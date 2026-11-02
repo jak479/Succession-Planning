@@ -36,7 +36,12 @@
   "id": "incapacity-definition",
   "q": "How does my operating agreement define incapacity?",
   "expect": "answered",
-  "gate": "pass"
+  "gate": "pass",
+  "forbidDocs": [
+   "INS",
+   "LEASE",
+   "LOAN"
+  ]
  },
  {
   "id": "health",

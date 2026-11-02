@@ -18,12 +18,13 @@ const GOOD: Brief = { topic: "Lease renewal", tier: "entity", urgent: false, sug
   no_clause_for: [], facts_needed: ["Has the landlord sent the renewal terms in writing?"], check_this: [], anchor_proximity: "Lease expiration 2027-01-31",
   agenda_line: "Lease renewal and new guaranty", attorney_note: "Option lapsed; uncapped guaranty. N10, C5." };
 const script = { screen: "none" as string, brief: GOOD as Brief | null, flags: {} as Record<string, boolean>, calls: [] as string[] };
+const fakeFlags = () => ({ off_question: false });
 const fake: Model = {
   async json({ system, user }) {
     script.calls.push(system === SCREEN_SYSTEM ? "screen:" + user : system === FRONT_DOOR_SYSTEM ? "brief" : "classify");
     if (system === SCREEN_SYSTEM) return { ok: true, value: { category: script.screen, explanation: "scripted" }, model: "fake" } as any;
     if (system === FRONT_DOOR_SYSTEM) return script.brief ? { ok: true, value: script.brief, model: "fake" } as any : { ok: false, reason: "API error 529" };
-    if (system === CLASSIFY_SYSTEM) return { ok: true, value: { advice: false, recommendation: false, evaluation_of_outside_answer: false, prediction: false, fee_or_time_estimate: false, medical_information: false, explanation: "", ...script.flags }, model: "fake" } as any;
+    if (system === CLASSIFY_SYSTEM) return { ok: true, value: { ...fakeFlags(), advice: false, recommendation: false, evaluation_of_outside_answer: false, prediction: false, fee_or_time_estimate: false, medical_information: false, explanation: "", ...script.flags }, model: "fake" } as any;
     throw new Error("unexpected prompt");
   },
 };
@@ -78,6 +79,11 @@ test("classifier flag (prediction) fails the gate even with clean words", async 
   reset(); script.flags = { prediction: true, explanation: "forecasts landlord" } as any;
   const { reply } = await ask("Will the landlord agree?");
   assert.deepEqual(reply.lines.length, 1);
+});
+
+test("classifier flag off_question (a quote that doesn't answer the question asked) fails the gate", async () => {
+  reset(); script.flags = { off_question: true, explanation: "insurance gap quoted for a definition question" } as any;
+  assert.equal((await ask("How is incapacity defined?")).reply.lines.length, 1);
 });
 
 test("citation to a document not in the file fails the gate", async () => {

@@ -19,7 +19,7 @@ export const HEALTH = /\b(diagnos\w*|dementia|alzheimer\w*|cancer|chemo\w*|strok
 
 export interface GateResult { pass: boolean; checks: { name: string; pass: boolean; detail?: string }[] }
 
-export async function gate(b: Brief, reply: Reply, titles: Map<string, string>, model: Model): Promise<GateResult> {
+export async function gate(b: Brief, reply: Reply, titles: Map<string, string>, model: Model, question = ""): Promise<GateResult> {
   const docKeys = new Set(titles.keys());
   const checks: GateResult["checks"] = [];
   const slots = modelSlots(b);
@@ -38,10 +38,10 @@ export async function gate(b: Brief, reply: Reply, titles: Map<string, string>, 
   checks.push({ name: "at most five fact questions", pass: b.facts_needed.length <= 5 });
   if (b.urgent) checks.push({ name: "urgent: no substance", pass: !slots.length });
 
-  const c = await model.json({ system: CLASSIFY_SYSTEM, user: replyText(reply), schema: ClassifySchema, effort: "low", maxTokens: 2000 });
+  const c = await model.json({ system: CLASSIFY_SYSTEM, user: `CLIENT'S QUESTION\n${question}\n\nMESSAGE TO AUDIT\n${replyText(reply)}`, schema: ClassifySchema, effort: "low", maxTokens: 2000 });
   if (!c.ok) checks.push({ name: "classifier", pass: false, detail: c.reason });
   else {
-    const flags = (["advice", "recommendation", "evaluation_of_outside_answer", "prediction", "fee_or_time_estimate", "medical_information"] as const).filter(k => c.value[k]);
+    const flags = (["off_question", "advice", "recommendation", "evaluation_of_outside_answer", "prediction", "fee_or_time_estimate", "medical_information"] as const).filter(k => c.value[k]);
     checks.push({ name: "classifier", pass: !flags.length, detail: flags.length ? `${flags.join(", ")}: ${c.value.explanation}` : undefined });
   }
   return { pass: checks.every(x => x.pass), checks };

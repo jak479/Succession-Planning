@@ -28,9 +28,11 @@ for (const k of cases) {
   const healthAsk = reply.lines.filter(l => l.startsWith("To prepare this for Thursday") && FACT_HEALTH.test(l));
   // Some cases must get through the gate, or the feature is dead in practice.
   const gateOk = k.gate !== "pass" || row.gate.pass;
-  const ok = route === k.expect && formsOk && !infra.length && !healthAsk.length && gateOk;
+  // Quotes limited to the question asked: some documents have no business in some answers.
+  const offDocs = (k.forbidDocs ?? []).filter((d: string) => reply.lines.some(l => l.includes(`(${d},`)));
+  const ok = !offDocs.length && route === k.expect && formsOk && !infra.length && !healthAsk.length && gateOk;
   if (!ok) failed++;
-  console.log(`${ok ? "PASS" : "FAIL"} ${k.id}: route=${route} (want ${k.expect}) gate=${row.gate.pass ? "pass" : "deferred"}${k.gate ? " (want pass)" : ""} forms=${formsOk}${healthAsk.length ? " HEALTH-QUESTION" : ""}`);
+  console.log(`${ok ? "PASS" : "FAIL"} ${k.id}: route=${route} (want ${k.expect}) gate=${row.gate.pass ? "pass" : "deferred"}${k.gate ? " (want pass)" : ""} forms=${formsOk}${offDocs.length ? " OFF-QUESTION:" + offDocs.join(",") : ""}${healthAsk.length ? " HEALTH-QUESTION" : ""}`);
   if (reply.check_this) for (const r of reply.check_this) console.log(`   ▸ ${r.outside_says} | ${r.your_documents_say} | ${r.difference}`);
   for (const l of reply.lines) console.log("   │ " + l);
   for (const x of (row.gate.checks ?? []).filter((x: any) => !x.pass)) console.log(`   ✗ ${x.name}: ${x.detail ?? ""}`);

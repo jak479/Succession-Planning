@@ -2,7 +2,7 @@
 // each brief records the version that produced it.
 import { z } from "zod";
 
-export const PROMPT_VERSION = "frontdoor-2026-11-02.2";
+export const PROMPT_VERSION = "frontdoor-2026-11-02.3";
 export const ATTORNEY = process.env.ATTORNEY_NAME ?? "Josh";
 
 export interface ClientFile {
@@ -53,7 +53,7 @@ FIELDS THE CLIENT SEES: documents_say[].says, documents_say[].section, facts_nee
 - Restate what the document provides in plain language, attributed to the document ("The lease provides…", "Article 9.2(c) lists…"). Never apply it to the client's situation or say what follows from it.
 - Never use: should, recommend, advise, suggest, likely, probably, correct, incorrect, wrong, right, safe, fine, enforceable, better, best.
 - No fee, price, cost of legal work, or time estimate.
-- documents_say: at most three entries, the most relevant first.
+- documents_say: at most three entries, the most relevant first. Quote only provisions that answer the question the client asked. Do not add provisions on neighbouring topics, and do not point out what a document lacks or omits ("lists no…", "does not include…") unless the client asked about that very thing. If nothing answers the question, leave documents_say empty and put the question in no_clause_for.
 - check_this: one row per statement in the outside answer. outside_says quotes or closely restates it; your_documents_say restates the governing provision (cite doc and section); relation is one category: same_terms, different_terms, document_not_cited_by_outside, or no_document_addresses. Do not write any other comparison text.
 - facts_needed: at most five concrete fact questions the attorney would ask. Ask for facts about the business, its documents and its dealings with others. Never ask about anyone's health, medical condition, diagnosis, treatment, memory, mental state or capacity; never ask about physicians, medical records, medical releases or HIPAA authorizations; never ask whether a question was prompted by a health event. Those are for the attorney alone, outside this workspace. Never ask for decisions, preferences or intentions about who should receive the business.
 
@@ -84,6 +84,7 @@ ${outside ? "OUTSIDE AI ANSWER THE CLIENT PASTED (check-this lane)\n" + outside 
 
 // ---------- Output classifier (the gate's model check) ----------
 export const ClassifySchema = z.object({
+  off_question: z.boolean(),
   advice: z.boolean(), recommendation: z.boolean(), evaluation_of_outside_answer: z.boolean(),
   prediction: z.boolean(), fee_or_time_estimate: z.boolean(), medical_information: z.boolean(),
   explanation: z.string(),
@@ -95,4 +96,5 @@ export const CLASSIFY_SYSTEM = `You audit a message a law firm's software is abo
 - prediction: forecasts an outcome (what a court, lender, landlord, or regulator will do; whether something will work out).
 - fee_or_time_estimate: states or estimates what legal work will cost or how long it will take.
 - medical_information: contains anyone's health information.
+- off_question: a quoted document provision does not answer the client's question as asked, or a sentence points out something a document lacks or omits when the client did not ask about it. Fact questions and the agenda line are never off_question.
 A faithful restatement of a document's terms ("The lease requires notice 180 days before expiration") is none of these. In particular, restating a document's own definition of incapacity or its physician-certification requirement is not medical_information; medical_information means facts about a real person's health. A comparison row in the fixed forms "The outside answer and the document state the same terms", "…state different terms", "The outside answer does not cite this provision", or "No document on file addresses this" is not evaluation_of_outside_answer. Asking the client about anyone's health, physicians or medical records IS medical_information. Be strict: when unsure, mark true. Explain in one sentence.`;

@@ -19,6 +19,7 @@ Decided 2026-11-02 (proposal; Josh to confirm hosting). Preserves the data model
   - Not available under ZDR: Fable 5.1 / Mythos (30-day retention required). Engine runs on `claude-opus-5-5`.
   - Carve-out: Anthropic may retain flagged content up to 2 years, and data required by law. Disclose this in the engagement letter's AI consent clause (§ 6(c)).
   - No browser calls to the API (CORS unsupported under ZDR); all calls from the server, which the design already requires.
+- **Front-door quotes are limited to the question asked** (no neighbouring provisions, no pointing out gaps); enforced by the prompt and a classifier flag `off_question`. Entity-tier fact questions about plans (e.g., "does the Company plan to vacate?") are acceptable as is.
 - **Integrate with LEAP and WealthCounsel**: docs/design/integrations.md (design only; vendor terms not yet confirmed).
 
 ## Repo layout
