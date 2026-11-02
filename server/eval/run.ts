@@ -19,7 +19,7 @@ const session = { personId: process.env.CLIENT_PERSON_ID!, workspaceId: process.
 let failed = 0;
 for (const k of cases) {
   const { id, reply } = await askFrontDoor(deps, session, { question: k.q, outside: k.outside ?? null });
-  const row = (await pool.query("select q.withheld, q.status, b.gate, b.stop_reason, b.topic, b.suggested_scope, b.attorney_note from ws.question q join ws.brief b on b.question_id = q.id where q.id = $1", [id])).rows[0];
+  const row = (await pool.query("select q.withheld, q.status, b.gate, b.stop_reason, b.topic, b.suggested_scope, b.attorney_note, b.facts_needed from ws.question q join ws.brief b on b.question_id = q.id where q.id = $1", [id])).rows[0];
   const route = row.withheld ? "withheld" : row.status === "held" ? "urgent" : "answered";
   const formsOk = reply.lines.every(l => FORMS.some(f => f.test(l)));
   // An engine, screen or classifier that could not run is an infrastructure failure, not a pass.
@@ -34,6 +34,7 @@ for (const k of cases) {
   if (reply.check_this) for (const r of reply.check_this) console.log(`   ▸ ${r.outside_says} | ${r.your_documents_say} | ${r.difference}`);
   for (const l of reply.lines) console.log("   │ " + l);
   for (const x of (row.gate.checks ?? []).filter((x: any) => !x.pass)) console.log(`   ✗ ${x.name}: ${x.detail ?? ""}`);
+  if (!row.gate.pass) for (const f of row.facts_needed ?? []) console.log(`   ? held fact question: ${f}`);
   if (row.stop_reason) console.log(`   stop: ${row.stop_reason}`);
   if (row.suggested_scope) console.log(`   brief: ${row.topic} · suggested scope ${row.suggested_scope}`);
 }

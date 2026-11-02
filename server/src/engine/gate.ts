@@ -10,7 +10,9 @@ const BANNED = /\b(should(n't)?|recommend\w*|advis\w*|advice|suggest\w*|i think|
 const FEE = /\b(fees?|retainer|hourly|billable|billing|invoice|flat fee|change[- ]order (price|cost|fee))\b/i;
 // Health information never enters the workspace.
 // Fact questions may not touch health or capacity at all, even in words a document itself uses (rules 3 and 4).
-export const FACT_HEALTH = /\b(health\w*|medical\w*|hipaa|physicians?|doctors?|medical condition|health condition|illness|sick\w*|(in)?capacit\w*|memory|mental\w*|cognitive|diagnos\w*|treatment|caregiver)\b/i;
+// "Incapacity" as a document's defined term, or "in what capacity would Luis sign", is not a capacity question;
+// a question about whether a person has or lacks capacity is.
+export const FACT_HEALTH = /\b(health\w*|medical\w*|hipaa|physicians?|doctors?|illness|sick\w*|memory|mental\w*|cognitive|diagnos\w*|treatment|caregiver|incapacitated|(lacks?|lacking|loses?|losing|lost|has|have|had|still has|retains?) (the )?capacity|capacity to (make|sign|manage|decide|understand)|decision[- ]making capacity)\b/i;
 // The engagement letter itself says "advising on the call"; quoting it is not advice.
 const ENGAGEMENT = /engagement letter/i;
 export const HEALTH = /\b(diagnos\w*|dementia|alzheimer\w*|cancer|chemo\w*|stroke|surgery|hospitali[sz]ed|hospital|medication|prescri\w*|terminal(ly)? ill|memory loss|mental health|depress\w*|seizure|heart attack|hospice|parkinson\w*)\b/i;

@@ -132,6 +132,13 @@ test("a fact question about health or capacity fails the gate (live eval finding
   assert.ok(b.gate.checks.some((x: any) => x.name === "fact questions: no health or capacity" && !x.pass));
   reset(); script.brief = { ...GOOD, facts_needed: ["Has a HIPAA authorization been signed naming the Interim Manager?"] };
   assert.equal((await ask("Who certifies incapacity?")).reply.lines.length, 1);
+  reset(); script.brief = { ...GOOD, facts_needed: ["Has anyone questioned whether Dana still has capacity to sign?"] };
+  assert.equal((await ask("Can Luis sign instead?")).reply.lines.length, 1);
+});
+
+test("'Incapacity' as a defined term, or 'in what capacity', is not a health question (live eval finding)", async () => {
+  reset(); script.brief = { ...GOOD, facts_needed: ["Does the full operating agreement define Incapacity anywhere besides Article 9.1(b)?", "In what capacity would Luis Herrera sign the renewal?"] };
+  assert.equal((await ask("How is incapacity defined?")).reply.lines.length, 3);
 });
 
 test("quoting the engagement letter's 'advising on the call' is not an advice hit; quoting it elsewhere still is", async () => {
