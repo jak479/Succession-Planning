@@ -19,7 +19,9 @@ export function claudeModel(client?: Anthropic): Model {
   return {
     async json({ system, user, schema, effort, maxTokens }) {
       try {
-        c ??= new Anthropic();
+        // ENGINE_ANTHROPIC_API_KEY lets the engine's key live under its own name, apart from any key the
+        // hosting platform or a developer tool uses. Falls back to the SDK's default (ANTHROPIC_API_KEY).
+        c ??= new Anthropic(process.env.ENGINE_ANTHROPIC_API_KEY ? { apiKey: process.env.ENGINE_ANTHROPIC_API_KEY } : {});
         const r = await c.messages.parse({
           model: MODEL,
           max_tokens: maxTokens,

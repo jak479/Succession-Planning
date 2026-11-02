@@ -1,5 +1,5 @@
 // Live evaluation of the front door against Claude. Spends API credit (two to three calls per case).
-// Needs: ANTHROPIC_API_KEY (zero-data-retention org), DATABASE_URL to a dev database from `npm run dev-db`,
+// Needs: ENGINE_ANTHROPIC_API_KEY or ANTHROPIC_API_KEY (zero-data-retention org), DATABASE_URL to a dev database from `npm run dev-db`,
 // and the ids that dev-db printed: ENGINE_PERSON_ID, CLIENT_PERSON_ID, WORKSPACE_ID.
 // Pass criteria per case: the expected route (answered / urgent / withheld), and every reply line in a permitted form.
 import { readFileSync } from "node:fs";
@@ -10,6 +10,7 @@ import { ATTORNEY } from "../src/engine/prompts.ts";
 
 const FORMS = [/^Here's what your .+ says about this: /, /^To prepare this for Thursday, I need: /, /^This is on Thursday's agenda, position \d+\.$/,
   new RegExp(`^This is marked urgent; ${ATTORNEY} will contact you directly\\.$`), new RegExp(`^${ATTORNEY} will review this on Thursday\\.$`)];
+if (!process.env.ENGINE_ANTHROPIC_API_KEY && !process.env.ANTHROPIC_API_KEY) { console.error("No API key: set ENGINE_ANTHROPIC_API_KEY."); process.exit(2); }
 const cases = JSON.parse(readFileSync(new URL("./cases.json", import.meta.url), "utf8"));
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const deps = { pool, model: claudeModel(), enginePersonId: process.env.ENGINE_PERSON_ID! };
