@@ -5,9 +5,9 @@ import { ClassifySchema, CLASSIFY_SYSTEM, type Brief } from "./prompts.ts";
 import { modelSlots, replyText, type Reply } from "./render.ts";
 
 // Words that signal advice, evaluation or prediction in a model-filled slot.
-const BANNED = /\b(should(n't)?|recommend\w*|advis\w*|advice|suggest\w*|i think|i believe|in my (view|opinion)|likely|unlikely|probably|will be fine|safe to|(un)?enforceable|correct(ly)?|incorrect|wrong|ought|better off|best option)\b/i;
+export const BANNED = /\b(should(n't)?|recommend\w*|advis\w*|advice|suggest\w*|i think|i believe|in my (view|opinion)|likely|unlikely|probably|will be fine|safe to|(un)?enforceable|correct(ly)?|incorrect|wrong|ought|better off|best option)\b/i;
 // The firm's fees and time never appear on a client surface.
-const FEE = /\b(fees?|retainer|hourly|billable|billing|invoice|flat fee|change[- ]order (price|cost|fee))\b/i;
+export const FEE = /\b(fees?|retainer|hourly|billable|billing|invoice|flat fee|change[- ]order (price|cost|fee))\b/i;
 // Health information never enters the workspace.
 // Fact questions may not touch health or capacity at all, even in words a document itself uses (rules 3 and 4).
 // "Incapacity" as a document's defined term, or "in what capacity would Luis sign", is not a capacity question;

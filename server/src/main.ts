@@ -8,6 +8,8 @@ import { stageOf } from "../../core/src/rules.ts";
 import { STAGES } from "../../core/src/catalog.ts";
 import { askFrontDoor } from "./engine/pipeline.ts";
 import { claudeModel } from "./engine/model.ts";
+import { clientTurn, requestConflictCheck, startSession, summary, uploadDocument } from "./engine/intake.ts";
+import { PUBLIC_RECORDS } from "../../core/src/intake.ts";
 
 const ENGINE = process.env.ENGINE_PERSON_ID ?? "";   // the agent identity the engine writes briefs as
 const model = claudeModel();
@@ -44,6 +46,38 @@ const routes: [string, RegExp, (x: Ctx, m: RegExpExecArray) => Promise<unknown>]
     return { questions: qs.map(q => ({ ...q, brief: briefs.find(b => b.question_id === q.id) ?? null })) };
   }],
   ["POST", /^\/api\/frontdoor\/([0-9a-f-]{36})\/scope$/, ({ c, body }, m) => c.query("select ws.confirm_scope($1,$2)", [m[1], String(body.scope)])],
+  // ---- Intake (item 3) ----
+  ["GET", /^\/api\/intake\/conflict$/, async ({ c, role }) => {
+    const checks = (await c.query("select id, names, status, requested_at, decided_at from ws.conflict_check order by requested_at desc")).rows;
+    if (role !== "attorney") return { checks: checks.map(x => ({ id: x.id, status: x.status })) };
+    const hits = (await c.query("select h.check_id, h.queried_name, h.similarity, f.name, f.relation from ws.conflict_hit h join ws.firm_party f on f.id = h.party_id")).rows;
+    return { checks: checks.map(x => ({ ...x, hits: hits.filter(h => h.check_id === x.id) })) };
+  }],
+  ["POST", /^\/api\/intake\/conflict\/([0-9a-f-]{36})\/decide$/, ({ c, body }, m) => c.query("select ws.decide_conflict($1,$2)", [m[1], String(body.decision)])],
+  ["GET", /^\/api\/intake\/records$/, async ({ c }) => {
+    const pulls = (await c.query("select record_id, query, status, done_at from ws.record_pull")).rows;
+    return { records: PUBLIC_RECORDS.map(r => ({ ...r, pulls: pulls.filter(p => p.record_id === r.id) })) };
+  }],
+  // Record a public-record pull done from the checklist: the result becomes a cited PUB source (rule 6).
+  ["POST", /^\/api\/intake\/records$/, async ({ c, body }) => {
+    const rec = PUBLIC_RECORDS.find(r => r.id === body.record_id); if (!rec) throw new Error("unknown record");
+    let sid: string | null = null;
+    if (body.status === "found") sid = (await c.query("insert into ws.source(workspace_id,label,kind,name,citation) values (ws.cur_ws(),$1,'PUB',$2,$3) returning id",
+      [`P-${rec.id}-${Date.now()}`, `${rec.name}: ${String(body.query)}`, String(body.citation ?? "")])).rows[0].id;
+    await c.query(`insert into ws.record_pull(workspace_id, record_id, query, status, source_id, done_by, done_at) values (ws.cur_ws(),$1,$2,$3,$4,ws.me(),now())
+      on conflict (workspace_id, record_id, query) do update set status = excluded.status, source_id = excluded.source_id, done_by = excluded.done_by, done_at = now()`,
+      [rec.id, String(body.query), String(body.status), sid]);
+    return { ok: true };
+  }],
+  // Thursday agenda from intake: every deferred or flagged agent turn, with the client message before it (attorney only).
+  ["GET", /^\/api\/intake\/agenda$/, async ({ c, role }) => {
+    if (role !== "attorney") throw new Error("not permitted");
+    return { items: (await c.query(`select a.id, a.at, a.body reply, g.flag, g.gate,
+        (select coalesce(t.body, '(withheld: health or capacity)') from ws.intake_turn t where t.speaker = 'client' and t.id < a.id order by t.id desc limit 1) client_message
+      from ws.intake_turn a join ws.intake_turn_gate g on g.turn_id = a.id where a.deferred or g.flag is not null order by a.id`)).rows };
+  }],
+  // Attorney's queue: documents received but unreadable.
+  ["GET", /^\/api\/intake\/queue$/, ({ c }) => c.query("select i.item_id, s.name filename, i.set_at from ws.intake_status i join ws.source s on s.id = i.source_id where i.status = 'received_unread' order by i.set_at").then(r => ({ unread: r.rows }))],
   ["POST", /^\/api\/board$/, async ({ c, body }) => {
     const d = (await c.query("select * from ws.change_order_def where id=$1", [body.co_id])).rows[0];
     if (!d) throw new Error("unknown change order");
@@ -85,6 +119,29 @@ http.createServer(async (req, res) => {
       const b = raw ? JSON.parse(raw) : {};
       return send(200, await askFrontDoor({ pool, model, enginePersonId: ENGINE }, { personId, workspaceId }, { question: String(b.question ?? ""), outside: b.outside ?? null, contextNode: b.context_node ?? null }));
     } catch { return send(400, { error: "That question couldn't be received. Please try again." }); }
+  }
+  const engineRoute = req.method === "POST" && /^\/api\/intake\/(conflict|start|message|upload|summary)$/.exec(url.pathname);
+  if (engineRoute) {
+    const personId = who(req), workspaceId = url.searchParams.get("ws");
+    const send = (code: number, obj: unknown) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(obj)); };
+    if (!personId || !workspaceId) return send(401, { error: "sign in" });
+    if (!ENGINE) return send(503, { error: "The workspace assistant isn't configured yet." });
+    const chunks: Buffer[] = []; for await (const ch of req) chunks.push(ch as Buffer);
+    const raw = Buffer.concat(chunks);
+    const deps = { pool, model, enginePersonId: ENGINE }, sess = { personId, workspaceId };
+    try {
+      switch (engineRoute[1]) {
+        case "conflict": return send(200, { id: await requestConflictCheck(deps, sess, JSON.parse(raw.toString() || "{}").names ?? []) });
+        case "start": return send(200, await startSession(deps, sess));
+        case "message": return send(200, await clientTurn(deps, sess, String(JSON.parse(raw.toString() || "{}").text ?? "")));
+        case "upload": return send(200, await uploadDocument(deps, sess, { item: url.searchParams.get("item") ?? "", filename: url.searchParams.get("name") ?? "upload",
+          mime: String(req.headers["content-type"] ?? ""), bytes: new Uint8Array(raw) }));
+        case "summary": return send(200, await summary(deps, sess));
+      }
+    } catch (e: any) {
+      const msg = String(e?.message ?? e);
+      return send(400, { error: /conflict check not cleared/.test(msg) ? "Josh needs to finish a routine check before intake begins. You'll hear when it's done." : /not a document item/.test(msg) ? "That item isn't a document." : "That couldn't be received. Please try again." });
+    }
   }
   const route = routes.find(([m, re]) => m === req.method && re.test(url.pathname));
   const send = (code: number, obj: unknown) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(obj ?? {})); };

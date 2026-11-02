@@ -35,12 +35,14 @@ const asWho = (p: string, fn: (c: pg.PoolClient) => Promise<any>) => inSession(p
 before(async () => {
   const a = new pg.Client({ connectionString: base + "/postgres" }); await a.connect(); await a.query(`create database ${db}`); await a.end();
   pool = new pg.Pool({ connectionString: `${base}/${db}` });
-  for (const f of ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql"]) await pool.query(readFileSync(new URL("../../core/db/" + f, import.meta.url), "utf8"));
+  for (const f of ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql", "005_intake.sql"]) await pool.query(readFileSync(new URL("../../core/db/" + f, import.meta.url), "utf8"));
   const one = async (q: string, p: unknown[] = []) => (await pool.query(q + " returning id", p)).rows[0].id;
   for (const [k, n, r] of [["atty", "Josh", "attorney"], ["dana", "Dana", "client"], ["luis", "Luis", "client"], ["engine", "engine", "agent"]]) id[k] = await one("insert into ws.person(name, role) values ($1,$2)", [n, r]);
   const cl = await one("insert into ws.client(name) values ('Gulfside Mechanical, LLC')");
   id.ent = await one("insert into ws.workspace(client_id, tier) values ($1,'entity')", [cl]);
   for (const p of [id.dana, id.luis, id.engine]) await pool.query("insert into ws.membership values ($1,$2,false)", [p, id.ent]);
+  await inSession(pool, { personId: id.engine, workspaceId: id.ent }, c => c.query("select ws.request_conflict_check('[{\"name\":\"Gulfside Mechanical, LLC\"}]'::jsonb) id")).then(async (r: any) =>
+    inSession(pool, { personId: id.atty, workspaceId: id.ent }, c => c.query("select ws.decide_conflict($1,'cleared')", [r.rows[0].id])));
   await inSession(pool, { personId: id.engine, workspaceId: id.ent }, async c => {
     for (const [key, title, body] of SAMPLE_DOCS) {
       const sid = (await c.query("insert into ws.source(workspace_id,label,kind,name,readable) values (ws.cur_ws(),$1,'DOC',$2,true) returning id", [key, title])).rows[0].id;

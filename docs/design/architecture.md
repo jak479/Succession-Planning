@@ -78,5 +78,33 @@ Live eval history: first run found a health fact question reaching the client ("
 
 Known gaps: anchor dates are not yet stored, so the brief sees none; "repeated advice request after one deferral" (stop rule) is not yet detected; the agenda position counts the last 7 days, not Thursday's actual agenda.
 
+## Intake agent (item 3, first increment): core/db/005_intake.sql, core/src/intake.ts, server/src/engine/intake.ts
+- **Conflict check first.** The agent or the attorney submits the names (`ws.request_conflict_check`).
+  - Hits are computed against every other client in the firm-wide name index (`ws.firm_party`): exact or trigram-similar after removing LLC/Inc and punctuation.
+  - Only the attorney sees hits; clients see pending / cleared / declined.
+  - Only the attorney decides (`ws.decide_conflict`). Clearing adds the client's names to the index.
+  - Until cleared, the database refuses intake answers, intake conversation turns, uploads and front-door questions from anyone but the attorney.
+- **Ask-last planner** (`core/src/intake.ts`):
+  - Items already stated, received or received-unread are never asked again.
+  - Documents are requested as one list; questions go one at a time.
+  - Core items first, then whatever feeds the earliest stage gate.
+  - Owner-tier and attorney-only items (C-2 to C-7) never appear.
+  - Question wording is fixed text (`INTAKE_Q`), never written by the model.
+- **Agent turn:**
+  - Stop-rule screen first; health text is never stored.
+  - The model maps the message to open items and writes a one-sentence restatement. The restatement is the only model-written client text, and it passes the lexical checks and the classifier or is not shown.
+  - Complete answers are recorded as `stated`, sourced to the client's own words.
+  - Status line and next question are fixed text.
+  - An advice request is deferred; asked again after a deferral, the line stops and the attorney is flagged.
+  - Deferred and flagged turns are the attorney's intake agenda (`GET /api/intake/agenda`).
+- **File drop:**
+  - Uploads enter unread.
+  - The server extracts text from PDF (pdf.js), DOCX and text.
+  - "Received" only with at least 200 letters of readable text; otherwise "received, unread" and on the attorney's queue (`GET /api/intake/queue`).
+  - Scanned images are not OCR'd yet.
+- **Public records, checklist mode.** Each source (Sunbiz, UCC, clerk, appraiser, DBPR, AHCA, PACER) is listed with its link. A pull done by hand is recorded with `POST /api/intake/records` as a cited PUB source. Automated pulls come site by site, after each site's terms are read.
+
+Not yet in item 3: OCR for scans; automated record pulls; Google Drive import; Plaid and payroll links; the profile builder (sources → 27 fields, conflicts); the three-way check (description vs document vs record); live eval cases for the intake agent; a client intake page.
+
 ## Not yet built in item 1
 Scan findings, front-door briefs, and scope classification (attorney-only until confirmed) are item 2–4 tables.

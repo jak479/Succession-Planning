@@ -6,7 +6,7 @@ const base = process.env.PGURL ?? "postgresql://postgres@%2Fvar%2Ftmp:5433", nam
 const a = new pg.Client({ connectionString: base + "/postgres" }); await a.connect();
 await a.query(`drop database if exists ${name}`); await a.query(`create database ${name}`); await a.end();
 const c = new pg.Client({ connectionString: `${base}/${name}` }); await c.connect();
-for (const f of ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql"]) await c.query(readFileSync(new URL("../../core/db/" + f, import.meta.url), "utf8"));
+for (const f of ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql", "005_intake.sql"]) await c.query(readFileSync(new URL("../../core/db/" + f, import.meta.url), "utf8"));
 const one = async (q: string, p: unknown[] = []) => (await c.query(q + " returning id", p)).rows[0].id;
 const atty = await one("insert into ws.person(name, role) values ('Josh','attorney')");
 const dana = await one("insert into ws.person(name, role) values ('Dana Ortiz','client')");
@@ -16,6 +16,14 @@ const cl = await one("insert into ws.client(name, onboarding_fee) values ('Gulfs
 const ent = await one("insert into ws.workspace(client_id, tier) values ($1,'entity')", [cl]);
 const own = await one("insert into ws.workspace(client_id, tier) values ($1,'owner')", [cl]);
 await c.query("insert into ws.membership values ($1,$2,true),($1,$3,false),($4,$2,false),($5,$2,false),($5,$3,false)", [dana, ent, own, luis, engine]);
+// Conflict check run and cleared, so the sample client can be used for intake and the front door.
+const asIn = async (person: string, ws: string, q: string, p: unknown[] = []) => {
+  await c.query("begin"); await c.query("set local role ws_app");
+  await c.query("select set_config('app.person_id',$1,true), set_config('app.workspace_id',$2,true)", [person, ws]);
+  const r = await c.query(q, p); await c.query("commit"); return r;
+};
+const chk = (await asIn(engine, ent, "select ws.request_conflict_check($1::jsonb) id", [JSON.stringify([{ name: "Gulfside Mechanical, LLC", relation: "client_entity" }, { name: "Dana Ortiz", relation: "owner" }, { name: "Luis Herrera", relation: "successor" }])])).rows[0].id;
+await asIn(atty, ent, "select ws.decide_conflict($1,'cleared')", [chk]);
 // Sample documents from the prototype's client file (entity tier), entered as the engine after "OCR".
 await c.query("begin"); await c.query("set local role ws_app");
 await c.query("select set_config('app.person_id',$1,true), set_config('app.workspace_id',$2,true)", [engine, ent]);
