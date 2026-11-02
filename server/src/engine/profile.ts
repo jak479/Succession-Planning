@@ -14,17 +14,27 @@ const RANK: Record<string, number> = { CALL: 6, DOC: 5, PUB: 4, API: 3, CLIENT: 
 const MAX_SOURCE_CHARS = 60000;
 
 export const ProfileSchema = z.object({
-  values: z.array(z.object({ field: z.string(), value: z.string(), source: z.string(), quote: z.string() })),
+  values: z.array(z.object({ field: z.string(), value: z.string(), source: z.string(), quotes: z.array(z.string()) })),
   conflicts: z.array(z.object({ field: z.string(), value_a: z.string(), source_a: z.string(), value_b: z.string(), source_b: z.string() })),
   gaps: z.array(z.string()),
 });
 
 const SYSTEM = `You build the factual profile of a business client for a Florida law firm, from the sources listed. Extract only what a source states; never infer, estimate, summarize opinions, or advise.
-For each field you can fill: give a one-line "value", the label of the ONE source it comes from in "source", and in "quote" an exact excerpt (copied character for character, at most 300 characters) from that source that states it. If you cannot quote it, do not fill the field.
+For each field you can fill: give a one-line "value" that covers everything the source states for that field (for example every policy, every guaranty), the label of the ONE source it comes from in "source", and in "quotes" one to four exact excerpts (each copied character for character, at most 300 characters) from that source that together state every part of the value. If you cannot quote it, do not fill the field.
 Use only the field names listed, exactly as written. Never record anyone's health, medical or capacity information.
 Where two sources state different things for the same field, list a conflict with both values and both source labels; do not choose between them.
 "gaps": fields no source addresses.`;
 
+// What each field means, where the name alone is ambiguous (live eval: "Name; role" was filled with the family liaison).
+const FIELD_HELP: Record<string, string> = {
+  "Name; role": "the business owner's (principal's) own name and role in the company; not anyone else's",
+  "Target exit and preferred exit": "the owner's stated target exit date and preferred kind of exit",
+  "Personal guaranties": "every personal guaranty the owner has given (lease, loans, lines, vendor accounts)",
+  "Insurance in force": "every policy in force: carrier or type, insured, owner, beneficiary, amount, renewal",
+  "Bank accounts and signers": "each business bank account and who can sign or administer it",
+  "Key employees": "employees the business depends on, with roles",
+  "Family and who is affected": "names and roles of family members and others affected; facts only",
+};
 const norm = (t: string) => t.toLowerCase().replace(/\s+/g, " ").trim();
 
 export async function buildProfile(d: ProfileDeps, s: Session) {
@@ -39,7 +49,7 @@ export async function buildProfile(d: ProfileDeps, s: Session) {
     const block = srcs.map(r => `[${r.label}] (${r.kind}${r.kind === "CLIENT" ? ": the client's own words" : ""}) ${r.name}, ${String(r.pulled_at).slice(0, 10)}\n${text(r).slice(0, MAX_SOURCE_CHARS)}`).join("\n\n=====\n\n");
     const current = (await c.query("select p.field, p.value, s.label, s.kind from ws.profile_value p join ws.source s on s.id = p.source_id")).rows;
 
-    const r = await d.model.json({ system: SYSTEM, user: `FIELDS\n${fields.join("\n")}\n\nCURRENT PROFILE\n${current.map(x => `${x.field}: ${x.value} [${x.label}]`).join("\n") || "(empty)"}\n\nSOURCES\n${block || "(none)"}`,
+    const r = await d.model.json({ system: SYSTEM, user: `FIELDS\n${fields.map(f => FIELD_HELP[f] ? `${f} — ${FIELD_HELP[f]}` : f).join("\n")}\n\nCURRENT PROFILE\n${current.map(x => `${x.field}: ${x.value} [${x.label}]`).join("\n") || "(empty)"}\n\nSOURCES\n${block || "(none)"}`,
       schema: ProfileSchema, effort: "medium", maxTokens: 16000 });
     if (!r.ok) {
       await c.query("insert into ws.profile_run(workspace_id, model, result) values (ws.cur_ws(), null, $1)", [JSON.stringify({ error: r.reason })]);
@@ -57,10 +67,10 @@ export async function buildProfile(d: ProfileDeps, s: Session) {
       const src = byLabel.get(v.source);
       if (!fields.includes(v.field)) { dropped.push({ field: v.field, why: "not a field the agent may fill in this tier" }); continue; }
       if (!src) { dropped.push({ field: v.field, why: `unknown source ${v.source}` }); continue; }
-      if (HEALTH.test(v.value) || HEALTH.test(v.quote)) { dropped.push({ field: v.field, why: "health information" }); continue; }
-      // The quote must be in the source the model cited. Owner tier has no contents to quote: only titles and dates.
+      if (HEALTH.test(v.value) || v.quotes.some(q => HEALTH.test(q))) { dropped.push({ field: v.field, why: "health information" }); continue; }
+      // Every quote must be in the source the model cited. Owner tier has no contents to quote: only titles and dates.
       const haystack = norm(`${src.name} ${tier === "owner" ? String(src.pulled_at).slice(0, 10) : text(src)}`);
-      if (!v.quote.trim() || !haystack.includes(norm(v.quote))) { dropped.push({ field: v.field, why: "quote not found in the cited source" }); continue; }
+      if (!v.quotes.length || v.quotes.length > 4 || v.quotes.some(q => !q.trim() || !haystack.includes(norm(q)))) { dropped.push({ field: v.field, why: "quote not found in the cited source" }); continue; }
       const cur = current.find(x => x.field === v.field);
       if (cur && norm(cur.value) !== norm(v.value)) {
         await addConflict(v.field, cur.value, cur.label, v.value, v.source);

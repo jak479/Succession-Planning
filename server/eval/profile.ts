@@ -17,6 +17,8 @@ const checks: [string, boolean][] = [
   ["Lease shows the 2027-01-31 term end", /2027-01-31|January 31, 2027/.test(get("Lease"))],
   ["Loans names Seacoast Bank", /Seacoast/i.test(get("Loans and credit lines"))],
   ["Insurance shows the $420,000 key-person policy", /420,000|420000/.test(get("Insurance in force"))],
+  ["Personal guaranties include both the lease and the loan", /lease/i.test(get("Personal guaranties")) && /loan|Seacoast/i.test(get("Personal guaranties"))],
+  ["Name; role is the owner, Dana Ortiz", /Dana Ortiz/.test(get("Name; role")) && !/Maria/.test(get("Name; role"))],
 ];
 for (const [n, ok] of checks) console.log(`${ok ? "PASS" : "FAIL"} ${n}`);
 process.exit(checks.every(c => c[1]) ? 0 : 1);
