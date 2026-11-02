@@ -22,9 +22,9 @@ jobs:
       PGURL: postgresql://postgres@localhost:5432
       DATABASE_URL: postgresql://postgres@localhost:5432/oew_dev
       # Federation ids from the Claude Console (Workload identity page). Identifiers, not secrets.
-      ANTHROPIC_ORGANIZATION_ID: REPLACE_ORG_ID
-      ANTHROPIC_SERVICE_ACCOUNT_ID: REPLACE_SVAC_ID
-      ANTHROPIC_FEDERATION_RULE_ID: REPLACE_FDRL_ID
+      ANTHROPIC_ORGANIZATION_ID: cd7121a4-669b-4dda-a1de-ad2f59a785bb
+      ANTHROPIC_SERVICE_ACCOUNT_ID: svac_01SRfCzKt6Z2WR4S8LYYAsvM
+      ANTHROPIC_FEDERATION_RULE_ID: fdrl_01UK65FPhpAykYkcP9tBzQoF
       ANTHROPIC_IDENTITY_TOKEN_FILE: /tmp/gha-jwt
     steps:
       - uses: actions/checkout@v4
