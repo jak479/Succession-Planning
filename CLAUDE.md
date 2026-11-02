@@ -51,6 +51,7 @@ import → profile → intake gate → path assigned → scan (findings, attorne
 
 ## Open decisions
 - Agent never drafts or fills in documents; owner-tier documents: existence, date, drafter only (decided 2026-11-02).
+- Anthropic API on zero data retention (decided 2026-11-02): no Files API, Batches, Managed Agents, Skills, MCP connector or code execution; engine on claude-opus-5-5. See docs/design/architecture.md.
 - LEAP + WealthCounsel integration: confirm API terms with the vendors (docs/design/integrations.md).
 - Non-client front door: conflict names + one question only. (Current: yes.)
 - First-release API links: Plaid + payroll first; QuickBooks and mailbox search second.

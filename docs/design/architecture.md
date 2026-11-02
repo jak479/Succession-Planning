@@ -12,6 +12,13 @@ Decided 2026-11-02 (proposal; Josh to confirm hosting). Preserves the data model
 ## Decisions 2026-11-02
 - **Custom board**, not monday.com. Built (item 5, ahead of 2–4).
 - **The agent never drafts or fills in a document.** Drafting is the attorney's, in WealthCounsel. In the owner tier the agent records a document's existence, date and drafter only. The fields for POA agent / PR / trustee and long-term care / asset protection are recorded by the attorney from the call (enforced: `ws.profile_field_def.agent_may`).
+- **Zero data retention (ZDR)** on the Anthropic API organization. Source: platform.claude.com/docs/en/manage-claude/api-and-data-retention (read 2026-11-02).
+  - Arranged through Anthropic sales, per organization; not a Console switch. Each new organization needs its own enablement.
+  - ZDR-eligible and planned for use: Messages API, token counting, PDF input in the request, citations, prompt caching, adaptive thinking, structured outputs (qualified), web search/fetch.
+  - Not ZDR-eligible; the API does not block them, so the server must: Files API, Message Batches, Managed Agents (transcripts persist), Agent Skills, MCP connector, code execution / programmatic tool calling. Documents go inline in each request, never uploaded to Anthropic.
+  - Not available under ZDR: Fable 5.1 / Mythos (30-day retention required). Engine runs on `claude-opus-5-5`.
+  - Carve-out: Anthropic may retain flagged content up to 2 years, and data required by law. Disclose this in the engagement letter's AI consent clause (§ 6(c)).
+  - No browser calls to the API (CORS unsupported under ZDR); all calls from the server, which the design already requires.
 - **Integrate with LEAP and WealthCounsel**: docs/design/integrations.md (design only; vendor terms not yet confirmed).
 
 ## Repo layout
