@@ -114,8 +114,35 @@ test("engine failure fails closed to the agenda line", async () => {
   assert.equal(b.topic, "(engine unavailable)");
 });
 
-test("check-this: comparison table plus the review line", async () => {
-  reset(); script.brief = { ...GOOD, check_this: [{ outside_says: "The manager can sign the renewal for you.", your_documents_say: "OA 9.2(b) lets the Interim Manager renew leases during the Continuity Period.", difference: "The outside answer does not mention the Continuity Period." }] };
+test("check-this: server writes the comparison sentence from a fixed category", async () => {
+  reset(); script.brief = { ...GOOD, check_this: [
+    { outside_says: "The manager can sign the renewal for you.", doc: "OA-Art9", section: "9.2(b)", your_documents_say: "The Interim Manager may renew leases during the Continuity Period.", relation: "document_not_cited_by_outside" },
+    { outside_says: "The guaranty would transfer to the company.", doc: "", section: "", your_documents_say: "", relation: "no_document_addresses" }] };
   const { reply } = await ask("ChatGPT says Luis can sign it. Check this.", "The manager can sign the renewal for you.");
-  assert.equal(reply.check_this?.length, 1); assert.equal(reply.lines.at(-1), "Josh will review this on Thursday.");
+  assert.deepEqual(reply.check_this?.map(r => r.difference), ["The outside answer does not cite this provision.", "No document on file addresses this."]);
+  assert.match(reply.check_this![0].your_documents_say, /\(OA-Art9, 9\.2\(b\)\)$/);
+  assert.equal(reply.lines.at(-1), "Josh will review this on Thursday.");
+});
+
+test("a fact question about health or capacity fails the gate (live eval finding, 2026-11-02)", async () => {
+  reset(); script.brief = { ...GOOD, facts_needed: ["Is this question prompted by a current health event or concern affecting Dana Ortiz?"] };
+  const { id: q, reply } = await ask("How does my operating agreement define incapacity?");
+  assert.equal(reply.lines.length, 1);
+  const b = await inSession(pool, { personId: id.atty, workspaceId: id.ent }, c => c.query("select gate from ws.brief where question_id=$1", [q]).then(r => r.rows[0]));
+  assert.ok(b.gate.checks.some((x: any) => x.name === "fact questions: no health or capacity" && !x.pass));
+  reset(); script.brief = { ...GOOD, facts_needed: ["Has a HIPAA authorization been signed naming the Interim Manager?"] };
+  assert.equal((await ask("Who certifies incapacity?")).reply.lines.length, 1);
+});
+
+test("quoting the engagement letter's 'advising on the call' is not an advice hit; quoting it elsewhere still is", async () => {
+  reset(); script.brief = { ...GOOD, documents_say: [{ doc: "SCOPE", section: "Schedule A", says: "Schedule A includes reviewing a lease received and advising on the call." }] };
+  assert.equal((await ask("Is a lease review included?")).reply.lines.length, 3);
+  reset(); script.brief = { ...GOOD, documents_say: [{ doc: "LEASE", section: "Guaranty", says: "We are advising you to renegotiate." }] };
+  assert.equal((await ask("What about the guaranty?")).reply.lines.length, 1);
+});
+
+test("at most three document quotes reach the client", async () => {
+  reset(); const d = GOOD.documents_say[0]; script.brief = { ...GOOD, documents_say: [d, d, d, d, d] };
+  const { reply } = await ask("Tell me everything about the lease.");
+  assert.equal(reply.lines.filter(l => l.startsWith("Here's what your")).length, 3);
 });

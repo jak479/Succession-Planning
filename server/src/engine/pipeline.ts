@@ -56,7 +56,7 @@ export async function askFrontDoor(d: Deps, client: Session, ask: Ask): Promise<
         brief = r.value; model = r.model; urgent = brief.urgent;
         const titles = new Map(file.documents.map(x => [x.key, x.title]));
         const candidate = renderReply(brief, titles, position);
-        const g = await gate(brief, candidate, new Set(titles.keys()), d.model);
+        const g = await gate(brief, candidate, titles, d.model);
         reply = g.pass ? candidate : agendaReply(position); gateResult = g;
       }
     }

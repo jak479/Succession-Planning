@@ -9,19 +9,29 @@ const BANNED = /\b(should(n't)?|recommend\w*|advis\w*|advice|suggest\w*|i think|
 // The firm's fees and time never appear on a client surface.
 const FEE = /\b(fees?|retainer|hourly|billable|billing|invoice|flat fee|change[- ]order (price|cost|fee))\b/i;
 // Health information never enters the workspace.
+// Fact questions may not touch health or capacity at all, even in words a document itself uses (rules 3 and 4).
+export const FACT_HEALTH = /\b(health\w*|medical\w*|hipaa|physicians?|doctors?|medical condition|health condition|illness|sick\w*|(in)?capacit\w*|memory|mental\w*|cognitive|diagnos\w*|treatment|caregiver)\b/i;
+// The engagement letter itself says "advising on the call"; quoting it is not advice.
+const ENGAGEMENT = /engagement letter/i;
 export const HEALTH = /\b(diagnos\w*|dementia|alzheimer\w*|cancer|chemo\w*|stroke|surgery|hospitali[sz]ed|hospital|medication|prescri\w*|terminal(ly)? ill|memory loss|mental health|depress\w*|seizure|heart attack|hospice|parkinson\w*)\b/i;
 
 export interface GateResult { pass: boolean; checks: { name: string; pass: boolean; detail?: string }[] }
 
-export async function gate(b: Brief, reply: Reply, docKeys: Set<string>, model: Model): Promise<GateResult> {
+export async function gate(b: Brief, reply: Reply, titles: Map<string, string>, model: Model): Promise<GateResult> {
+  const docKeys = new Set(titles.keys());
   const checks: GateResult["checks"] = [];
   const slots = modelSlots(b);
   const hit = (re: RegExp) => slots.map(s => s.match(re)?.[0]).filter(Boolean) as string[];
-  const banned = hit(BANNED), fee = hit(FEE), health = hit(HEALTH);
+  const banned = slots.filter(x => !b.documents_say.some(d => d.says === x && ENGAGEMENT.test(titles.get(d.doc) ?? ""))).map(x => x.match(BANNED)?.[0])
+    .concat(b.documents_say.filter(d => ENGAGEMENT.test(titles.get(d.doc) ?? "")).map(d => d.says.replace(/\badvis\w*/gi, "").match(BANNED)?.[0]))
+    .filter(Boolean) as string[];
+  const fee = hit(FEE), health = hit(HEALTH);
+  const factHealth = b.facts_needed.map(f => f.match(FACT_HEALTH)?.[0]).filter(Boolean) as string[];
   checks.push({ name: "lexical: advice words", pass: !banned.length, detail: banned.join(", ") || undefined });
   checks.push({ name: "lexical: fee words", pass: !fee.length, detail: fee.join(", ") || undefined });
   checks.push({ name: "lexical: health words", pass: !health.length, detail: health.join(", ") || undefined });
-  const badCites = b.documents_say.map(d => d.doc).filter(k => !docKeys.has(k));
+  checks.push({ name: "fact questions: no health or capacity", pass: !factHealth.length, detail: factHealth.join(", ") || undefined });
+  const badCites = [...b.documents_say.map(d => d.doc), ...b.check_this.filter(r => r.relation !== "no_document_addresses").map(r => r.doc)].filter(k => !docKeys.has(k));
   checks.push({ name: "citations exist in the file", pass: !badCites.length, detail: badCites.join(", ") || undefined });
   checks.push({ name: "at most five fact questions", pass: b.facts_needed.length <= 5 });
   if (b.urgent) checks.push({ name: "urgent: no substance", pass: !slots.length });

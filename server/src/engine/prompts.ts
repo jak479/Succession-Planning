@@ -2,7 +2,7 @@
 // each brief records the version that produced it.
 import { z } from "zod";
 
-export const PROMPT_VERSION = "frontdoor-2026-11-02.1";
+export const PROMPT_VERSION = "frontdoor-2026-11-02.2";
 export const ATTORNEY = process.env.ATTORNEY_NAME ?? "Josh";
 
 export interface ClientFile {
@@ -36,7 +36,9 @@ export const BriefSchema = z.object({
   documents_say: z.array(z.object({ doc: z.string(), section: z.string(), says: z.string() })),
   no_clause_for: z.array(z.string()),
   facts_needed: z.array(z.string()),
-  check_this: z.array(z.object({ outside_says: z.string(), your_documents_say: z.string(), difference: z.string() })),
+  // The difference is a fixed category; the server writes the sentence (render.ts), so no free-text verdict can reach the client.
+  check_this: z.array(z.object({ outside_says: z.string(), doc: z.string(), section: z.string(), your_documents_say: z.string(),
+    relation: z.enum(["same_terms", "different_terms", "document_not_cited_by_outside", "no_document_addresses"]) })),
   anchor_proximity: z.string(),
   agenda_line: z.string(),
   attorney_note: z.string(),
@@ -51,8 +53,9 @@ FIELDS THE CLIENT SEES: documents_say[].says, documents_say[].section, facts_nee
 - Restate what the document provides in plain language, attributed to the document ("The lease provides…", "Article 9.2(c) lists…"). Never apply it to the client's situation or say what follows from it.
 - Never use: should, recommend, advise, suggest, likely, probably, correct, incorrect, wrong, right, safe, fine, enforceable, better, best.
 - No fee, price, cost of legal work, or time estimate.
-- check_this compares the outside answer to the documents in neutral terms: "The outside answer says X; Article 9.2(c) provides Y." No verdict.
-- facts_needed: at most five concrete fact questions the attorney would ask. Ask for facts, not decisions or preferences.
+- documents_say: at most three entries, the most relevant first.
+- check_this: one row per statement in the outside answer. outside_says quotes or closely restates it; your_documents_say restates the governing provision (cite doc and section); relation is one category: same_terms, different_terms, document_not_cited_by_outside, or no_document_addresses. Do not write any other comparison text.
+- facts_needed: at most five concrete fact questions the attorney would ask. Ask for facts about the business, its documents and its dealings with others. Never ask about anyone's health, medical condition, diagnosis, treatment, memory, mental state or capacity; never ask about physicians, medical records, medical releases or HIPAA authorizations; never ask whether a question was prompted by a health event. Those are for the attorney alone, outside this workspace. Never ask for decisions, preferences or intentions about who should receive the business.
 
 FIELDS ONLY THE ATTORNEY SEES: topic, tier, urgent, suggested_scope, scope_reason (cite Schedule A or B language from the SCOPE document), no_clause_for, anchor_proximity (any anchor date within 120 days the question touches, else empty), agenda_line, attorney_note (2-4 candid sentences: what is at stake per the documents and which nodes this touches).
 
@@ -92,4 +95,4 @@ export const CLASSIFY_SYSTEM = `You audit a message a law firm's software is abo
 - prediction: forecasts an outcome (what a court, lender, landlord, or regulator will do; whether something will work out).
 - fee_or_time_estimate: states or estimates what legal work will cost or how long it will take.
 - medical_information: contains anyone's health information.
-A faithful restatement of a document's terms ("The lease requires notice 180 days before expiration") is none of these. Be strict: when unsure, mark true. Explain in one sentence.`;
+A faithful restatement of a document's terms ("The lease requires notice 180 days before expiration") is none of these. In particular, restating a document's own definition of incapacity or its physician-certification requirement is not medical_information; medical_information means facts about a real person's health. A comparison row in the fixed forms "The outside answer and the document state the same terms", "…state different terms", "The outside answer does not cite this provision", or "No document on file addresses this" is not evaluation_of_outside_answer. Asking the client about anyone's health, physicians or medical records IS medical_information. Be strict: when unsure, mark true. Explain in one sentence.`;

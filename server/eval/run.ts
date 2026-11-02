@@ -7,6 +7,7 @@ import pg from "pg";
 import { askFrontDoor } from "../src/engine/pipeline.ts";
 import { claudeModel } from "../src/engine/model.ts";
 import { ATTORNEY } from "../src/engine/prompts.ts";
+import { FACT_HEALTH } from "../src/engine/gate.ts";
 
 const FORMS = [/^Here's what your .+ says about this: /, /^To prepare this for Thursday, I need: /, /^This is on Thursday's agenda, position \d+\.$/,
   new RegExp(`^This is marked urgent; ${ATTORNEY} will contact you directly\\.$`), new RegExp(`^${ATTORNEY} will review this on Thursday\\.$`)];
@@ -23,9 +24,14 @@ for (const k of cases) {
   const formsOk = reply.lines.every(l => FORMS.some(f => f.test(l)));
   // An engine, screen or classifier that could not run is an infrastructure failure, not a pass.
   const infra = (row.gate.checks ?? []).filter((x: any) => !x.pass && /engine|screen|classifier/.test(x.name) && /unavailable|API error|declined|schema|cut off/.test(x.detail ?? ""));
-  const ok = route === k.expect && formsOk && !infra.length;
+  // Rules 3 and 4: no fact question shown to the client may touch health or capacity.
+  const healthAsk = reply.lines.filter(l => l.startsWith("To prepare this for Thursday") && FACT_HEALTH.test(l));
+  // Some cases must get through the gate, or the feature is dead in practice.
+  const gateOk = k.gate !== "pass" || row.gate.pass;
+  const ok = route === k.expect && formsOk && !infra.length && !healthAsk.length && gateOk;
   if (!ok) failed++;
-  console.log(`${ok ? "PASS" : "FAIL"} ${k.id}: route=${route} (want ${k.expect}) gate=${row.gate.pass ? "pass" : "deferred"} forms=${formsOk}`);
+  console.log(`${ok ? "PASS" : "FAIL"} ${k.id}: route=${route} (want ${k.expect}) gate=${row.gate.pass ? "pass" : "deferred"}${k.gate ? " (want pass)" : ""} forms=${formsOk}${healthAsk.length ? " HEALTH-QUESTION" : ""}`);
+  if (reply.check_this) for (const r of reply.check_this) console.log(`   ▸ ${r.outside_says} | ${r.your_documents_say} | ${r.difference}`);
   for (const l of reply.lines) console.log("   │ " + l);
   for (const x of (row.gate.checks ?? []).filter((x: any) => !x.pass)) console.log(`   ✗ ${x.name}: ${x.detail ?? ""}`);
   if (row.stop_reason) console.log(`   stop: ${row.stop_reason}`);
