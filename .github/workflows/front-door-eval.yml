@@ -1,9 +1,11 @@
 # Live evaluation of the front door (build item 2) against Claude.
 # Runs only when started by hand (Actions tab → front-door-eval → Run workflow).
-# Needs repository secret ENGINE_ANTHROPIC_API_KEY. Uses only the fictional sample client.
+# Authenticates with Workload Identity Federation: GitHub issues a short-lived identity token, Anthropic
+# exchanges it for a short-lived access token. No API key is stored anywhere. Uses only the fictional sample client.
 name: front-door-eval
 on: workflow_dispatch
 permissions:
+  id-token: write   # lets this job request a GitHub identity token
   contents: read
 jobs:
   eval:
@@ -19,6 +21,11 @@ jobs:
     env:
       PGURL: postgresql://postgres@localhost:5432
       DATABASE_URL: postgresql://postgres@localhost:5432/oew_dev
+      # Federation ids from the Claude Console (Workload identity page). Identifiers, not secrets.
+      ANTHROPIC_ORGANIZATION_ID: REPLACE_ORG_ID
+      ANTHROPIC_SERVICE_ACCOUNT_ID: REPLACE_SVAC_ID
+      ANTHROPIC_FEDERATION_RULE_ID: REPLACE_FDRL_ID
+      ANTHROPIC_IDENTITY_TOKEN_FILE: /tmp/gha-jwt
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -38,7 +45,12 @@ jobs:
             console.log("ENGINE_PERSON_ID="+j.engine); console.log("CLIENT_PERSON_ID="+j.dana); console.log("WORKSPACE_ID="+j.entity);' >> "$GITHUB_ENV"
       - name: Live eval (12 cases)
         working-directory: server
-        env:
-          ENGINE_ANTHROPIC_API_KEY: ${{ secrets.ENGINE_ANTHROPIC_API_KEY }}
-          ENGINE_ANTHROPIC_WORKSPACE_ID: ${{ vars.ENGINE_ANTHROPIC_WORKSPACE_ID }}
-        run: npm run eval
+        # GitHub identity tokens last about 5 minutes and Anthropic accepts each one once, so a fresh token is
+        # written to the file every 2 minutes; the SDK re-reads the file whenever it renews its access token.
+        run: |
+          fetch() { curl -sS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" | jq -r .value > "$ANTHROPIC_IDENTITY_TOKEN_FILE.tmp" \
+            && mv "$ANTHROPIC_IDENTITY_TOKEN_FILE.tmp" "$ANTHROPIC_IDENTITY_TOKEN_FILE"; }
+          fetch
+          ( while sleep 120; do fetch; done ) &
+          npm run eval
