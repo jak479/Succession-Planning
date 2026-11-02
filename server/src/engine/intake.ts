@@ -128,6 +128,14 @@ export async function clientTurn(d: IntakeDeps, s: Session, message: string): Pr
 }
 
 // ---------- File drop ----------
+/** A transcript counts as readable only with real text and fewer than 5% "[illegible]" words. */
+export function judgeTranscript(text: string): { readable: boolean; letters: number; illegibleShare: number; reason?: string } {
+  const words = text.split(/\s+/).filter(Boolean).length, illegible = (text.match(/\[illegible\]/g) ?? []).length;
+  const letters = (text.match(/\p{L}/gu) ?? []).length, illegibleShare = illegible / Math.max(words, 1);
+  if (letters < MIN_LETTERS) return { readable: false, letters, illegibleShare, reason: "too little text" };
+  if (illegibleShare >= 0.05) return { readable: false, letters, illegibleShare, reason: "transcription mostly illegible" };
+  return { readable: true, letters, illegibleShare };
+}
 /** The client uploads a document for an intake item. It enters unread; the engine reads it server-side and records
  *  "received" only when readable text came out (rule 6); otherwise "received, unread" for the attorney's queue. */
 export async function uploadDocument(d: IntakeDeps, s: Session, f: { item: string; filename: string; mime: string; bytes: Uint8Array }) {
@@ -150,9 +158,8 @@ export async function uploadDocument(d: IntakeDeps, s: Session, f: { item: strin
   if (!x.readable && d.model.transcribe && TRANSCRIBE_MEDIA.has(mime)) {
     const t = await d.model.transcribe({ bytes: f.bytes, mime });
     if (t.ok) {
-      const words = t.value.split(/\s+/).length, illegible = (t.value.match(/\[illegible\]/g) ?? []).length;
-      const letters = (t.value.match(/[A-Za-z]/g) ?? []).length;
-      x = letters >= MIN_LETTERS && illegible / Math.max(words, 1) < 0.05 ? { text: t.value, readable: true } : { text: "", readable: false, reason: "transcription mostly illegible" };
+      const j = judgeTranscript(t.value);
+      x = j.readable ? { text: t.value, readable: true } : { text: "", readable: false, reason: j.reason };
       transcribed = x.readable;
     } else x = { ...x, reason: `${x.reason}; transcription failed: ${t.reason}` };
   }

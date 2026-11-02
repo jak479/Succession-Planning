@@ -1,0 +1,5 @@
+[
+ { "file": "panama-birth-certificate-sample.webp", "mime": "image/webp", "expect": "received",
+   "source": "Sample image published by the U.S. Department of State (per the attorney, 2026-11-02): a Panamanian civil-registry birth certificate, names redacted by the publisher, shown twice with an authentication page. Spanish text, seals, signatures, redaction bars.",
+   "mustContain": ["REGISTRO CIVIL", "CERTIFICA"] }
+]
