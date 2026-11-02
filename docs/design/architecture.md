@@ -20,6 +20,7 @@ Decided 2026-11-02 (proposal; Josh to confirm hosting). Preserves the data model
   - Carve-out: Anthropic may retain flagged content up to 2 years, and data required by law. Disclose this in the engagement letter's AI consent clause (§ 6(c)).
   - No browser calls to the API (CORS unsupported under ZDR); all calls from the server, which the design already requires.
 - **Front-door quotes are limited to the question asked** (no neighbouring provisions, no pointing out gaps); enforced by the prompt; the classifier names any off-question quote and the server removes it (the rest of the answer stays). Entity-tier fact questions about plans (e.g., "does the Company plan to vacate?") are acceptable as is.
+- **Client surfaces label every assistant message as automated, not from a lawyer** (Fla. Ethics Op. 24-1 on chatbots identifying themselves; docs/sources/fl-bar-ethics-op-24-1.pdf). Required before any client uses the front door.
 - **Integrate with LEAP and WealthCounsel**: docs/design/integrations.md (design only; vendor terms not yet confirmed).
 
 ## Repo layout
