@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan Board</title>
+<style>
+:root{--bg:#f7f6f2;--card:#fff;--ink:#1d2321;--muted:#5d6763;--line:#d9d6cc;--accent:#2d5b8a;--good:#2f7d4f;--warn:#b7791f;--crit:#b23a3a}
+@media (prefers-color-scheme: dark){:root{--bg:#141716;--card:#1e2220;--ink:#e8ebe9;--muted:#9aa5a0;--line:#343a37;--accent:#7fb0e0;--good:#5cbf84;--warn:#e0a84a;--crit:#e57373}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:16px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px 20px;align-items:baseline}
+h1{font-size:18px;margin:0}.muted,.small{color:var(--muted)}.small{font-size:13px}
+main{padding:16px;max-width:1200px;margin:0 auto}
+.kanban{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:820px){.kanban{grid-template-columns:1fr}}
+.col{background:transparent;border:1px solid var(--line);border-radius:8px;padding:8px;min-height:80px}
+.col h2{font-size:14px;margin:4px 4px 8px;display:flex;justify-content:space-between}
+.kcard{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:6px;padding:10px;margin-bottom:8px}
+.kcard.Done{border-left-color:var(--good)}.kcard.Scoped,.kcard.In{border-left-color:var(--accent)}.kcard.pending{border-left-color:var(--warn)}
+.t{font-weight:600}.note{background:color-mix(in srgb,var(--warn) 12%,transparent);border-radius:4px;padding:6px;margin-top:6px;font-size:13px}
+label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
+input,textarea,select{width:100%;font:inherit;padding:6px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}
+textarea{min-height:60px}button{font:inherit;padding:6px 10px;border-radius:4px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;margin-top:8px}
+button.ghost{background:transparent;color:var(--accent)}.acts{display:flex;flex-wrap:wrap;gap:6px}
+.budget{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:16px 0}
+.budget div{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px}.budget b{display:block;font-size:20px}
+.err{color:var(--crit);min-height:1.4em;margin:8px 0}.check{display:flex;gap:8px;align-items:flex-start}.check input{width:auto;margin-top:4px}
+section.add{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:16px}
+</style>
+</head>
+<body>
+<header><h1 id="title">Plan board</h1><span id="who" class="muted"></span><span id="stage" class="muted"></span></header>
+<main>
+  <section class="add" id="add" hidden>
+    <strong>Add an item</strong>
+    <label for="co">Change-order catalog</label><select id="co"></select>
+    <label for="finding">Finding (attorney only)</label><textarea id="finding"></textarea>
+    <button id="addBtn" type="button">Add to Identified</button>
+  </section>
+  <div class="err" id="err" role="alert"></div>
+  <div class="kanban" id="kanban"></div>
+  <h2 style="font-size:16px;margin-top:24px">Budget</h2>
+  <div class="budget" id="budget"></div>
+  <p class="small">Allowances are planning estimates only. Nothing is payable on an allowance until it becomes an approved change order and the work is done.</p>
+</main>
+<script>
+const qs = new URLSearchParams(location.search), AS = qs.get("as"), WS = qs.get("ws");
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const money = n => n == null ? "—" : "$" + Number(n).toLocaleString("en-US");
+const COLS = ["Identified", "Scoped", "In progress", "Done"];
+let data = null;
+
+async function api(path, body){
+  const r = await fetch(path + (path.includes("?") ? "&" : "?") + "ws=" + encodeURIComponent(WS), {
+    method: body ? "POST" : "GET", headers: {"authorization": "Dev " + AS, "content-type": "application/json"}, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json(); if (!r.ok) throw new Error(j.error || "Something went wrong."); return j;
+}
+async function act(path, body){ $("err").textContent = ""; try { await api(path, body || {}); await load(); } catch (e) { $("err").textContent = e.message; } }
+
+function card(it){
+  const att = data.me.role === "attorney", pending = it.col === "Identified" && it.proposed_at;
+  let h = `<div class="t">${esc(it.title)}</div><div class="small">${esc((it.clears||[]).join(", "))}${it.schedule ? " · Schedule " + esc(it.schedule) : ""}</div>`;
+  if (att && (it.finding || it.attorney_note)) h += `<div class="note">${esc(it.finding)}${it.attorney_note ? "<br>" + esc(it.attorney_note) : ""}</div>`;
+  if (it.col === "Identified") {
+    h += `<div class="small">Allowance (estimate): ${money(it.allowance)}</div>`;
+    if (pending) h += `<div class="small" style="margin-top:6px"><strong>Change order proposed: ${money(it.proposed_price)}</strong><br>${esc(it.scope_text)}</div>`;
+    if (att) {
+      if (it.schedule === "A") h += `<div class="acts"><button data-a="included" data-id="${it.id}">Scope as included (Schedule A)</button></div>`;
+      else h += `<label for="p${it.id}">Change-order price</label><input id="p${it.id}" type="number" min="0" step="100" value="${it.proposed_price ?? ""}">
+        <label for="s${it.id}">Written scope the client signs</label><textarea id="s${it.id}">${esc(it.scope_text ?? "")}</textarea>
+        <div class="acts"><button data-a="propose" data-id="${it.id}">${pending ? "Revise proposal" : "Propose change order"}</button></div>`;
+    } else if (pending && data.me.signer) {
+      h += `<label for="n${it.id}">Type your full name to sign</label><input id="n${it.id}" autocomplete="name">
+        <label class="check"><input type="checkbox" id="c${it.id}"> I am authorized to sign for ${esc(data.me.client)} and approve this scope and price in writing.</label>
+        <div class="acts"><button data-a="approve" data-id="${it.id}">Approve change order</button></div>`;
+    } else if (pending) h += `<div class="small">Waiting for approval by the company's authorized signer.</div>`;
+    else h += `<div class="small">On Thursday's agenda.</div>`;
+  } else {
+    h += `<div class="small">${it.price === 0 ? "Included in your subscription" : "Approved: " + money(it.price)}${it.signed_by ? " · signed by " + esc(it.signed_by) + " " + new Date(it.signed_at).toLocaleDateString() : ""}</div>`;
+    if (att && it.col === "Scoped") h += `<div class="acts"><button data-a="move" data-col="In progress" data-id="${it.id}">Start</button><button class="ghost" data-a="move" data-col="Identified" data-id="${it.id}">Withdraw</button></div>`;
+    if (att && it.col === "In progress") h += `<div class="acts"><button data-a="move" data-col="Done" data-id="${it.id}">Done</button></div>`;
+  }
+  return `<div class="kcard ${it.col.split(" ")[0]}${pending ? " pending" : ""}">${h}</div>`;
+}
+
+function render(){
+  const m = data.me;
+  $("title").textContent = m.client + " · plan board"; document.title = "Plan Board";
+  $("who").textContent = m.name + (m.role === "attorney" ? " (attorney)" : m.signer ? " (authorized signer)" : "");
+  $("stage").textContent = "Stage " + data.stage.index + ": " + data.stage.name;
+  $("add").hidden = m.role !== "attorney";
+  if (m.role === "attorney") $("co").innerHTML = data.catalog.map(c => `<option value="${esc(c.id)}">${esc(c.name)} (Sched. ${c.schedule}; clears ${esc(c.clears.join(", "))})</option>`).join("");
+  $("kanban").innerHTML = COLS.map(col => { const cs = data.items.filter(i => i.col === col);
+    return `<div class="col"><h2>${col}<span class="muted">${cs.length}</span></h2>${cs.map(card).join("") || '<div class="small">—</div>'}</div>`; }).join("");
+  const b = data.budget || {};
+  $("budget").innerHTML = [["Onboarding (flat fee)", b.onboarding_fee], ["Approved change orders", b.approved], ["Completed", b.completed], ["Allowances (estimates)", b.allowances]]
+    .map(([k, v]) => `<div><span class="small">${k}</span><b>${money(v)}</b></div>`).join("");
+  $("kanban").querySelectorAll("button[data-a]").forEach(btn => btn.onclick = () => {
+    const id = btn.dataset.id, a = btn.dataset.a;
+    if (a === "propose") return act(`/api/board/${id}/propose`, {price: Number($("p"+id).value), scope: $("s"+id).value});
+    if (a === "included") return act(`/api/board/${id}/included`);
+    if (a === "move") return act(`/api/board/${id}/move`, {col: btn.dataset.col});
+    if (a === "approve") { if (!$("c"+id).checked) { $("err").textContent = "Check the box to confirm you are authorized to sign."; return; }
+      return act(`/api/board/${id}/approve`, {typed_name: $("n"+id).value}); }
+  });
+}
+async function load(){ try { data = await api("/api/board"); render(); } catch (e) { $("err").textContent = e.message; } }
+$("addBtn").onclick = () => act("/api/board", {co_id: $("co").value, finding: $("finding").value || null}).then(() => { $("finding").value = ""; });
+if (!AS || !WS) $("err").textContent = "Development sign-in: add ?as=<person-id>&ws=<workspace-id> to the address."; else load();
+</script>
+</body>
+</html>

@@ -1,0 +1,1321 @@
+<title>Front Door</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column intake form on top; two-pane result (client-visible / attorney brief) below; agenda rail at the end. */
+:root{
+  --bg:#f6f4ef; --fg:#1d1c1a; --muted:#6a655c; --line:#d9d4c9; --panel:#fffdf8;
+  --accent:#1f4e79; --accent-fg:#ffffff;
+  --client:#edf3ea; --client-line:#9fb89a;
+  --attorney:#f0ece2; --attorney-line:#c8bd9e;
+  --good:#2f7a3d; --warn:#b26a00; --crit:#a3262a;
+  --sans:"Libre Franklin",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#17181a; --fg:#ebe8e1; --muted:#9a958b; --line:#34363a; --panel:#1f2124;
+  --accent:#8fb8e0; --accent-fg:#101418;
+  --client:#1d2a1c; --client-line:#4f6a4c;
+  --attorney:#2a2620; --attorney-line:#6a5f45;
+  --good:#6cc27a; --warn:#e2a442; --crit:#e26a6e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#17181a; --fg:#ebe8e1; --muted:#9a958b; --line:#34363a; --panel:#1f2124;
+  --accent:#8fb8e0; --accent-fg:#101418;
+  --client:#1d2a1c; --client-line:#4f6a4c;
+  --attorney:#2a2620; --attorney-line:#6a5f45;
+  --good:#6cc27a; --warn:#e2a442; --crit:#e26a6e; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:960px;margin:0 auto;display:grid;gap:22px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px;border-bottom:1px solid var(--line);padding-bottom:12px}
+h1{font-size:22px;margin:0;font-weight:700;letter-spacing:-.01em}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 8px;font-weight:600}
+.sub{color:var(--muted);font-size:13px}
+.row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+label{font-size:13px;font-weight:500}
+select,textarea,input[type=text]{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:8px 10px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:84px}
+button{font:inherit;font-weight:600;border:1px solid var(--accent);background:var(--accent);color:var(--accent-fg);border-radius:4px;padding:9px 14px;cursor:pointer}
+button.ghost{background:transparent;color:var(--accent)}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:720px){.grid2{grid-template-columns:1fr}}
+.client{background:var(--client);border-color:var(--client-line)}
+.attorney{background:var(--attorney);border-color:var(--attorney-line)}
+.pill{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.pill.urgent{color:var(--crit);border-color:var(--crit)}
+.pill.quoted{color:var(--warn);border-color:var(--warn)}
+.pill.included{color:var(--good);border-color:var(--good)}
+.cite{font-family:var(--mono);font-size:12px;color:var(--muted)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;vertical-align:top;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.tablewrap{overflow-x:auto}
+ul{margin:4px 0 0;padding-left:18px}
+li{margin:2px 0}
+.status{font-size:13px;color:var(--muted);min-height:1.5em}
+.toggle{display:flex;gap:6px;border:1px solid var(--line);border-radius:4px;padding:2px}
+.toggle button{padding:5px 10px;font-size:13px;border-color:transparent;background:transparent;color:var(--fg)}
+.toggle button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.agenda li{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line);list-style:none}
+.agenda{padding:0}
+.n{font-family:var(--mono);font-size:12px;color:var(--muted)}
+details summary{cursor:pointer;font-size:13px;color:var(--muted)}
+.file dt{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:8px}
+.file dd{margin:0;font-size:13px}
+.small{font-size:12px;color:var(--muted)}
+.ex{font-size:12px;color:var(--accent);background:none;border:none;padding:0;text-decoration:underline;cursor:pointer;font-weight:500}
+@media (prefers-reduced-motion:no-preference){.card{transition:border-color .2s}}
+.stages{display:flex;gap:0;margin-top:12px;border:1px solid var(--line);border-radius:4px;overflow:hidden;flex-wrap:wrap}
+.stages button{flex:1 1 120px;border:0;border-right:1px solid var(--line);border-radius:0;background:var(--panel);color:var(--muted);font-weight:500;font-size:12px;padding:8px 6px;text-align:left;position:relative}
+.stages button:last-child{border-right:0}
+.stages button .k{display:block;font-family:var(--mono);font-size:10px;color:var(--muted)}
+.stages button[aria-selected="true"]{background:var(--accent);color:var(--accent-fg)}
+.stages button[aria-selected="true"] .k{color:var(--accent-fg);opacity:.8}
+.stages button.now::after{content:"you are here";position:absolute;right:6px;top:6px;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--good);font-weight:700}
+.stages button[aria-selected="true"].now::after{color:var(--accent-fg)}
+.stagedesc{font-size:13px;color:var(--muted);margin-top:8px;max-width:72ch}
+.drop{border:2px dashed var(--line);border-radius:6px;padding:14px;text-align:center;font-size:13px;color:var(--muted);background:var(--panel)}
+.drop.over{border-color:var(--accent);color:var(--fg)}
+.drop input{display:block;margin:8px auto 0;font-size:12px}
+.prof dt{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:10px;font-weight:600}
+.prof dd{margin:2px 0 0;font-size:13px;display:grid;grid-template-columns:minmax(120px,38%) 1fr;gap:4px 10px}
+.prof .k{color:var(--muted)}
+.prof .v .src{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:6px}
+.prof .v.unknown{color:var(--muted);font-style:italic}
+.conf{border-left:3px solid var(--warn);padding:6px 10px;margin-top:8px;font-size:13px;background:var(--panel)}
+.progress{height:6px;background:var(--line);border-radius:3px;margin-top:10px;overflow:hidden}
+.progress div{height:100%;background:var(--accent);width:0;transition:width .3s}
+.st{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:middle}
+.st.received{background:var(--good)}.st.requested{background:var(--warn)}.st.missing{background:transparent;border:2px solid var(--crit)}
+#intakeTable td:first-child{width:18px}
+#intakeTable button{padding:2px 8px;font-size:11px}
+.gate{margin-top:10px;padding:8px 12px;border-radius:4px;background:var(--attorney);border:1px solid var(--attorney-line);font-size:13px}
+#pathDiagram g.node{cursor:pointer}
+#pathDiagram g.node:hover rect:first-child{stroke-width:3.5}
+#pathDiagram g.node.sel rect:first-child{stroke:var(--accent);stroke-width:3.5}
+.nodepanel{margin-top:12px;border-top:1px solid var(--line);padding-top:12px;display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
+@media (max-width:720px){.nodepanel{grid-template-columns:1fr}}
+.nodepanel h3{font-size:16px;margin:0 0 4px;font-weight:700}
+.nodepanel h4{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:12px 0 4px;font-weight:600}
+.nodepanel p{margin:0;font-size:13.5px}
+.co{border:1px solid var(--line);border-radius:4px;padding:8px 10px;margin-top:8px;background:var(--panel)}
+.co .t{font-weight:600;font-size:13px}
+.co .acts{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.co .acts button{padding:4px 9px;font-size:12px}
+.co.active{border-color:var(--accent)}
+.preview{margin-top:10px;padding:8px 12px;border-radius:4px;background:var(--client);border:1px solid var(--client-line);font-size:13px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+.dep{display:inline-block;font-family:var(--mono);font-size:11px;padding:1px 6px;border:1px solid var(--line);border-radius:3px;margin:2px 2px 0 0;cursor:pointer}
+.dep.red{border-color:var(--crit);color:var(--crit)}.dep.amber{border-color:var(--warn);color:var(--warn)}.dep.green{border-color:var(--good);color:var(--good)}
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
+@media (max-width:720px){.kanban{grid-template-columns:1fr}}
+.col{border:1px solid var(--line);border-radius:4px;padding:8px;min-width:0;background:var(--bg)}
+.col h3{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;font-weight:600}
+.kcard{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:4px;padding:8px;margin-bottom:8px;font-size:13px}
+.kcard.red{border-left-color:var(--crit)}.kcard.amber{border-left-color:var(--warn)}.kcard.green{border-left-color:var(--good)}
+.kcard .t{font-weight:600}
+.kcard input{width:100%;margin-top:6px;font-size:13px;padding:5px 8px}
+.kcard .acts{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.kcard .acts button{padding:4px 9px;font-size:12px}
+.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:13px}
+.confirm{padding:4px 9px;font-size:12px}
+</style>
+
+<div class="wrap">
+<header>
+  <div><h1>Front Door</h1><div class="sub">Intake engine prototype · draft, not advice · every question lands on Thursday's call</div></div>
+  <div class="toggle" role="group" aria-label="Who is looking">
+    <button id="v-client" aria-pressed="true" type="button">Client sees</button>
+    <button id="v-att" aria-pressed="false" type="button">Attorney sees</button>
+  </div>
+</header>
+
+<section class="card">
+  <div class="row" style="justify-content:space-between">
+    <div class="row">
+      <label for="mode">Mode</label>
+      <select id="mode" style="width:auto">
+        <option value="client">Client · Gulfside Mechanical, LLC (sample file)</option>
+        <option value="prospect">Non-client · generic Florida library</option>
+      </select>
+    </div>
+    <details><summary>View the sample client file the engine reads</summary>
+      <dl class="file" id="filebox"></dl>
+    </details>
+  </div>
+</section>
+
+
+<section class="card" id="profileCard">
+  <div class="row" style="justify-content:space-between">
+    <div><h2 style="margin:0">Current state of affairs</h2><div class="small">The profile of the owner and the business, built from imported documents, connected sources and public records. Every value carries its source; conflicts are listed, not resolved.</div></div>
+    <div class="row"><button id="buildProfile" type="button">Build profile from imports</button><button class="ghost" id="buildStop" type="button" hidden>Stop</button></div>
+  </div>
+  <div class="status" id="buildStatus"></div>
+  <div class="grid2" style="margin-top:10px">
+    <div>
+      <h2>Import</h2>
+      <div class="drop" id="drop">
+        <label for="fileIn"><strong>Drop files here</strong> or choose: PDF, Word (.docx), text, CSV, JSON, HTML, email (.eml)</label>
+        <input id="fileIn" type="file" multiple accept=".pdf,.docx,.txt,.md,.csv,.json,.html,.htm,.eml,text/*,application/pdf,application/json">
+      </div>
+      <div id="driveBox" hidden style="margin-top:10px">
+        <label for="driveQ">Pull from Google Drive (your connector; the page never sees your credentials)</label>
+        <div class="row"><input id="driveQ" type="text" placeholder="e.g. operating agreement, lease, Gulfside" style="flex:1"><button id="driveGo" type="button">Search</button></div>
+        <div id="driveOut" class="small" style="margin-top:6px"></div>
+      </div>
+      <details style="margin-top:10px"><summary>Public records to pull (opens outside; paste results back here)</summary>
+        <ul class="small" id="pubList"></ul>
+      </details>
+      <h2 style="margin-top:12px">Imported sources <span class="n" id="srcCount"></span></h2>
+      <ul id="srcList" class="small" style="padding-left:16px"></ul>
+    </div>
+    <div>
+      <h2>Profile</h2>
+      <div id="profileOut"></div>
+    </div>
+  </div>
+</section>
+
+<section class="card" id="intakeCard">
+  <div class="row" style="justify-content:space-between">
+    <div><h2 style="margin:0">Intake</h2><div class="small">The path cannot be assigned until the documents and answers each node depends on are in. Items feed nodes; missing items leave their nodes unassessable.</div></div>
+    <div class="row"><span class="pill" id="intakePill"></span></div>
+  </div>
+  <div class="progress" aria-hidden="true"><div id="intakeBar"></div></div>
+  <div class="status" id="intakeStatus"></div>
+  <div class="grid2" style="margin-top:10px">
+    <div>
+      <h2>Received, requested, missing</h2>
+      <div class="tablewrap"><table id="intakeTable"><thead><tr><th></th><th>Item</th><th>Unlocks</th><th></th></tr></thead><tbody></tbody></table></div>
+    </div>
+    <div>
+      <h2>Intake assistant</h2>
+      <label for="docPaste">Paste a document, an email, or an answer from the client</label>
+      <textarea id="docPaste" placeholder="Example: the payroll provider is Gusto; Dana is the only admin. Or paste the bank's signatory card confirmation."></textarea>
+      <div class="row" style="margin-top:8px"><button class="ex" id="ex3" type="button">Load example answer</button></div>
+      <div class="row" style="margin-top:8px"><button id="extract" type="button">Read it against the intake list</button><button class="ghost" id="reqDraft" type="button">Draft the request for what's missing</button><span class="status" id="extractStatus"></span></div>
+      <div id="extractOut" style="margin-top:10px"></div>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="row" style="justify-content:space-between"><div><h2 style="margin:0">The path</h2><div class="small">What happens to the business if the owner is out, drawn at each stage of the engagement: from the statute's default to the exit the owner chose. The engagement is the work of moving from the left to the right.</div></div>
+  <div class="row">
+    <div class="toggle" role="group" aria-label="Overlay"><button id="ov-status" aria-pressed="true" type="button">Status</button><button id="ov-contract" aria-pressed="false" type="button">Contract coverage</button></div>
+  </div></div>
+  <div class="small" id="legend" style="margin-top:6px"></div>
+  <div class="stages" id="stages" role="tablist"></div>
+  <div class="stagedesc" id="stageDesc"></div>
+  <div class="tablewrap" style="margin-top:10px"><div id="pathDiagram" style="min-width:680px"></div></div>
+  <div id="previewBar" class="preview" hidden></div>
+  <div id="nodePanel" class="nodepanel" hidden></div>
+</section>
+
+<section class="card">
+  <h2>Ask</h2>
+  <div id="ctxChip" class="row" hidden style="margin-bottom:8px"><span class="pill" id="ctxLabel"></span><button class="ex" id="ctxClear" type="button">clear context</button></div>
+  <label for="q">Your question, or what you need to prepare for</label>
+  <textarea id="q" placeholder="Example: my landlord sent a lease renewal with a new personal guaranty."></textarea>
+  <div class="row" style="margin-top:8px"><button class="ex" id="ex1" type="button">Load example question</button></div>
+  <div style="margin-top:14px">
+    <label for="outside">Check this: paste what another AI tool told you (optional)</label>
+    <textarea id="outside" placeholder="Paste the answer you got from ChatGPT or another tool. The engine compares it to your own documents; it does not grade it."></textarea>
+    <div class="row" style="margin-top:8px"><button class="ex" id="ex2" type="button">Load example outside answer</button></div>
+  </div>
+  <div class="row" style="margin-top:14px">
+    <button id="go" type="button">Submit to the front door</button>
+    <button id="stop" class="ghost" type="button" hidden>Stop</button>
+    <span class="status" id="status"></span>
+  </div>
+</section>
+
+<section class="card">
+  <div class="row" style="justify-content:space-between">
+    <div><h2 style="margin:0">Plan scan</h2><div class="small">Reads the whole file against the node rules and coordination points; attorney reviews each finding before anything reaches the client.</div></div>
+    <div class="row"><button id="scan" type="button">Scan the plan</button><button id="scanStop" class="ghost" type="button" hidden>Stop</button></div>
+  </div>
+  <div class="status" id="scanStatus"></div>
+  <div class="tablewrap" id="scanWrap" hidden><table id="scanTable"><thead><tr><th>Node</th><th>Status</th><th>Finding (from the documents)</th><th>Cites</th><th>Satisfying document</th><th>Attorney</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<div class="grid2" id="result" hidden>
+  <section class="card client" id="clientPane">
+    <h2>What the client sees</h2>
+    <div id="clientOut"></div>
+  </section>
+  <section class="card attorney" id="attPane" hidden>
+    <h2>Brief for Thursday (attorney only)</h2>
+    <div id="attOut"></div>
+  </section>
+</div>
+
+<section class="card">
+  <div class="row" style="justify-content:space-between"><div><h2 style="margin:0">Open items</h2><div class="small">Each confirmed finding is a card. A card moves to Scoped only when the client approves the change order on the call; Done turns its node green.</div></div><button class="ghost" id="resetState" type="button">Reset prototype</button></div>
+  <div class="kanban" id="kanban"></div>
+</section>
+
+<section class="card">
+  <h2>Budget</h2>
+  <div class="tablewrap"><table id="budget"><tbody>
+    <tr><td>Base contract (onboarding, paid)</td><td class="num" id="bBase"></td></tr>
+    <tr><td>Approved change orders</td><td class="num" id="bApproved"></td></tr>
+    <tr><td>Completed and billable</td><td class="num" id="bDone"></td></tr>
+    <tr><td>Allowances (estimates, not payable)</td><td class="num" id="bAllow"></td></tr>
+    <tr><th>Projected total to date</th><th class="num" id="bTotal"></th></tr>
+  </tbody></table></div>
+  <div class="small" style="margin-top:6px">Subscription fee is billed monthly and is not part of the project budget. Allowances become payable only as approved, completed change orders.</div>
+</section>
+
+<section class="card">
+  <div class="row" style="justify-content:space-between"><h2 style="margin:0">Thursday's agenda</h2><span class="small" id="agendaMeta"></span></div>
+  <ul class="agenda" id="agenda"><li class="small" style="display:block;border:0">Nothing queued yet.</li></ul>
+</section>
+
+<section class="card">
+  <h2>Pattern log (back office)</h2>
+  <div class="tablewrap"><table id="log"><thead><tr><th>#</th><th>Topic</th><th>Lane</th><th>Suggested scope</th><th>Clause found</th><th>Near anchor</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<p class="small">Sample client, documents and figures are invented for this prototype. The engine's instructions enforce the front-door rules: it reports what the documents say, asks for facts, and schedules; it never advises, grades an outside answer, or quotes a fee. Scope classification is a suggestion for the attorney and is not shown to the client.</p>
+</div>
+
+<script>
+// ---------- Sample client file (invented) ----------
+const CLIENT_FILE = {
+  company: "Gulfside Mechanical, LLC (Florida, single-member, member-managed)",
+  owner: "Dana Ortiz, sole member",
+  today: "2026-11-01",
+  anchor_dates: [
+    {name: "SBA 7(a) loan anniversary / annual review date", date: "2027-02-15"},
+    {name: "Lease expiration (current term)", date: "2027-01-31"},
+    {name: "Key-person life policy renewal", date: "2027-03-01"},
+    {name: "Continuity statement expiry", date: "2027-02-15"},
+    {name: "Target exit date (client-set milestone)", date: "2031-06-30"}
+  ],
+  documents: [
+    {id: "OA-Art9", name: "Operating Agreement, Article 9 (Continuity), signed 2026-10-20", text:
+      "9.1(b) Unavailability Event means the first of: (1) Principal's death; (2) Incapacity, certified in writing by two licensed physicians; (3) Unavailability, meaning no contact with the bank, Interim Manager or counsel for 14 consecutive days, certified by the Interim Manager. " +
+      "9.1(c) Interim Manager: Luis Herrera (operations manager); alternate: Maria Ortiz (spouse). " +
+      "9.2(b) During the Continuity Period the Interim Manager may sign on all accounts, run payroll, hire and dismiss employees, collect receivables, pay creditors, perform, renew and terminate contracts and leases in the ordinary course, and deal with the landlord, lenders, insurers and licensing agencies. " +
+      "9.2(c) The Interim Manager may not, without a Branch Decision: sell or encumber substantially all assets; admit a member; merge, convert or dissolve; incur debt or personal guaranties outside the Cash Rule. " +
+      "9.3 Cash Rule: Schedule 1. 9.5 Branch Decision within 30 days by the Principal's attorney-in-fact; default branch: continue for 12 months, then sell. " +
+      "Schedule 1: reserve account at Seacoast Bank target $84,000 (90 days payroll and fixed costs); vendors up to $7,500 per vendor per month without consent; any single expenditure over $15,000, any new debt or capital purchase requires Family Liaison (Maria Ortiz) consent."},
+    {id: "LEASE", name: "Lease abstract, 4410 Industrial Blvd, Tampa (2022, 5-year term)", text:
+      "Term ends 2027-01-31. One 5-year renewal option, notice required 180 days before expiration (deadline 2026-08-04, passed). Rent $6,200/month, 3% annual escalation. Personal guaranty by Dana Ortiz for the full term, no cap, no release on assignment. Assignment requires landlord consent, not to be unreasonably withheld. Default: 10-day cure for monetary default."},
+    {id: "LOAN", name: "SBA 7(a) loan, Seacoast Bank (2024)", text:
+      "Original $420,000, balance about $362,000, 10-year term, matures 2034-02-15. Personal guaranty by Dana Ortiz. Covenant: borrower maintains key-person life insurance of $420,000 assigned to lender while the loan is outstanding; lender may require evidence annually. Change of ownership or management without lender consent is an event of default."},
+    {id: "INS", name: "Insurance schedule", text:
+      "Key-person term life $420,000 on Dana Ortiz, owner: Company, beneficiary: Company, collaterally assigned to Seacoast Bank; renews 2027-03-01. Disability buy-out: none. GL and workers comp: in force, renew 2027-05-01."},
+    {id: "DPOA", name: "Durable POA with business rider (ch. 709), signed 2026-10-20", text:
+      "Business Agent: Luis Herrera; alternate Maria Ortiz. Part B general authority over the Company interest, banks, lenders, landlord. Part C initialed: (2) beneficiary designations on policies funding continuity obligations. Not initialed: trust transfer, gifts, disclaimer."},
+    {id: "SCOPE", name: "Engagement letter, Schedules A and B", text:
+      "Schedule A (included in subscription): reviewing a contract, lease or proposal received and advising on the call; answering legal questions about operations, employees, customers, vendors, regulators; reviewing a demand or notice and advising; reviewing a lender or customer continuity questionnaire; annual minutes and Sunbiz filings; maintaining the plan. " +
+      "Schedule B (change order, quoted before work starts): drafting or negotiating a contract, lease, amendment or settlement; responding to a demand on the Company's behalf; any matter with a court, agency or opposing counsel; entity restructuring or sale; employment, retention, buy-sell and valuation work; drafting a branch beyond the default; family governance; coordination drafting."}
+  ],
+  node_status: "N0 green; N2 green; N3 green; N4 AMBER (bank acceptance letter for DPOA not yet received); N5 green ($86,100 on deposit); N6 green; N7 green; N8 AMBER (access list dated 2025-09); N9 green; N10 AMBER (lease renewal option lapsed; guaranty uncapped); N12 RED (no retention term for Luis Herrera); N14 green; N15a green; C2 green; C3 AMBER (bank); C5 AMBER."
+};
+
+const GENERIC_FILE = {
+  company: "Non-client (no file on record)",
+  owner: "Prospect",
+  today: "2026-11-01",
+  anchor_dates: [],
+  documents: [
+    {id: "FL-LIB", name: "Firm's generic Florida reference notes (prototype stub)", text:
+      "Florida LLCs: an individual member is dissociated on death (§ 605.0602(7)(a)); incapacity dissociates only on guardianship or court order, and only in a member-managed company (§ 605.0602(7)(b)); a deceased member's representative has only transferee rights (§ 605.0504); the operating agreement may supply an interim manager (§ 605.0105). Powers of attorney executed after Oct. 1, 2011 take effect on signing and cannot spring (§ 709.2108); gifts, trust changes and beneficiary changes require the principal's initials beside each (§ 709.2202). The prospect's own documents are not on file; whether any clause governs cannot be determined without them."}
+  ],
+  node_status: "No file."
+};
+
+// ---------- Examples ----------
+const EX_Q = "My landlord emailed a lease renewal for 4410 Industrial. Rent goes to $7,100 and they want a new personal guaranty from me and from Luis. I want to sign it this week. Does my plan cover this and what do I need to do?";
+const EX_OUT = "From ChatGPT: In Florida, a personal guaranty on a commercial lease is enforceable but you can usually negotiate a cap or a 'good guy' clause. Since your LLC has an operating agreement with an interim manager, the manager can sign the renewal for you if you're unavailable, and the guaranty would transfer to the company. You should be fine signing it, just make sure the renewal option in the old lease is exercised in writing.";
+
+// ---------- Prompt ----------
+function buildPrompt(file, question, outside, mode, ctx){
+  const docs = file.documents.map(d => `[${d.id}] ${d.name}\n${d.text}`).join("\n\n");
+  const anchors = file.anchor_dates.map(a => `${a.name}: ${a.date}`).join("; ") || "none";
+  const ctxText = ctx && NODE_INFO[ctx] ? `\nCONTEXT NODE. The client asked this while looking at path node ${ctx} (${NODE_INFO[ctx].name}). Node logic: ${NODE_INFO[ctx].logic} Satisfied by: ${NODE_INFO[ctx].satisfied}. Current status: ${state.nodes[ctx] || "not yet built"}. Read the question in that context; set "context_node" to "${ctx}" in your reply; and in documents_say prefer the clause that satisfies this node.\n` : "";
+  return `You are the FRONT DOOR of a Florida law firm's client workspace. You are an intake engine, not a lawyer. Today is ${file.today}. The weekly attorney call is Thursday.
+
+GOVERNING RULE (draft-not-advice). You may do only three things: (1) report what the client's own documents say, quoting the document id and section; (2) list the facts the attorney needs; (3) schedule the matter on Thursday's call. You NEVER: advise, recommend, predict an outcome, say what the client should do, evaluate or grade an outside answer as right or wrong, or state or estimate a fee. If an outside answer is provided, you compare it to the documents in a neutral table with NO verdict column. If the question suggests a court deadline, a regulator, a safety issue, or the owner's own incapacity or health, set urgent=true and say a human will respond; do not address the substance. Never use the words "should", "recommend", "advise", "correct", "incorrect", "wrong", "right" about the client's choices or the outside answer.
+
+MODE: ${mode === "prospect" ? "NON-CLIENT. No documents are on file. Read only the firm's generic notes. Every 'what your documents say' item must state that the prospect's own documents are needed. Offer one call." : "CLIENT. Read the client file below."}
+
+CLIENT FILE
+Company: ${file.company}
+Owner: ${file.owner}
+Anchor dates: ${anchors}
+Node status: ${file.node_status}
+
+DOCUMENTS
+${docs}
+
+${ctxText}
+CLIENT'S QUESTION
+${question}
+
+${outside ? "OUTSIDE AI ANSWER THE CLIENT PASTED (check-this lane)\n" + outside : "(No outside answer pasted.)"}
+
+Reply with ONLY a JSON object of this exact shape:
+{
+ "topic": "2-5 word topic label",
+ "context_node": "the context node id if one was given, else empty string",
+ "tier": "entity" | "personal",
+ "urgent": true | false,
+ "suggested_scope": "included" | "quoted" | "mixed",
+ "scope_reason": "one sentence citing Schedule A or B language (attorney only)",
+ "documents_say": [ {"doc": "doc id", "section": "section", "says": "plain-language restatement of what the clause provides, 1-2 sentences"} ],
+ "no_clause_for": [ "any part of the question no document governs" ],
+ "facts_needed": [ "up to 5 fact questions the attorney would ask, concrete" ],
+ "check_this": [ {"outside_says": "...", "your_documents_say": "... with doc id", "difference": "neutral statement of where they differ or agree, no judgment"} ],
+ "anchor_proximity": "name any anchor date within 120 days that this touches, else empty string",
+ "agenda_position": 1 | 2 | 3,
+ "agenda_line": "one line for the agenda",
+ "client_message": "the exact message the client sees. Allowed sentence forms only: 'Here is what your [document] says about this: ...' / 'To prepare this for Thursday, I need: ...' / 'This is on Thursday's agenda, position N.' / 'This is marked urgent; Josh will contact you directly.' / for check-this: 'Josh will review the comparison on Thursday.' No advice. If urgent, the message contains only the urgent sentence.",
+ "attorney_note": "2-4 sentences for the attorney only: what is at stake per the documents, which node statuses this touches, and anything the attorney will want to raise. May be candid; the client never sees this."
+}
+Use empty arrays where nothing applies. Keep documents_say to what actually governs; if nothing does, say so in no_clause_for.`;
+}
+
+// ---------- Scan prompt ----------
+const NODE_RULES = `NODES (red rule in brackets):
+N0 Trigger defined [clause unsigned or incapacity standard undefined]
+N1 Notice tree [contact unreachable; tree older than 12 months]
+N2 Authority activates [manager left/declined; unsigned; consent not on file]
+N3 Successor manager [no alternate]
+N4 Bank access [manager not on signatory card; bank has not accepted POA; new account since review]
+N5 Cash reserve [balance below 90-day figure; rule unsigned]
+N6 Payroll runs [owner sole admin; provider changed]
+N7 Insurance in force [policy lapsed; beneficiary is owner personally where entity should be]
+N8 Credentials [list older than 12 months; MFA device is owner's phone only]
+N9 Customer notice / continuity statement [list older than 12 months; statement expired]
+N10 Vendor, lease, guaranty list [lease renewed or new guaranty since last review]
+N11 License/regulatory [renewal passed without review; designee changed]
+N12 Key staff [key employee changed; no retention term for a person the plan names]
+N14 Day-30 checkpoint [decision-maker unnamed or is only the incapacitated owner]
+N15a/b/c Default branch drafted [default branch named but instruction, valuation/buyer list, or wind-down sequence missing]
+COORDINATION (red when the two documents disagree):
+C1 Who receives the interest (will/trust vs OA transfer restrictions)
+C2 Who runs it day one (POA agent vs Interim Manager; conflicting duties)
+C3 Authority instruments (OA grant vs DPOA; bank accepted one not the other)
+C4 Buy-sell funding (policy owner/beneficiary vs entity's right to proceeds)
+C5 Guaranties (estate exposure vs company schedule; new guaranty since review)
+C6 Exit proceeds (sale form/timing vs personal plan)
+C7 Lifetime transfer (executed on one side only)
+C8 Family liaison (unnamed; liaison is a disputing heir)
+ANCHOR RULE: flag any anchor date within 120 days of today and what must be done before it per the documents.`;
+
+function buildScanPrompt(file){
+  const docs = file.documents.map(d => `[${d.id}] ${d.name}\n${d.text}`).join("\n\n");
+  const anchors = file.anchor_dates.map(a => `${a.name}: ${a.date}`).join("; ") || "none";
+  return `You are the PLAN SCANNER of a Florida law firm's client workspace. You read a client's documents and node statuses and report FINDINGS: places where the documents, taken together with the node rules below, show a gap, an inconsistency, an expired or approaching item, or a rule that has tripped. Today is ${file.today}.
+
+RULES. A finding is an observation about the documents, never advice. You state what the documents provide, which rule it meets or fails, and which document would satisfy the node (from the node list). You do not recommend, predict, or say what the client should do, and you do not quote fees. Only the attorney sees these findings. Do not invent facts not in the file; if a node cannot be assessed from the file, say "not assessable from file" rather than guessing. Prefer fewer, well-founded findings over many weak ones.
+
+${NODE_RULES}
+
+CLIENT FILE
+Company: ${file.company}
+Owner: ${file.owner}
+Anchor dates: ${anchors}
+Recorded node status: ${file.node_status}
+
+DOCUMENTS
+${docs}
+
+Reply with ONLY a JSON array, ordered most serious first, of objects:
+{"node": "N10" | "C5" | "ANCHOR" | ..., "status": "red" | "amber" | "green" | "not assessable", "finding": "1-2 sentences stating what the documents show and which rule applies", "cites": ["DOC-ID section", ...], "satisfying_document": "the document or action that would clear the node, from the node list (not advice to take it)", "attorney_note": "one sentence for the attorney: what this connects to"}
+Include a finding for every node whose recorded status is amber or red, every anchor within 120 days, and any inconsistency you find between documents that the recorded status does not already reflect. Up to 12 findings.`;
+}
+
+// ---------- State ----------
+let sample = null, ctl = null, view = "client";
+const agenda = [], log = [];
+const $ = id => document.getElementById(id);
+
+// ---------- Render helpers ----------
+function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function li(items){ return items && items.length ? "<ul>" + items.map(i => `<li>${esc(i)}</li>`).join("") + "</ul>" : "<div class='small'>None.</div>"; }
+
+function renderFile(file){
+  $("filebox").innerHTML = `<dt>Company</dt><dd>${esc(file.company)}</dd><dt>Anchor dates</dt><dd>${esc(file.anchor_dates.map(a=>a.name+" "+a.date).join(" · ") || "none")}</dd><dt>Node status</dt><dd>${esc(file.node_status)}</dd>` +
+    file.documents.map(d => `<dt>${esc(d.id)} · ${esc(d.name)}</dt><dd>${esc(d.text)}</dd>`).join("");
+}
+
+function renderResult(r, lane){
+  $("result").hidden = false;
+  // Client pane
+  const checkTable = r.check_this && r.check_this.length ? `<div class="tablewrap" style="margin-top:10px"><table><thead><tr><th>Outside answer says</th><th>Your documents say</th><th>Difference</th></tr></thead><tbody>` +
+    r.check_this.map(c => `<tr><td>${esc(c.outside_says)}</td><td>${esc(c.your_documents_say)}</td><td>${esc(c.difference)}</td></tr>`).join("") + `</tbody></table></div>` : "";
+  $("clientOut").innerHTML = (r.urgent ? `<span class="pill urgent">Urgent</span> ` : "") +
+    `<p style="margin:8px 0 0">${esc(r.client_message)}</p>` +
+    (r.urgent ? "" : `<div style="margin-top:10px"><h2>What your documents say</h2>` +
+      (r.documents_say && r.documents_say.length ? r.documents_say.map(d => `<p style="margin:4px 0"><span class="cite">${esc(d.doc)} ${esc(d.section)}</span><br>${esc(d.says)}</p>`).join("") : "") +
+      (r.no_clause_for && r.no_clause_for.length ? `<p class="small">No document on file covers: ${esc(r.no_clause_for.join("; "))}.</p>` : "") +
+      `<h2 style="margin-top:12px">To prepare this for Thursday, I need</h2>${li(r.facts_needed)}` + checkTable + `</div>`);
+  // Attorney pane
+  const scopeClass = r.suggested_scope === "quoted" ? "quoted" : r.suggested_scope === "included" ? "included" : "";
+  $("attOut").innerHTML = `<div class="row">${r.context_node ? `<span class="pill" style="color:var(--accent);border-color:var(--accent)">${esc(r.context_node)}</span>` : ""}<span class="pill">${esc(r.topic)}</span><span class="pill">${esc(r.tier)} tier</span><span class="pill ${scopeClass}">${esc(r.suggested_scope)} (suggested)</span>${r.urgent ? '<span class="pill urgent">urgent</span>' : ""}</div>` +
+    `<p class="small" style="margin:8px 0 0">${esc(r.scope_reason)}</p>` +
+    `<p style="margin:10px 0 0">${esc(r.attorney_note)}</p>` +
+    (r.anchor_proximity ? `<p class="small">Anchor within 120 days: ${esc(r.anchor_proximity)}</p>` : "") +
+    `<p class="small">Agenda position ${esc(r.agenda_position)}: ${esc(r.agenda_line)}</p>`;
+  // Agenda
+  if (r.context_node) r.agenda_line = "[" + r.context_node + "] " + r.agenda_line;
+  agenda.push(r); renderAgenda();
+  // Log
+  log.push({topic: r.topic, lane, scope: r.suggested_scope, clause: r.documents_say && r.documents_say.length ? "yes" : "no", anchor: r.anchor_proximity || "—"});
+  $("log").querySelector("tbody").innerHTML = log.map((l,i) => `<tr><td>${i+1}</td><td>${esc(l.topic)}</td><td>${esc(l.lane)}</td><td>${esc(l.scope)}</td><td>${esc(l.clause)}</td><td>${esc(l.anchor)}</td></tr>`).join("");
+}
+
+// ---------- Canned result (so the page is complete at rest and works without Claude) ----------
+const CANNED = {
+  topic: "Lease renewal and guaranty", tier: "entity", urgent: false, suggested_scope: "mixed",
+  scope_reason: "Reviewing the renewal and advising on the call is Schedule A; negotiating or drafting the renewal or guaranty terms is Schedule B.",
+  documents_say: [
+    {doc: "LEASE", section: "Renewal option", says: "The current lease has one five-year renewal option that required notice 180 days before expiration; that deadline was August 4, 2026. The term ends January 31, 2027."},
+    {doc: "LEASE", section: "Guaranty", says: "Dana Ortiz's existing guaranty covers the full term with no cap and no release on assignment."},
+    {doc: "OA-Art9", section: "9.2(c)", says: "The Interim Manager may not incur personal guaranties outside the Cash Rule without a Branch Decision."},
+    {doc: "LOAN", section: "Covenant", says: "A change of management without lender consent is an event of default under the SBA loan."}
+  ],
+  no_clause_for: ["whether Luis Herrera may be asked to give a personal guaranty (no document addresses a guaranty by the Interim Manager personally)"],
+  facts_needed: ["A copy of the landlord's renewal email and the proposed renewal document.", "Whether the landlord treats this as a new lease or as the lapsed option being exercised late.", "The proposed guaranty terms: cap, duration, release on assignment or sale.", "Whether Luis has been told the guaranty would be his personally.", "Any deadline the landlord has set for signing."],
+  check_this: [
+    {outside_says: "The interim manager can sign the renewal if you are unavailable and the guaranty would transfer to the company.", your_documents_say: "OA-Art9 9.2(b) lets the Interim Manager renew leases in the ordinary course; 9.2(c) bars new personal guaranties without a Branch Decision. The LEASE guaranty is personal to Dana Ortiz and has no release on assignment.", difference: "The outside answer treats the guaranty as transferable to the company; the lease abstract shows a personal guaranty with no release, and the operating agreement separates lease renewal authority from guaranty authority."},
+    {outside_says: "Make sure the renewal option in the old lease is exercised in writing.", your_documents_say: "LEASE: option notice was due August 4, 2026.", difference: "The outside answer assumes the option is still open; the lease abstract shows the notice date has passed."}
+  ],
+  anchor_proximity: "Lease expiration 2027-01-31 (91 days)",
+  agenda_position: 1,
+  agenda_line: "Lease renewal at 4410 Industrial: lapsed option, new guaranties for Dana and Luis, signing this week",
+  client_message: "Here is what your lease and operating agreement say about this, below. To prepare this for Thursday, I need the items listed. This is on Thursday's agenda, position 1. Josh will review the comparison on Thursday.",
+  attorney_note: "Client intends to sign within the week; the lease anchor is 91 days out and the option lapsed, so the landlord holds leverage on terms. N10 is already amber (uncapped guaranty) and a second guaranty from Luis would put C5 red and make him a guarantor-manager. The SBA covenant on management change is worth raising if the landlord's paper names Luis in any capacity. Scope: review is included; negotiating the guaranty cap is a change order."
+};
+
+// ---------- Wiring ----------
+function currentFile(){ return $("mode").value === "prospect" ? GENERIC_FILE : CLIENT_FILE; }
+$("mode").addEventListener("change", () => { renderFile(currentFile()); renderPath(); });
+$("ex1").onclick = () => { $("q").value = EX_Q; };
+$("ctxClear").onclick = () => { ctxNode = null; $("ctxChip").hidden = true; };
+$("ex2").onclick = () => { $("outside").value = EX_OUT; };
+
+function setView(v){
+  view = v;
+  $("v-client").setAttribute("aria-pressed", v === "client");
+  $("v-att").setAttribute("aria-pressed", v === "att");
+  $("attPane").hidden = v !== "att";
+}
+function setOverlay(o){ overlay = o; $("ov-status").setAttribute("aria-pressed", o === "status"); $("ov-contract").setAttribute("aria-pressed", o === "contract"); renderPath(); }
+$("ov-status").onclick = () => setOverlay("status");
+$("ov-contract").onclick = () => setOverlay("contract");
+$("v-client").onclick = () => setView("client");
+$("v-att").onclick = () => setView("att");
+
+const COPY = {
+  not_granted: "Claude is not allowed for this page in your view. The example brief below shows the output shape.",
+  rate_limited: "Too many requests right now. Wait a minute and try again.",
+  refused: "Claude declined this input. Reword and try again.",
+  invalid_json: "The engine returned something unreadable. Try again.",
+  cancelled: "",
+};
+
+$("stop").onclick = () => ctl?.abort();
+$("go").onclick = async () => {
+  const q = $("q").value.trim(); const outside = $("outside").value.trim();
+  if (!q) { $("status").textContent = "Type a question first."; return; }
+  const lane = outside ? "check-this" : "question";
+  if (!sample) {
+    $("status").textContent = "Claude isn't available in this view; showing the pre-run example brief.";
+    renderResult(Object.assign({}, CANNED, ctxNode ? {context_node: ctxNode} : {}), lane); return;
+  }
+  ctl = new AbortController();
+  $("go").disabled = true; $("stop").hidden = false; $("status").textContent = "Thinking… (first use asks you to allow this page to use Claude)";
+  try {
+    const r = await sample.json(buildPrompt(currentFile(), q, outside, $("mode").value, ctxNode), {signal: ctl.signal, modelTier: "default", cache: false});
+    if (!r || typeof r !== "object" || !r.client_message) throw {code: "invalid_json", message: "shape"};
+    if (ctxNode) r.context_node = ctxNode;
+    renderResult(r, lane); $("status").textContent = "";
+  } catch (e) {
+    const code = e && e.code ? e.code : "upstream_error";
+    $("status").textContent = COPY[code] ?? "The engine hit a problem. Try again in a moment.";
+    if (code === "not_granted" || code === "sampling_disabled") { sample = null; renderResult(CANNED, lane); }
+  } finally { $("go").disabled = false; $("stop").hidden = true; ctl = null; }
+};
+
+// ---------- State file (prototype: in-page, mirrored to this browser only) ----------
+const BASE_CONTRACT = 3500;
+const state = { nodes: {}, items: [], nextId: 1 };
+function loadState(){
+  try { const s = JSON.parse(localStorage.getItem("frontdoor-state") || "null"); if (s && s.nodes) Object.assign(state, s); } catch {}
+}
+function saveState(){ try { localStorage.setItem("frontdoor-state", JSON.stringify(state)); } catch {} }
+function resetState(){ state.nodes = nodeStatuses(CLIENT_FILE.node_status); state.items = []; state.nextId = 1; state.intake = Object.assign({}, INTAKE_SEED); saveState(); redraw(); }
+function setNode(id, status){ if (!id || !/^[NC]\d/.test(id)) return; state.nodes[id] = status; saveState(); }
+function redraw(){ renderProfile(); renderIntake(); renderPath(); renderKanban(); renderBudget(); }
+
+// ---------- The path: one diagram per stage of the engagement ----------
+// Each stage: nodes {id:{l,x,y,fixed?}}, edges [[a,b]], crit Set("a>b"), reached(state)->bool.
+// Node fill: fixed status if given; else state.nodes[id]; else "planned" (not yet built).
+const STAGES = [
+  // Every stage has two lanes: rows 0..laneSplit-1 are the BUSINESS, rows >= laneSplit are the OWNER's estate plan.
+  // Rungs (dashed) are the coordination points where the business interest sits inside the estate plan.
+  { key: "S0", name: "Statutory default", desc: "No plan on either track. Chapters 605, 709, 732 and 744 run on their own. The business has no operator; the owner's interest passes by intestacy through probate; the guaranties land on the estate. Every box is a gap.",
+    laneSplit: 3,
+    nodes: {
+      D0:{l:"Owner out",x:0,y:1,fixed:"red"},
+      D1:{l:"Death: member dissociated",x:1,y:0,fixed:"red",sub:"§ 605.0602(7)(a)"},
+      D2:{l:"Incapacity: cannot act",x:1,y:2,fixed:"red",sub:"§ 605.0602(7)(b)"},
+      D5:{l:"No signer, no payroll",x:2,y:1,fixed:"red"},
+      D6:{l:"Bank freezes; staff go",x:3,y:1,fixed:"red"},
+      D7:{l:"Liquidation value only",x:4,y:1,fixed:"red"},
+      O1:{l:"No DPOA: guardianship petition",x:1,y:4,fixed:"red",sub:"ch. 744; months"},
+      O2:{l:"No will: intestacy",x:2,y:3,fixed:"red",sub:"ch. 732 pt. I"},
+      O3:{l:"Transferee rights only",x:2,y:5,fixed:"red",sub:"§ 605.0504"},
+      O4:{l:"Probate: interest tied up",x:3,y:4,fixed:"red",sub:"ch. 733"},
+      O5:{l:"Guaranties vs. estate",x:4,y:4,fixed:"red"},
+      O6:{l:"Family receives what is left",x:5,y:2,fixed:"red"}
+    },
+    edges: [["D0","D1"],["D0","D2"],["D1","D5"],["D2","D5"],["D5","D6"],["D6","D7"],["D0","O1"],["D0","O2"],["O1","O3"],["O2","O4"],["O3","O4"],["O4","O5"],["D7","O6"],["O5","O6"]],
+    crit: new Set(["D0>D1","D1>D5","D5>D6","D6>D7","D7>O6"]),
+    rungs: new Set(["D1>O3","D2>O1","O1>D5"]),
+    reached: () => true },
+
+  { key: "S1", name: "Emergency egress", desc: "Phase 1 delivered on both tracks. Business: trigger, interim manager, bank, cash, payroll. Owner: a durable POA with the business rider naming the same person, a will or trust that mentions the interest, a health surrogate. The two rungs that matter on day one are C2 and C3.",
+    laneSplit: 5,
+    nodes: {
+      N0:{l:"Trigger",x:0,y:2}, N2:{l:"Authority (OA Art. 9)",x:1,y:2}, N5:{l:"Cash reserve",x:1,y:0}, N7:{l:"Insurance",x:1,y:4},
+      N3:{l:"Alternate mgr",x:2,y:3}, N4:{l:"Bank access",x:2,y:2}, N8:{l:"Credentials",x:2,y:1}, N1:{l:"Notice tree",x:2,y:0},
+      N10:{l:"Lease/guaranty",x:2,y:4}, N12:{l:"Key staff",x:3,y:4}, N6:{l:"Payroll",x:3,y:2}, N9:{l:"Customers",x:3,y:1}, N11:{l:"Licenses",x:3,y:0},
+      N14:{l:"Day-30 decision",x:4,y:2}, N15a:{l:"Continue",x:5,y:1}, N15b:{l:"Sell",x:5,y:2}, N15c:{l:"Wind down",x:5,y:3},
+      P1:{l:"DPOA + business rider",x:1,y:6,alias:"C2",sub:"ch. 709"}, P2:{l:"Bank accepts DPOA",x:2,y:6,alias:"C3"}, P3:{l:"Health surrogate / living will",x:0,y:6,alias:"C8",sub:"ch. 765"}, P4:{l:"Will or trust names the interest",x:4,y:6,alias:"C1"}, P5:{l:"Family liaison named",x:5,y:6,alias:"C8"}
+    },
+    edges: [["N0","N2"],["N0","N1"],["N2","N3"],["N2","N4"],["N2","N8"],["N2","N10"],["N2","N12"],["N2","N11"],["N4","N6"],["N5","N6"],["N8","N6"],["N8","N9"],["N2","N9"],["N2","N14"],["N4","N14"],["N6","N14"],["N14","N15a"],["N14","N15b"],["N14","N15c"],["N9","N15b"],["N12","N15b"],["N5","N15c"],["N10","N15c"],["N7","N15b"],
+            ["P3","P1"],["P1","P2"],["P2","P4"],["P4","P5"],["P1","N2"],["P2","N4"],["P5","N14"]],
+    crit: new Set(["N0>N2","N2>N4","N4>N6","N6>N14","N14>N15c","P1>N2","P2>N4"]),
+    rungs: new Set(["P1>N2","P2>N4","P5>N14"]),
+    reached: s => ["N0","N2","N4","N5","N6"].every(k => ["green","amber"].includes(s.nodes[k])) },
+
+  { key: "S2", name: "Coordinated", desc: "The owner's estate plan and the company's plan agree at every rung. The business interest now has a defined place in the estate plan: who takes it, through what vehicle, funded how, with the guaranties scheduled on both sides.",
+    laneSplit: 2,
+    nodes: {
+      N0:{l:"Trigger",x:0,y:0}, N2:{l:"Authority (OA)",x:1,y:0}, N4:{l:"Bank access",x:2,y:0}, N7:{l:"Insurance, entity-owned",x:3,y:0}, N14:{l:"Day-30 decision",x:4,y:0}, N15:{l:"Default branch",x:5,y:0},
+      G:{l:"Guaranty schedule",x:0,y:3,alias:"C5"}, P1:{l:"DPOA agent = manager",x:1,y:3,alias:"C2"}, P2:{l:"Bank accepts both",x:2,y:3,alias:"C3"}, P3:{l:"Policy matches buy-sell",x:3,y:3,alias:"C4"}, P5:{l:"Liaison directs manager",x:4,y:3,alias:"C8"}, P4:{l:"Trust/will takes interest; OA admits",x:5,y:3,alias:"C1"},
+      P6:{l:"Medicaid / asset-protection plan",x:3,y:5,alias:"C6",sub:"personal tier"}, P7:{l:"Lifetime transfer plan",x:5,y:5,alias:"C7",sub:"gift/estate tax; equalization"}
+    },
+    edges: [["N0","N2"],["N2","N4"],["N4","N7"],["N7","N14"],["N14","N15"],["G","P1"],["P1","P2"],["P2","P3"],["P3","P5"],["P5","P4"],["P6","P3"],["P7","P4"],
+            ["G","N2"],["P1","N2"],["P2","N4"],["P3","N7"],["P5","N14"],["P4","N15"]],
+    crit: new Set(["N0>N2","N2>N4","N4>N7","N7>N14","N14>N15","P1>N2","P2>N4"]),
+    rungs: new Set(["G>N2","P1>N2","P2>N4","P3>N7","P5>N14","P4>N15","P6>P3","P7>P4"]),
+    reached: s => ["C1","C2","C3","C8"].every(k => ["green","amber"].includes(s.nodes[k])) },
+
+  { key: "S3", name: "Branches drafted", desc: "Each branch is drafted on the business side and received on the estate side: a continuing business is held in trust; sale proceeds land in a plan that keeps step-up and benefits; a wind-down pays creditors and releases guaranties before the estate closes.",
+    laneSplit: 3,
+    nodes: {
+      N14:{l:"Day-30 decision",x:0,y:1},
+      N15a:{l:"Continue",x:1,y:0}, A1:{l:"12-month operating plan",x:2,y:0}, A2:{l:"Retention terms",x:3,y:0,alias:"N12"},
+      N15b:{l:"Sell",x:1,y:1}, B1:{l:"Valuation reference",x:2,y:1}, B2:{l:"Buyer list",x:3,y:1}, B3:{l:"Sale authority + LOI form",x:4,y:1},
+      N15c:{l:"Wind down",x:1,y:2}, W1:{l:"Sequence",x:2,y:2}, W2:{l:"Funding",x:3,y:2,alias:"N5"}, W3:{l:"Guaranty exit",x:4,y:2,alias:"N10"},
+      X:{l:"Family nets the value",x:5,y:1},
+      T1:{l:"Trust admitted as member",x:2,y:3,alias:"C1"}, T2:{l:"Proceeds: step-up, benefits",x:3,y:4,alias:"C6"}, T3:{l:"Creditor period; releases",x:4,y:5,alias:"C5",sub:"§ 733.702"}, T4:{l:"Equalization among heirs",x:5,y:4,alias:"C7"}
+    },
+    edges: [["N14","N15a"],["N14","N15b"],["N14","N15c"],["N15a","A1"],["A1","A2"],["N15b","B1"],["B1","B2"],["B2","B3"],["N15c","W1"],["W1","W2"],["W2","W3"],["A2","X"],["B3","X"],["W3","X"],
+            ["T1","T2"],["T2","T4"],["T3","T4"],["A1","T1"],["B3","T2"],["W3","T3"],["T4","X"]],
+    crit: new Set(["N14>N15b","N15b>B1","B1>B2","B2>B3","B3>X"]),
+    rungs: new Set(["A1>T1","B3>T2","W3>T3"]),
+    reached: s => ["N15a","N15b","N15c"].every(k => ["green","amber"].includes(s.nodes[k])) },
+
+  { key: "S4", name: "Chosen exit", desc: "The scheduled path on both tracks: the business transfers on the target date; the owner's estate plan receives the result and is restated for life after the business. The emergency egress stays live as the side exit until closing.",
+    laneSplit: 3,
+    nodes: {
+      E0:{l:"Today",x:0,y:1,fixed:"green"}, E1:{l:"Successor identified",x:1,y:1}, E2:{l:"Transition plan",x:2,y:1}, E3:{l:"Valuation + terms",x:3,y:1}, E4:{l:"Closing on target date",x:4,y:1,sub:"2031-06-30"}, E5:{l:"Post-exit punch list",x:5,y:1,sub:"releases, dissolution, earnout"},
+      S:{l:"Emergency egress (live)",x:2,y:2,alias:"N2"}, S2:{l:"Day-30 decision",x:3,y:2,alias:"N14"}, S3:{l:"Branch executes",x:4,y:2,alias:"N15b"},
+      R1:{l:"Pre-exit gifting / freeze",x:1,y:4,alias:"C7"}, R2:{l:"Proceeds land in plan",x:3,y:4,alias:"C6"}, R3:{l:"Retirement income; LTC plan",x:4,y:4}, R4:{l:"Estate plan restated",x:5,y:4,alias:"C1"}
+    },
+    edges: [["E0","E1"],["E1","E2"],["E2","E3"],["E3","E4"],["E4","E5"],["E0","S"],["S","S2"],["S2","S3"],["S3","E5"],["R1","R2"],["R2","R3"],["R3","R4"],["E1","R1"],["E4","R2"],["E5","R4"]],
+    crit: new Set(["E0>E1","E1>E2","E2>E3","E3>E4","E4>E5"]),
+    rungs: new Set(["E1>R1","E4>R2","E5>R4"]),
+    reached: s => false }
+];
+// ---------- What each node means (client-readable logic) ----------
+const NODE_INFO = {
+  N0:{name:"Trigger", logic:"Nothing in the plan can start until someone can say, with evidence, that the owner is out. The statute gives no definition for incapacity or unavailability, so the operating agreement supplies one: death certificate, two physicians' certification, or 14 days of no contact.", satisfied:"Operating Agreement Art. 9.1(b)", red:"Clause unsigned, or no incapacity standard."},
+  N1:{name:"Notice tree", logic:"On day one the manager, family liaison, attorney and bank each need to hear from a named person in a set order. A stale contact list is the most common reason a good plan stalls.", satisfied:"Instruction letter with contact tree, tested yearly", red:"Any contact unreachable; list older than 12 months."},
+  N2:{name:"Authority", logic:"Under § 605.0602 a deceased member is dissociated and an incapacitated sole member keeps authority but cannot use it. The LLC Act supplies no operator. Article 9 names an Interim Manager whose authority activates on the trigger, without a filing or a court.", satisfied:"OA Art. 9.2 with the manager's signed consent", red:"Manager left or declined; document unsigned; consent not on file."},
+  N3:{name:"Alternate manager", logic:"The named manager may be the person in the car with the owner. A second name costs nothing and keeps N2 from failing on one absence.", satisfied:"Alternate named in Art. 9.1(c), consent on file", red:"No alternate, or alternate has left."},
+  N4:{name:"Bank access", logic:"Authority on paper means nothing until the bank honors it. Banks routinely decline powers of attorney and don't update signatory cards on request. The bank's written acceptance, delivered before the event, is what makes payroll possible on day two.", satisfied:"Bank acceptance letter; manager on the signatory card; online admin other than the owner", red:"Manager not on card; bank has not accepted the DPOA; a new account opened since review."},
+  N5:{name:"Cash reserve", logic:"The manager needs money the moment authority activates. Ninety days of payroll and fixed costs in a reserve account, with a written spending rule, is what turns authority into operation.", satisfied:"Reserve account at target; Schedule 1 Cash Rule signed", red:"Balance below the 90-day figure; rule unsigned."},
+  N6:{name:"Payroll runs", logic:"Staff stay if they are paid on time the first Friday. Payroll depends on bank access, cash and the payroll provider's admin credentials being in someone's hands other than the owner's.", satisfied:"Manager named as payroll admin; funding path through N4 and N5", red:"Owner is the sole admin; provider changed."},
+  N7:{name:"Insurance", logic:"Key-person and disability coverage are the cash that funds a buyout or a wind-down. The common error is a policy payable to the owner personally when the plan needs it payable to the company or a trust.", satisfied:"Policy schedule with correct owner and beneficiary; renewals tracked", red:"A policy lapsed; beneficiary is the owner where the entity should be."},
+  N8:{name:"Credentials", logic:"Passwords, MFA devices, the domain and software admin are where modern businesses actually live. If the MFA device is the owner's phone, nobody gets in.", satisfied:"Password manager with the manager as emergency contact; access list under 12 months old", red:"List older than 12 months; MFA device is the owner's phone only."},
+  N9:{name:"Customers and continuity statement", logic:"Customers and referral sources need to hear that the business continues, from someone they recognize. Larger customers and lenders ask for this in writing; the continuity statement is the one-page answer.", satisfied:"Customer list and script; stakeholder continuity statement in date", red:"List older than 12 months; statement expired."},
+  N10:{name:"Lease and guaranties", logic:"The lease and the loan follow the owner personally through guaranties. The plan lists what the owner has signed for and names who negotiates the exit, so the family isn't learning about a guaranty from a demand letter.", satisfied:"Guaranty schedule; lease abstract; negotiator named", red:"Lease renewed or new guaranty signed since last review."},
+  N11:{name:"Licenses", logic:"A licensed business has a regulator with its own rules for who may run it and how ownership changes. Missing the designee rule can close the business faster than a bank can.", satisfied:"Designee on file; change-of-ownership rule abstract", red:"License renewal passed without review; designee changed."},
+  N12:{name:"Key staff", logic:"The plan names people. If the Interim Manager has no reason to stay through the owner's absence, the plan names a vacancy. Retention terms are what make N2 real.", satisfied:"Retention agreements for each person the plan names", red:"Key employee changed; no retention term for a named person."},
+  N14:{name:"Day-30 decision", logic:"Someone other than the absent owner must decide, with information, whether the business continues, sells or winds down. The default branch tells the manager what to prepare for in the meantime.", satisfied:"Decision authority clause (Art. 9.5); report list", red:"Decision-maker unnamed, or is only the owner."},
+  N15a:{name:"Continue branch", logic:"If the business will run under the manager for a year, the manager needs an operating plan and the staff need to stay.", satisfied:"12-month operating instruction", red:"Default branch is continue and no instruction exists."},
+  N15b:{name:"Sell branch", logic:"A sale under pressure gets a liquidation price. A valuation reference, a buyer list and sale authority let the manager run a process instead of taking the first offer.", satisfied:"Sale authority (Schedule 2); valuation method; buyer list", red:"Default branch is sell and valuation or buyer list is missing."},
+  N15c:{name:"Wind-down branch", logic:"For most owner-run businesses this is the realistic outcome. A planned closure collects receivables, sells the list and equipment, exits the lease on terms and releases guaranties. An unplanned one defaults on all of it.", satisfied:"Wind-down instruction (§§ 605.0701–.0713); funding; guaranty exit", red:"Default branch is wind down and sequence or funding is undefined."},
+  C1:{name:"Who receives the interest", logic:"The will or trust says who takes the owner's interest. The operating agreement says whether that person may become a member. When they disagree, the heir holds an economic interest with no vote and no right to manage.", satisfied:"Will/trust and OA transfer provisions aligned; trust admitted", red:"Different takers; OA bars the transfer; trust not admitted."},
+  C2:{name:"Who runs it on day one", logic:"The POA agent acts for the owner; the Interim Manager acts for the company. If they are different people with no coordination clause, two people hold authority over the same business on the same morning.", satisfied:"Same person, or a coordination clause", red:"Different persons uncoordinated; same person with conflicting duties."},
+  C3:{name:"Authority instruments", logic:"The operating agreement and the durable POA are two documents that must say the same thing and must both be recognized by the bank. Amend one without the other and the plan splits.", satisfied:"OA Art. 9 and DPOA rider consistent; bank has accepted both", red:"One amended or revoked without the other; bank accepted one only."},
+  C4:{name:"Buy-sell funding", logic:"Insurance meant to fund a buyout must be owned and payable in a way that matches the buy-sell structure, or the proceeds land in the wrong hands and are taxed the wrong way.", satisfied:"Policy owner and beneficiary match the structure", red:"Owned or payable inconsistently; premium payer inconsistent with tax treatment."},
+  C5:{name:"Guaranties", logic:"A personal guaranty is a debt of the estate. The company's guaranty schedule and the owner's estate plan must show the same list, so the exposure is planned rather than discovered.", satisfied:"Guaranty schedule reviewed on both tiers", red:"New guaranty since last review on either side."},
+  C6:{name:"Exit proceeds", logic:"How and when the business is sold decides whether the owner keeps benefits, keeps a basis step-up, and keeps the proceeds protected. The sale structure has to be chosen with the personal plan in view.", satisfied:"Sale form and timing consistent with the personal plan", red:"Proposed sale defeats the personal plan."},
+  C7:{name:"Lifetime transfer", logic:"A gift of part of the business to a child or employee has tax and fairness consequences on the owner's side and control consequences on the company's. Both sides execute together or not at all.", satisfied:"Transfer mechanics and gift/estate plan executed together", red:"Transfer executed on one side only."},
+  C8:{name:"Family liaison", logic:"The manager needs one person to take direction from and report to. The family needs one person to speak for it. If that person is also a disputing heir, the plan has a conflict built in.", satisfied:"Liaison named in Art. 9.6 and in the personal documents", red:"Unnamed; liaison is a disputing heir; liaison unavailable."}
+};
+// Statutory and future nodes: logic only
+const FIXED_INFO = {
+  D0:{name:"Owner out", logic:"Death, incapacity or disappearance. Without a plan, the statute decides what happens next."},
+  D1:{name:"Death: member dissociated", logic:"§ 605.0602(7)(a): an individual member is dissociated on death. The estate holds a transferee's economic rights only (§ 605.0504), with no authority to manage."},
+  D2:{name:"Incapacity: sole member cannot act", logic:"§ 605.0602(7)(b): incapacity dissociates a member only on guardianship or court order, and only in a member-managed company. The owner remains the only person with authority and cannot use it."},
+  D5:{name:"No one may sign or run payroll", logic:"No manager, no signatory, no admin. The bank will not honor an unauthorized person, and the payroll provider will not run without its admin."},
+  D6:{name:"Bank freezes; staff and customers go", logic:"Staff leave when the first payroll misses. Customers move when calls go unanswered. Value drains in weeks."},
+  D7:{name:"Liquidation value only", logic:"What remains sells as assets, not as a business. The customer list, the name and the staff are gone."},
+  O1:{name:"No DPOA: guardianship petition", logic:"Without a durable power of attorney, the family petitions under ch. 744. Months, legal fees, a court-supervised guardian, and a public record."},
+  O2:{name:"No will: intestacy", logic:"Ch. 732 part I decides who inherits. The business interest passes in shares the owner did not choose, possibly to minors."},
+  O3:{name:"Estate holds transferee rights only", logic:"§ 605.0504: the estate receives distributions if any are made, with no vote and no management right."},
+  O4:{name:"Probate: interest tied up", logic:"Ch. 733: the interest cannot be sold or transferred until the personal representative is appointed and the creditor period runs."},
+  O5:{name:"Guaranties claimed against estate", logic:"The lease and the loan guaranties become claims in the estate. Exempt assets are protected; the rest is exposed."},
+  O6:{name:"Family receives what is left", logic:"Liquidation proceeds, less creditors, less guaranties, less fees, after probate."},
+  E0:{name:"Today", logic:"The project runs from today to the exit event."}, E1:{name:"Successor identified", logic:"A buyer, a family member or an employee, named and willing. Set by intake A2."},
+  E2:{name:"Transition plan", logic:"How knowledge, relationships and authority move from the owner to the successor over the schedule."},
+  E3:{name:"Valuation and terms", logic:"The number and the structure: lump sum, installment, rent, earnout. Chosen with the owner's personal plan in view (C6)."},
+  E4:{name:"Closing on target date", logic:"The exit event. A client-set milestone; it may move."},
+  E5:{name:"Post-exit punch list", logic:"Guaranty releases, dissolution or earnout administration, final tax filings. The project ends when these close."},
+  S:{name:"Emergency egress (live)", logic:"The contingency plan stays active until closing. If the owner is out before the target date, the project takes this exit."},
+  S2:{name:"Day-30 decision", logic:"See N14."}, S3:{name:"Branch executes", logic:"See N15."},
+  R1:{name:"Pre-exit gifting or freeze", logic:"Transfers made before the value is realized, if the personal plan calls for them (C7)."},
+  R2:{name:"Proceeds land in plan", logic:"The sale result arrives in the vehicle the estate plan prepared for it (C6)."},
+  R3:{name:"Retirement income; LTC plan", logic:"What the owner lives on after the business, and how long-term care is funded."},
+  R4:{name:"Estate plan restated without the business", logic:"The will or trust is rewritten for an estate that no longer holds an operating company."},
+  A1:{name:"12-month operating plan", logic:"See N15a."}, A2:{name:"Retention terms", logic:"See N12."}, B1:{name:"Valuation reference", logic:"See N15b."}, B2:{name:"Buyer list", logic:"See N15b."}, B3:{name:"Sale authority and LOI form", logic:"See N15b."},
+  W1:{name:"Sequence", logic:"See N15c."}, W2:{name:"Funding", logic:"See N5."}, W3:{name:"Guaranty exit", logic:"See N10."}, X:{name:"Family nets the value", logic:"The purpose of the plan: the business converts to value for the family rather than draining away."},
+  T1:{name:"Trust admitted as member", logic:"If the business continues after death, a trustee holds the interest and directs the manager. The OA must admit the trust (C1)."},
+  T2:{name:"Proceeds: step-up, installment, benefits", logic:"Sale proceeds after death can take a basis step-up; before death they are planned for benefits and protection (C6)."},
+  T3:{name:"Estate: creditor period; guaranty releases", logic:"§ 733.702: creditors must file within the period. Guaranty releases negotiated in the wind-down keep claims out of the estate (C5)."},
+  T4:{name:"Equalization among heirs", logic:"If one child takes the business, the others are equalized from other assets or insurance (C7)."},
+  P1:{name:"DPOA + business rider", logic:"See C2."}, P2:{name:"Bank accepts DPOA", logic:"See C3."}, P3:{name:"Policy owner / beneficiary", logic:"See C4."}, P4:{name:"Will or trust names the interest", logic:"See C1."}, P5:{name:"Family liaison", logic:"See C8."}, P6:{name:"Medicaid / asset-protection plan", logic:"See C6."}, P7:{name:"Lifetime transfer plan", logic:"See C7."}, G:{name:"Guaranty schedule", logic:"See C5."}, N15:{name:"Default branch", logic:"See N14 and N15a–c."}
+};
+
+// ---------- Change-order catalog: what each clears ----------
+const CHANGE_ORDERS = [
+  {id:"CO-RET", name:"Retention agreement (per key person)", low:1200, high:1200, clears:["N12"], sched:"B"},
+  {id:"CO-BANK", name:"Bank acceptance package (certificate, affidavit, signatory update)", low:0, high:0, clears:["N4","C3"], sched:"A", note:"Included in subscription"},
+  {id:"CO-ACCESS", name:"Credentials and access refresh", low:0, high:0, clears:["N8"], sched:"A", note:"Included in subscription"},
+  {id:"CO-GUAR", name:"Guaranty schedule and lease abstract update, both tiers", low:1500, high:3000, clears:["N10","C5"], sched:"B"},
+  {id:"CO-WIND", name:"Wind-down branch drafted (sequence, funding, guaranty exit)", low:2500, high:6000, clears:["N15c"], sched:"B"},
+  {id:"CO-SELL", name:"Sell branch drafted (valuation reference, buyer list, sale authority)", low:3000, high:6000, clears:["N15b"], sched:"B"},
+  {id:"CO-CONT", name:"Continue branch drafted (12-month operating instruction)", low:2500, high:4000, clears:["N15a"], sched:"B"},
+  {id:"CO-TRUST", name:"Trust admission amendment and transfer provisions", low:1500, high:3000, clears:["C1"], sched:"B"},
+  {id:"CO-BUYSELL", name:"Buy-sell agreement and funding alignment", low:4000, high:8000, clears:["C4","N7"], sched:"B"},
+  {id:"CO-FAM", name:"Family governance module (meeting, charter, next-gen track)", low:4000, high:7500, clears:["C7","C8"], sched:"B"}
+];
+let selectedNode = null, previewCO = null, ctxNode = null, overlay = "status";
+
+// ---------- Intake items: what each node needs before it can be assessed ----------
+// kind: doc (a document) | fact (an answer). tier: E entity | P personal. core: required before the path is assigned.
+const INTAKE = [
+  {id:"A1", kind:"fact", tier:"E", core:true,  q:"Target exit date, age, or 'no plan to'", feeds:["E4","N14"]},
+  {id:"A2", kind:"fact", tier:"E", core:true,  q:"What a good exit looks like (sell / family or employee / keep income / close clean)", feeds:["N15","N15a","N15b","N15c","E1"]},
+  {id:"A3", kind:"fact", tier:"E", core:false, q:"What you need from the business at exit (lump sum, income, or out); rough number", feeds:["E3"]},
+  {id:"A4", kind:"fact", tier:"E", core:true,  q:"If you were out tomorrow, what should happen to the business", feeds:["N14","N15"]},
+  {id:"A5", kind:"fact", tier:"E", core:true,  q:"Who is affected: spouse, children, partners, key employees", feeds:["C8","C1","N12"]},
+  {id:"A6", kind:"fact", tier:"E", core:false, q:"Who has asked you for a continuity plan (lender, customer, regulator, partner)", feeds:["N9"]},
+  {id:"B1", kind:"doc",  tier:"E", core:true,  q:"Operating agreement or bylaws; ownership percentages", feeds:["N0","N2","N3","N14","C1"]},
+  {id:"B2", kind:"fact", tier:"E", core:true,  q:"What stops on day one without you", feeds:["N2","N4","N6","N8","N11"]},
+  {id:"B3", kind:"fact", tier:"E", core:true,  q:"Who could run it for 90 days; do they know; would they", feeds:["N2","N12"]},
+  {id:"B4", kind:"fact", tier:"E", core:false, q:"Second choice if that person can't", feeds:["N3"]},
+  {id:"B5", kind:"doc",  tier:"E", core:true,  q:"Bank accounts; signatory card; who has online admin", feeds:["N4","C3"]},
+  {id:"B6", kind:"fact", tier:"E", core:true,  q:"Monthly payroll and fixed costs; cash on hand; reserve", feeds:["N5","N6"]},
+  {id:"B7", kind:"fact", tier:"E", core:true,  q:"Payroll provider and who is admin", feeds:["N6"]},
+  {id:"B8", kind:"doc",  tier:"E", core:false, q:"Insurance schedule: carrier, owner, beneficiary, renewal dates", feeds:["N7","C4"]},
+  {id:"B9", kind:"fact", tier:"E", core:false, q:"Where passwords, MFA devices, domain and keys are; who else can get in", feeds:["N8"]},
+  {id:"B10",kind:"doc",  tier:"E", core:false, q:"Top customers and referral sources; contracts with renewal dates", feeds:["N9"]},
+  {id:"B11",kind:"doc",  tier:"E", core:false, q:"Lease: term, renewal, personal guaranty; other guaranties", feeds:["N10","C5"]},
+  {id:"B12",kind:"doc",  tier:"E", core:false, q:"Loans: lender, balance, maturity, guaranty, insurance covenant", feeds:["N10","C5","N7"]},
+  {id:"B13",kind:"doc",  tier:"E", core:false, q:"Licenses held; renewal dates; designee on file", feeds:["N11"]},
+  {id:"B14",kind:"fact", tier:"E", core:false, q:"Key employees: who, what they'd need to stay, agreements in place", feeds:["N12"]},
+  {id:"B15",kind:"fact", tier:"E", core:false, q:"Rough business value and how you'd know", feeds:["N15b","E3"]},
+  {id:"C-1",kind:"doc",  tier:"P", core:true,  q:"Will, trust, durable POA, health care surrogate; who drafted; do they mention the business", feeds:["C1","C2","C3","C8","P1","P4","P3"]},
+  {id:"C-2",kind:"fact", tier:"P", core:true,  q:"Who is POA agent, personal representative, trustee; same person as B3?", feeds:["C2"]},
+  {id:"C-3",kind:"fact", tier:"P", core:false, q:"Who you want the interest to go to; is that what the documents say", feeds:["C1"]},
+  {id:"C-4",kind:"fact", tier:"P", core:false, q:"Who speaks for your family; is that who the manager should take direction from", feeds:["C8","P5"]},
+  {id:"C-5",kind:"fact", tier:"P", core:false, q:"Is any of the business owned through a trust, or should it be", feeds:["C1","T1"]},
+  {id:"C-6",kind:"fact", tier:"P", core:false, q:"Long-term care / Medicaid planning; asset-protection advisor", feeds:["C6","P6"]},
+  {id:"C-7",kind:"fact", tier:"P", core:false, q:"Any lifetime transfer to family or employee intended", feeds:["C7","P7"]},
+  {id:"C-8",kind:"fact", tier:"P", core:false, q:"CPA, financial advisor, other attorney; may we coordinate", feeds:[]}
+];
+// Sample client: what's already in the file
+const INTAKE_SEED = { A1:"received", A2:"received", A4:"received", A5:"received", B1:"received", B2:"received", B3:"received", B5:"requested", B6:"received", B8:"received", B11:"received", B12:"received", "C-1":"received", "C-2":"received", A6:"received", B4:"received" };
+function intakeStatus(id){ return (state.intake && state.intake[id]) || "missing"; }
+function missingFor(nodeKey){ return INTAKE.filter(it => it.feeds.includes(nodeKey) && intakeStatus(it.id) !== "received"); }
+function coreMissing(){ return INTAKE.filter(it => it.core && intakeStatus(it.id) !== "received"); }
+function pathAssigned(){ return coreMissing().length === 0; }
+function setIntake(id, status){ state.intake = state.intake || {}; state.intake[id] = status; saveState(); redraw(); }
+
+// ---------- Contract coverage: which engagement pays for which node ----------
+// phase1 = onboarding flat fee (delivered); sub = Phase 2 subscription, Schedule A / maintenance;
+// co = Schedule B change order (approved before work); personal = owner's personal engagement letter; none = not contracted (statutory outcome)
+const COVERAGE = {
+  N0:"phase1", N1:"phase1", N2:"phase1", N3:"phase1", N5:"phase1", N10:"phase1", N14:"phase1", N9:"phase1",
+  N4:"sub", N6:"sub", N7:"sub", N8:"sub", N11:"sub", N15:"phase1",
+  N12:"co", N15a:"co", N15b:"co", N15c:"co",
+  C1:"co", C2:"sub", C3:"sub", C4:"co", C5:"sub", C6:"personal", C7:"co", C8:"sub",
+  E0:"sub", E1:"co", E2:"co", E3:"co", E4:"co", E5:"co", S:"phase1", S2:"phase1", S3:"co",
+  R1:"personal", R2:"personal", R3:"personal", R4:"personal",
+  A1:"co", A2:"co", B1:"co", B2:"co", B3:"co", W1:"co", W2:"phase1", W3:"co", X:"co",
+  T1:"co", T2:"personal", T3:"personal", T4:"personal",
+  P1:"personal", P2:"sub", P3:"personal", P4:"personal", P5:"personal", P6:"personal", P7:"personal", G:"sub"
+};
+const COVERAGE_META = {
+  phase1:{label:"Onboarding (paid)", color:"var(--accent)", dash:""},
+  sub:{label:"Subscription (Schedule A)", color:"var(--good)", dash:""},
+  co:{label:"Change order (Schedule B)", color:"var(--warn)", dash:"6 3"},
+  personal:{label:"Personal engagement", color:"#8a5fb0", dash:"2 3"},
+  none:{label:"Not contracted (statute)", color:"var(--line)", dash:"1 3"}
+};
+function coverageOf(stage, id){
+  const n = stage.nodes[id]; if (n.fixed && /^[DO]\d/.test(id)) return "none";
+  const key = n.alias || id;
+  // a change-order node already on the board as Scoped/In progress/Done counts as contracted
+  if (COVERAGE[key] === "co" && state.items.some(it => (it.clears || [it.node]).includes(key) && it.column !== "Identified")) return "sub";
+  return COVERAGE[key] || COVERAGE[id] || "none";
+}
+
+let viewStage = null;
+function currentStageIdx(){ let i = 0; for (let k = 1; k < STAGES.length; k++) if (STAGES[k].reached(state)) i = k; return i; }
+
+const NODES = {
+  N0:{l:"Trigger",x:0,y:2}, N2:{l:"Authority",x:1,y:2}, N5:{l:"Cash reserve",x:1,y:0}, N7:{l:"Insurance",x:1,y:4},
+  N3:{l:"Alternate mgr",x:2,y:3}, N4:{l:"Bank access",x:2,y:2}, N8:{l:"Credentials",x:2,y:1}, N1:{l:"Notice tree",x:2,y:0},
+  N10:{l:"Lease/guaranty",x:2,y:4}, N12:{l:"Key staff",x:3,y:4}, N6:{l:"Payroll",x:3,y:2}, N9:{l:"Customers",x:3,y:1}, N11:{l:"Licenses",x:3,y:0},
+  N14:{l:"Day-30 decision",x:4,y:2}, N15a:{l:"Continue",x:5,y:1}, N15b:{l:"Sell",x:5,y:2}, N15c:{l:"Wind down",x:5,y:3}
+};
+const EDGES = [["N0","N2"],["N0","N1"],["N2","N3"],["N2","N4"],["N2","N8"],["N2","N10"],["N2","N12"],["N2","N11"],["N4","N6"],["N5","N6"],["N8","N6"],["N8","N9"],["N2","N9"],["N2","N14"],["N4","N14"],["N6","N14"],["N14","N15a"],["N14","N15b"],["N14","N15c"],["N9","N15b"],["N12","N15b"],["N5","N15c"],["N10","N15c"],["N7","N15b"]];
+const CRIT = new Set(["N0>N2","N2>N4","N4>N6","N6>N14","N14>N15c"]);
+function nodeStatuses(str){
+  const s = {}; const re = /\b(N\d+[abc]?|C\d)\s+(green|amber|red)\b/gi; let m;
+  while ((m = re.exec(str))) s[m[1].toUpperCase()] = m[2].toLowerCase();
+  return s;
+}
+function effectiveNodes(){
+  if (!previewCO) return state.nodes;
+  const co = CHANGE_ORDERS.find(c => c.id === previewCO); const n = Object.assign({}, state.nodes);
+  if (co) for (const k of co.clears) n[k] = "green";
+  return n;
+}
+function nodeFill(stage, id){
+  const n = stage.nodes[id];
+  if (n.fixed) return n.fixed;
+  if ($("mode").value === "prospect") return "planned";
+  const key = n.alias || id, nodes = effectiveNodes();
+  if (!previewCO && (missingFor(key).length || missingFor(id).length) && nodes[key] !== "green" && nodes[key] !== "red") return "unassessed";
+  if (key === "N15") { const b = ["N15a","N15b","N15c"].map(k => nodes[k]); return b.includes("red") ? "red" : b.includes("amber") ? "amber" : b.every(x => x === "green") ? "green" : "planned"; }
+  return nodes[key] || "planned";
+}
+function stageIdxFor(nodes){ const s = {nodes}; let i = 0; for (let k = 1; k < STAGES.length; k++) if (STAGES[k].reached(s)) i = k; return i; }
+function downstream(stage, id){
+  const out = new Set(); const walk = x => { for (const [a,b] of stage.edges) if (a === x && !out.has(b)) { out.add(b); walk(b); } }; walk(id); return [...out];
+}
+function renderNodePanel(){
+  const panel = $("nodePanel"); const stage = STAGES[viewStage];
+  if (!selectedNode || !stage.nodes[selectedNode]) { panel.hidden = true; return; }
+  const id = selectedNode, n = stage.nodes[id], key = n.alias || id;
+  const info = NODE_INFO[key] || FIXED_INFO[id] || FIXED_INFO[key] || {name: n.l, logic: ""};
+  const status = nodeFill(stage, id);
+  const deps = downstream(stage, id).map(d => `<span class="dep ${nodeFill(stage,d)}" data-node="${d}">${esc(stage.nodes[d].alias || d)} ${esc(stage.nodes[d].l)}</span>`).join("") || "<span class='small'>Nothing depends on this.</span>";
+  const cos = CHANGE_ORDERS.filter(c => c.clears.includes(key));
+  const coHtml = cos.length ? cos.map(c => {
+    const onBoard = state.items.some(it => it.co === c.id);
+    return `<div class="co ${previewCO === c.id ? "active" : ""}"><div class="t">${esc(c.name)}</div><div class="small">Schedule ${c.sched}${c.note ? " · " + esc(c.note) : " · estimate " + money(c.low) + (c.high > c.low ? "–" + money(c.high) : "")} · clears ${c.clears.join(", ")}</div>
+      <div class="acts"><button class="ghost" data-prev="${c.id}" type="button">${previewCO === c.id ? "Stop preview" : "Preview on the path"}</button><button data-add="${c.id}" type="button" ${onBoard ? "disabled" : ""}>${onBoard ? "On the board" : "Add to Open Items"}</button></div></div>`;
+  }).join("") : (n.fixed ? "<p class='small'>Statutory outcome; no change order applies. The whole plan is the fix.</p>" : "<p class='small'>No change order is needed for this node, or it is maintained inside the subscription.</p>");
+  panel.hidden = false;
+  panel.innerHTML = `<div>
+      <div class="row"><span class="cite">${esc(key)}</span><span class="pill ${status==="red"?"urgent":""}" style="${status==="green"?"color:var(--good);border-color:var(--good)":status==="amber"?"color:var(--warn);border-color:var(--warn)":""}">${esc(status === "planned" ? "not yet built" : status)}</span></div>
+      <h3>${esc(info.name)}</h3>
+      <p class="small" style="margin-top:2px"><span style="display:inline-block;width:12px;height:9px;border:2px ${COVERAGE_META[coverageOf(stage,id)].dash ? "dashed" : "solid"} ${COVERAGE_META[coverageOf(stage,id)].color};border-radius:2px;vertical-align:-1px"></span> Contract: ${esc(COVERAGE_META[coverageOf(stage,id)].label)}${coverageOf(stage,id) === "co" && COVERAGE[key] === "co" ? " — not yet approved" : ""}</p>
+      <h4>Why it is on the path</h4><p>${esc(info.logic)}</p>
+      ${info.satisfied ? `<h4>What satisfies it</h4><p>${esc(info.satisfied)}</p>` : ""}
+      ${info.red ? `<h4>What turns it red</h4><p>${esc(info.red)}</p>` : ""}
+      <h4>What depends on it</h4><div>${deps}</div>
+      ${(() => { const m = missingFor(key).concat(missingFor(id)).filter((v,i,a) => a.indexOf(v) === i); return m.length ? `<h4>Needs from you before this can be assessed</h4><ul>${m.map(i => `<li>${esc(i.id)} · ${esc(i.q)} <span class="small">(${intakeStatus(i.id)})</span> <button class="ex" data-ik="${i.id}" type="button">mark received</button></li>`).join("")}</ul>` : ""; })()}
+    </div>
+    <div>
+      <h4 style="margin-top:0">Change orders that affect this node</h4>${coHtml}
+      <h4>Ask about this</h4><p class="small">Your question is filed against ${esc(key)}; the brief and the agenda carry it.</p>
+      <div class="acts" style="margin-top:6px"><button data-ask="${key}" type="button">Ask a question about ${esc(key)}</button></div>
+    </div>`;
+  panel.querySelectorAll("[data-node]").forEach(el => el.onclick = () => { selectedNode = el.dataset.node; renderPath(); });
+  panel.querySelectorAll("[data-ik]").forEach(b => b.onclick = () => setIntake(b.dataset.ik, "received"));
+  panel.querySelectorAll("[data-prev]").forEach(b => b.onclick = () => { previewCO = previewCO === b.dataset.prev ? null : b.dataset.prev; renderPath(); });
+  panel.querySelectorAll("[data-add]").forEach(b => b.onclick = () => addChangeOrder(b.dataset.add));
+  panel.querySelector("[data-ask]").onclick = () => setContext(key);
+}
+function renderPreviewBar(){
+  const bar = $("previewBar");
+  if (!previewCO) { bar.hidden = true; return; }
+  const co = CHANGE_ORDERS.find(c => c.id === previewCO); const now = stageIdxFor(state.nodes), after = stageIdxFor(effectiveNodes());
+  bar.hidden = false;
+  bar.innerHTML = `<span><strong>Preview:</strong> ${esc(co.name)} — clears ${co.clears.join(", ")}. ${after > now ? `Moves the plan from stage ${now} (${esc(STAGES[now].name)}) to stage ${after} (${esc(STAGES[after].name)}).` : `Stage stays at ${now} (${esc(STAGES[now].name)}); other gaps remain.`}</span><button class="ghost" id="prevOff" type="button">Stop preview</button>`;
+  $("prevOff").onclick = () => { previewCO = null; renderPath(); };
+}
+function addChangeOrder(coId){
+  const co = CHANGE_ORDERS.find(c => c.id === coId); if (!co) return;
+  state.items.push({ id: state.nextId++, co: co.id, node: co.clears[0], clears: co.clears, status: state.nodes[co.clears[0]] || "amber", title: co.name, finding: "Added from the path by the client for discussion on Thursday. Schedule " + co.sched + ".", column: "Identified", allowance: co.low, price: 0 });
+  saveState(); previewCO = null; redraw();
+  agenda.push({ topic: co.clears.join(","), urgent: false, agenda_position: 2, agenda_line: "Change order requested from the path: " + co.name });
+  renderAgenda();
+}
+function setContext(key){
+  ctxNode = key; const info = NODE_INFO[key] || {name: key};
+  $("ctxChip").hidden = false; $("ctxLabel").textContent = "About " + key + " · " + info.name;
+  $("q").focus(); $("q").scrollIntoView({behavior: "smooth", block: "center"});
+}
+function renderStages(){
+  const now = currentStageIdx(); if (viewStage === null) viewStage = now;
+  $("stages").innerHTML = STAGES.map((s,i) => `<button role="tab" type="button" aria-selected="${i===viewStage}" class="${i===now?"now":""}" data-i="${i}"><span class="k">${i} · ${s.key}</span>${esc(s.name)}</button>`).join("");
+  $("stages").querySelectorAll("button").forEach(b => b.onclick = () => { viewStage = Number(b.dataset.i); renderPath(); });
+  $("stageDesc").textContent = STAGES[viewStage].desc;
+}
+function renderIntake(){
+  const total = INTAKE.length, got = INTAKE.filter(it => intakeStatus(it.id) === "received").length;
+  const core = INTAKE.filter(it => it.core), coreGot = core.filter(it => intakeStatus(it.id) === "received").length;
+  $("intakeBar").style.width = Math.round(100 * got / total) + "%";
+  $("intakePill").textContent = pathAssigned() ? "Path assigned" : `Path not assigned · ${core.length - coreGot} required item${core.length - coreGot === 1 ? "" : "s"} missing`;
+  $("intakePill").style.color = pathAssigned() ? "var(--good)" : "var(--crit)"; $("intakePill").style.borderColor = pathAssigned() ? "var(--good)" : "var(--crit)";
+  $("intakeStatus").textContent = `${got} of ${total} items received · ${coreGot} of ${core.length} required.`;
+  const order = {missing: 0, requested: 1, received: 2};
+  const rows = INTAKE.slice().sort((a,b) => order[intakeStatus(a.id)] - order[intakeStatus(b.id)] || (b.core - a.core));
+  const open = INTAKE.filter(it => intakeStatus(it.id) !== "received");
+  $("intakeTable").querySelector("tbody").innerHTML = (open.length ? "" : `<tr><td colspan="4" class="small">Everything on the list is in.</td></tr>`) + rows.filter(it => intakeStatus(it.id) !== "received" || showReceived).map(it => {
+    const s = intakeStatus(it.id);
+    return `<tr><td><span class="st ${s}" title="${s}"></span></td><td>${it.core ? "<strong>" : ""}${esc(it.id)} · ${esc(it.q)}${it.core ? "</strong>" : ""}<div class="small">${it.kind === "doc" ? "document" : "answer"} · ${it.tier === "P" ? "owner tier" : "entity"}${it.core ? " · required" : ""}</div></td><td class="cite">${esc(it.feeds.join(" "))}</td><td>${s === "received" ? `<button class="ghost" data-ik="${it.id}" data-is="missing" type="button">undo</button>` : s === "requested" ? `<button data-ik="${it.id}" data-is="received" type="button">received</button>` : `<button class="ghost" data-ik="${it.id}" data-is="requested" type="button">request</button> <button data-ik="${it.id}" data-is="received" type="button">received</button>`}</td></tr>`;
+  }).join("");
+  $("intakeTable").querySelectorAll("button[data-ik]").forEach(b => b.onclick = () => setIntake(b.dataset.ik, b.dataset.is));
+  const recv = INTAKE.filter(it => intakeStatus(it.id) === "received").length;
+  $("intakeTable").querySelector("tbody").insertAdjacentHTML("beforeend", `<tr><td colspan="4"><button class="ex" id="toggleRecv" type="button">${showReceived ? "Hide" : "Show"} ${recv} received item${recv === 1 ? "" : "s"}</button></td></tr>`);
+  $("toggleRecv").onclick = () => { showReceived = !showReceived; renderIntake(); };
+}
+let showReceived = false;
+function renderLegend(){
+  if (overlay === "contract") {
+    const counts = {}; const stage = STAGES[viewStage];
+    for (const id in stage.nodes) { const c = coverageOf(stage, id); counts[c] = (counts[c] || 0) + 1; }
+    $("legend").innerHTML = Object.entries(COVERAGE_META).filter(([k]) => counts[k]).map(([k,m]) => `<span style="display:inline-block;margin-right:12px"><span style="display:inline-block;width:14px;height:10px;border:2px ${m.dash ? "dashed" : "solid"} ${m.color};border-radius:2px;vertical-align:-1px"></span> ${m.label} · ${counts[k]}</span>`).join("") + `<span style="display:inline-block">Left stripe still shows status.</span>`;
+  } else {
+    $("legend").innerHTML = `<span style="color:var(--good)">■</span> in place &nbsp;<span style="color:var(--warn)">■</span> review due &nbsp;<span style="color:var(--crit)">■</span> gap &nbsp;<span style="color:var(--muted)">□</span> not yet built`;
+  }
+}
+function renderPath(){
+  renderStages(); renderLegend();
+  const stage = STAGES[viewStage];
+  let gate = document.getElementById("gateBar");
+  if (!gate) { gate = document.createElement("div"); gate.id = "gateBar"; gate.className = "gate"; $("stageDesc").after(gate); }
+  if ($("mode").value !== "prospect" && !pathAssigned()) { const m = coreMissing(); gate.hidden = false; gate.innerHTML = `<strong>Path not yet assigned.</strong> ${m.length} required intake item${m.length === 1 ? " is" : "s are"} missing: ${esc(m.map(i => i.id).join(", "))}. Nodes that depend on them are drawn dotted grey as <em>awaiting</em>; status, stages and change-order previews are provisional until intake closes.`; }
+  else gate.hidden = true;
+  const W=128, H=40, GX=140, GY=60, PX=14, PY=14;
+  const cols = 1 + Math.max(...Object.values(stage.nodes).map(n => n.x)), rows = 1 + Math.max(...Object.values(stage.nodes).map(n => n.y));
+  const pos = id => ({cx: PX + stage.nodes[id].x*GX + W/2, cy: PY + stage.nodes[id].y*GY + H/2});
+  const color = s => s === "red" ? "var(--crit)" : s === "amber" ? "var(--warn)" : s === "green" ? "var(--good)" : s === "unassessed" ? "var(--muted)" : "var(--line)";
+  const LW = 22; // lane label gutter
+  const totalW = LW + PX*2 + cols*GX - (GX-W), totalH = PY*2 + rows*GY - (GY-H);
+  const splitY = PY + stage.laneSplit*GY - (GY-H)/2;
+  let svg = `<svg viewBox="0 0 ${totalW} ${totalH}" width="100%" role="img" aria-label="${esc(stage.name)} path diagram, business and owner lanes" style="font-family:var(--sans);font-size:11px;display:block">`;
+  svg += `<defs><marker id="ah" viewBox="0 0 6 6" refX="6" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L6 3L0 6z" fill="var(--muted)"/></marker></defs>`;
+  // lanes
+  svg += `<rect x="0" y="0" width="${totalW}" height="${splitY}" fill="var(--panel)" opacity=".55"/>`;
+  svg += `<rect x="0" y="${splitY}" width="${totalW}" height="${totalH - splitY}" fill="var(--attorney)" opacity=".35"/>`;
+  svg += `<line x1="0" y1="${splitY}" x2="${totalW}" y2="${splitY}" stroke="var(--line)" stroke-dasharray="6 4"/>`;
+  svg += `<text transform="translate(13 ${splitY/2}) rotate(-90)" text-anchor="middle" fill="var(--muted)" font-size="9" letter-spacing="1.5" font-weight="600">BUSINESS</text>`;
+  svg += `<text transform="translate(13 ${splitY + (totalH-splitY)/2}) rotate(-90)" text-anchor="middle" fill="var(--muted)" font-size="9" letter-spacing="1.5" font-weight="600">OWNER</text>`;
+  const posL = id => { const p = pos(id); return {cx: p.cx + LW, cy: p.cy}; };
+  for (const [a,b] of stage.edges){
+    const p = posL(a), q = posL(b); const crit = stage.crit.has(a+">"+b); const rung = stage.rungs && stage.rungs.has(a+">"+b);
+    let d;
+    if (rung) { const up = q.cy < p.cy; d = `M${p.cx} ${p.cy + (up ? -H/2 : H/2)} L${q.cx} ${q.cy + (up ? H/2 : -H/2)}`; }
+    else { const x1 = p.cx + W/2, x2 = q.cx - W/2; d = `M${x1} ${p.cy} C${x1+30} ${p.cy} ${x2-30} ${q.cy} ${x2} ${q.cy}`; }
+    const rungFill = rung ? nodeFill(stage, a) : null;
+    svg += `<path d="${d}" fill="none" stroke="${rung ? color(rungFill) : crit ? "var(--fg)" : "var(--line)"}" stroke-width="${crit ? 2.5 : rung ? 2 : 1}" ${rung ? 'stroke-dasharray="4 3"' : ""} marker-end="url(#ah)"/>`;
+  }
+  for (const id in stage.nodes){
+    const n = stage.nodes[id], p = posL(id), s = nodeFill(stage, id);
+    const planned = s === "planned" || s === "unassessed";
+    let stroke = color(s), sw = planned ? 1 : 2.5, dash = s === "unassessed" ? "1 2" : planned ? "3 3" : "";
+    if (overlay === "contract") { const cm = COVERAGE_META[coverageOf(stage, id)]; stroke = cm.color; sw = 2.5; dash = cm.dash; }
+    svg += `<clipPath id="clip-${id}"><rect x="${p.cx-W/2}" y="${p.cy-H/2}" width="${W-4}" height="${H}"/></clipPath>`;
+    svg += `<g class="node ${id === selectedNode ? "sel" : ""}" data-node="${id}" tabindex="0" role="button" aria-label="${esc(n.l)}"><rect x="${p.cx-W/2}" y="${p.cy-H/2}" width="${W}" height="${H}" rx="4" fill="var(--panel)" stroke="${stroke}" stroke-width="${sw}" ${dash ? `stroke-dasharray="${dash}"` : ""}/>` +
+      (planned ? "" : `<rect x="${p.cx-W/2}" y="${p.cy-H/2}" width="6" height="${H}" rx="2" fill="${color(s)}"/>`) +
+      `<text clip-path="url(#clip-${id})" x="${p.cx-W/2+12}" y="${p.cy-6}" fill="var(--muted)" font-family="var(--mono)" font-size="9">${esc(n.alias || id)}${s === "unassessed" ? " · awaiting " + esc(missingFor(n.alias || id).concat(missingFor(id)).map(i => i.id).filter((v,i,a) => a.indexOf(v) === i).slice(0,3).join(",")) : n.sub ? " · " + esc(n.sub) : ""}</text>` +
+      `<text clip-path="url(#clip-${id})" x="${p.cx-W/2+12}" y="${p.cy+9}" fill="${planned ? "var(--muted)" : "var(--fg)"}" font-weight="600" font-size="${n.l.length > 30 ? 8 : n.l.length > 22 ? 9 : 11}">${esc(n.l)}</text></g>`;
+  }
+  svg += `</svg>`;
+  $("pathDiagram").innerHTML = svg;
+  $("pathDiagram").querySelectorAll("g.node").forEach(g => {
+    const pick = () => { selectedNode = selectedNode === g.dataset.node ? null : g.dataset.node; renderPath(); };
+    g.onclick = pick; g.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } };
+  });
+  renderPreviewBar(); renderNodePanel();
+}
+
+// ---------- Import and profile ----------
+// Profile schema: section -> field -> {v, src}. "src" is the imported source id; a field never set shows as unknown.
+const PROFILE_SCHEMA = {
+  "Business": ["Legal name and entity type","Florida document number; status; formation date","Registered agent; principal address","Owners and percentages","Managers / officers of record","Annual report last filed","Licenses and regulator","Revenue, payroll and fixed costs","Bank accounts and signers","Payroll provider and admin","Insurance in force","Lease","Loans and credit lines","UCC filings against the company","Judgments or liens","Top customers / referral sources","Key employees","Estimated value and basis"],
+  "Owner": ["Name; role","Target exit and preferred exit","Family and who is affected","Personal documents in place (will, trust, DPOA, surrogate)","Who holds authority: POA agent / PR / trustee","Personal guaranties","Real property and homestead","Advisors (CPA, planner, other counsel)","Long-term care / asset-protection planning"]
+};
+const PUBLIC_RECORDS = [
+  {name:"Sunbiz entity record (Division of Corporations)", why:"document number, status, formation date, registered agent, officers/managers, annual report history", url:"https://search.sunbiz.org/Inquiry/CorporationSearch/ByName"},
+  {name:"Florida Secured Transaction Registry (UCC)", why:"UCC-1 filings naming the company or the owner as debtor: the lender's blanket lien, equipment financing", url:"https://www.floridaucc.com/uccweb/"},
+  {name:"County property appraiser", why:"real property owned by the company or the owner; homestead status; the building the business occupies", url:"https://floridarevenue.com/property/Pages/LocalOfficials.aspx"},
+  {name:"County clerk official records", why:"recorded judgments, liens, mortgages, lis pendens against the company or the owner", url:"https://www.myfloridacounty.com/"},
+  {name:"DBPR license lookup", why:"professional and business licenses, qualifiers, expiration", url:"https://www.myfloridalicense.com/wl11.asp"},
+  {name:"AHCA facility / provider lookup (healthcare only)", why:"license, administrator of record, expiration", url:"https://quality.healthfinder.fl.gov/facilitylocator/facloc.aspx"},
+  {name:"Federal and state court dockets (PACER; county clerk)", why:"pending litigation naming the company or the owner", url:"https://pacer.uscourts.gov/"}
+];
+const sources = []; // {id, name, kind, text}
+let mcp = null, buildCtl = null;
+
+function addSource(name, kind, text){
+  const id = "S" + (sources.length + 1);
+  sources.push({id, name, kind, text: String(text || "").slice(0, 60000)});
+  renderSources();
+  return id;
+}
+function renderSources(){
+  $("srcCount").textContent = sources.length ? sources.length : "";
+  $("srcList").innerHTML = sources.length ? sources.map(s => `<li><span class="cite">${s.id}</span> ${esc(s.name)} <span class="small">· ${esc(s.kind)} · ${(s.text.length/1000).toFixed(1)}k chars</span></li>`).join("") : "<li>Nothing imported yet. The sample client file counts as source S0.</li>";
+}
+function renderPublic(){
+  $("pubList").innerHTML = PUBLIC_RECORDS.map(r => `<li><a href="${r.url}" target="_blank" rel="noopener">${esc(r.name)}</a> — ${esc(r.why)}</li>`).join("") + `<li>Paste what you find into the intake assistant box below, or save it as a text file and drop it here; name the file for the record (e.g. "sunbiz-gulfside.txt").</li>`;
+}
+// pdf.js on demand
+let pdfjsReady = null;
+function loadPdfjs(){
+  if (pdfjsReady) return pdfjsReady;
+  pdfjsReady = new Promise((res, rej) => {
+    const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    s.onload = () => { try { window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; res(window.pdfjsLib); } catch (e) { rej(e); } };
+    s.onerror = () => rej(new Error("pdf.js failed to load")); document.head.appendChild(s);
+  });
+  return pdfjsReady;
+}
+async function pdfText(file){
+  const lib = await loadPdfjs(); const buf = await file.arrayBuffer(); const doc = await lib.getDocument({data: buf}).promise;
+  let out = []; const n = Math.min(doc.numPages, 40);
+  for (let i = 1; i <= n; i++) { const pg = await doc.getPage(i); const tc = await pg.getTextContent(); out.push(tc.items.map(it => it.str).join(" ")); }
+  return out.join("\n\n") + (doc.numPages > n ? `\n\n[${doc.numPages - n} more pages not read]` : "");
+}
+async function docxText(file){
+  // minimal .docx reader: unzip word/document.xml and strip tags (no library; uses DecompressionStream)
+  const buf = new Uint8Array(await file.arrayBuffer()); const dv = new DataView(buf.buffer);
+  // find central directory end
+  let eocd = -1; for (let i = buf.length - 22; i >= 0 && i > buf.length - 70000; i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) throw new Error("not a zip");
+  const cdOff = dv.getUint32(eocd + 16, true), cdN = dv.getUint16(eocd + 10, true); let p = cdOff;
+  for (let k = 0; k < cdN; k++) {
+    if (dv.getUint32(p, true) !== 0x02014b50) break;
+    const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true), nlen = dv.getUint16(p + 28, true), elen = dv.getUint16(p + 30, true), clen = dv.getUint16(p + 32, true), lho = dv.getUint32(p + 42, true);
+    const name = new TextDecoder().decode(buf.subarray(p + 46, p + 46 + nlen));
+    if (name === "word/document.xml") {
+      const lnlen = dv.getUint16(lho + 26, true), lelen = dv.getUint16(lho + 28, true); const start = lho + 30 + lnlen + lelen; const data = buf.subarray(start, start + csize);
+      let xml;
+      if (method === 0) xml = new TextDecoder().decode(data);
+      else { const ds = new DecompressionStream("deflate-raw"); const stream = new Blob([data]).stream().pipeThrough(ds); xml = await new Response(stream).text(); }
+      return xml.replace(/<w:p[ >]/g, "\n<w:p ").replace(/<w:tab\/>/g, "\t").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/\n{3,}/g, "\n\n").trim();
+    }
+    p += 46 + nlen + elen + clen;
+  }
+  throw new Error("document.xml not found");
+}
+async function ingestFile(file){
+  const name = file.name, lower = name.toLowerCase();
+  try {
+    let text;
+    if (lower.endsWith(".pdf") || file.type === "application/pdf") text = await pdfText(file);
+    else if (lower.endsWith(".docx")) text = await docxText(file);
+    else text = await file.text();
+    if (lower.endsWith(".html") || lower.endsWith(".htm")) text = text.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<style[\s\S]*?<\/style>/gi, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    addSource(name, lower.endsWith(".eml") ? "email" : lower.endsWith(".csv") ? "data" : "document", text);
+  } catch (e) { addSource(name, "unreadable", ""); $("buildStatus").textContent = `Couldn't read ${name}: ${e.message || e}. Try saving it as PDF or text.`; }
+}
+$("fileIn").addEventListener("change", async e => { for (const f of e.target.files) await ingestFile(f); e.target.value = ""; });
+const dz = $("drop");
+["dragenter","dragover"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add("over"); }));
+["dragleave","drop"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove("over"); }));
+dz.addEventListener("drop", async e => { for (const f of e.dataTransfer.files) await ingestFile(f); });
+
+// Google Drive through the viewer's own connector
+async function driveSearch(q){
+  $("driveOut").textContent = "Searching…";
+  try {
+    const terms = q.split(/\s+/).filter(Boolean).map(t => `title contains '${t.replace(/'/g, "\\'")}'`).join(" and ");
+    const r = await mcp.callTool("Google Drive", "search_files", {query: terms, pageSize: 8, excludeContentSnippets: true});
+    const files = (r.payload && r.payload.files) || [];
+    if (!files.length) { $("driveOut").textContent = "No files matched."; return; }
+    $("driveOut").innerHTML = files.map(f => `<div class="row" style="justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line)"><span>${esc(f.title)} <span class="n">${esc((f.modifiedTime || "").slice(0,10))}</span></span><button data-fid="${esc(f.id)}" data-ft="${esc(f.title)}" type="button" style="padding:2px 8px;font-size:11px">Import</button></div>`).join("");
+    $("driveOut").querySelectorAll("button[data-fid]").forEach(b => b.onclick = async () => {
+      b.disabled = true; b.textContent = "Reading…";
+      try { const rr = await mcp.callTool("Google Drive", "read_file_content", {fileId: b.dataset.fid}); const text = typeof rr.payload === "string" ? rr.payload : (rr.payload && (rr.payload.content || rr.payload.text)) || (rr.content || []).map(c => c.text || "").join("\n"); addSource(b.dataset.ft, "drive", text); b.textContent = "Imported"; }
+      catch (e) { b.textContent = "Failed"; $("driveOut").insertAdjacentHTML("beforeend", `<div class="small">${esc(driveErr(e))}</div>`); }
+    });
+  } catch (e) { $("driveOut").textContent = driveErr(e); }
+}
+function driveErr(e){
+  const c = e && e.code;
+  if (c === "needs_reauth") return "Google Drive needs to be reconnected in claude.ai settings.";
+  if (c === "server_not_connected") return "Google Drive isn't connected for this account.";
+  if (c === "approval_required" || c === "not_granted") return "Allow this page to use Google Drive when prompted, then search again.";
+  if (c === "tool_error") return "Drive reported an error for that file.";
+  return "Drive is unavailable right now; try again shortly.";
+}
+$("driveGo").onclick = () => { const q = $("driveQ").value.trim(); if (q && mcp) driveSearch(q); };
+$("driveQ").addEventListener("keydown", e => { if (e.key === "Enter") $("driveGo").click(); });
+
+// Profile state
+function renderProfile(){
+  const prof = state.profile || {};
+  const conflicts = state.conflicts || [];
+  let html = `<dl class="prof">`;
+  for (const sec in PROFILE_SCHEMA) {
+    html += `<dt>${esc(sec)}</dt>`;
+    for (const f of PROFILE_SCHEMA[sec]) { const e = prof[sec] && prof[sec][f]; html += `<dd><span class="k">${esc(f)}</span><span class="v ${e ? "" : "unknown"}">${e ? esc(e.v) + `<span class="src">${esc(e.src || "")}</span>` : "unknown"}</span></dd>`; }
+  }
+  html += `</dl>`;
+  if (conflicts.length) html += `<h2 style="margin-top:12px">Conflicts between sources</h2>` + conflicts.map(c => `<div class="conf"><strong>${esc(c.field)}</strong>: ${esc(c.a)} <span class="cite">${esc(c.src_a)}</span> vs ${esc(c.b)} <span class="cite">${esc(c.src_b)}</span></div>`).join("");
+  const known = Object.values(prof).reduce((n, s) => n + Object.keys(s).length, 0), total = Object.values(PROFILE_SCHEMA).reduce((n, a) => n + a.length, 0);
+  html = `<div class="small" style="margin-bottom:4px">${known} of ${total} fields known</div>` + html;
+  $("profileOut").innerHTML = html;
+}
+function buildProfilePrompt(){
+  const prof = JSON.stringify(state.profile || {});
+  const srcText = [`[S0] Sample client file\n${CLIENT_FILE.documents.map(d => d.name + ": " + d.text).join("\n")}`].concat(sources.filter(s => s.text).map(s => `[${s.id}] ${s.name} (${s.kind})\n${s.text.slice(0, 20000)}`)).join("\n\n=====\n\n");
+  const schema = Object.entries(PROFILE_SCHEMA).map(([sec, fs]) => `${sec}: ${fs.join(" | ")}`).join("\n");
+  const intake = INTAKE.map(it => `${it.id}: ${it.q}`).join("\n");
+  return `You are the PROFILE BUILDER of a Florida law firm's client workspace. From the sources below, fill a profile of the business and its owner: the current state of affairs. Extract only what a source states; never infer, estimate, or advise. Every value names the source id it came from. Where two sources disagree, record a conflict and leave the field at the more recent or more authoritative source's value (a public record over a client description; a signed document over an email). Where nothing in the sources addresses a field, omit it.
+
+PROFILE FIELDS (section: field | field ...)
+${schema}
+
+CURRENT PROFILE (keep values you cannot improve)
+${prof}
+
+INTAKE ITEMS (mark any the sources satisfy)
+${intake}
+
+SOURCES
+${srcText}
+
+Reply with ONLY a JSON object:
+{"profile": { "Business": { "<field exactly as listed>": {"v": "value in one line", "src": "S0"} , ... }, "Owner": { ... } },
+ "conflicts": [ {"field": "...", "a": "...", "src_a": "S1", "b": "...", "src_b": "S2"} ],
+ "intake_satisfied": [ {"id": "B5", "complete": true|false, "note": "what the source shows"} ],
+ "node_facts": [ {"node": "N4", "fact": "neutral statement relevant to the node's rule", "src": "S1"} ],
+ "gaps": [ "fields that no source addresses and that an obvious document would answer, e.g. 'Sunbiz record would give document number and annual report date'" ] }`;
+}
+const CANNED_PROFILE = {
+  profile: { Business: {
+    "Legal name and entity type": {v:"Gulfside Mechanical, LLC, Florida single-member LLC, member-managed", src:"S0"},
+    "Owners and percentages": {v:"Dana Ortiz, 100%", src:"S0"},
+    "Managers / officers of record": {v:"Dana Ortiz (member); Interim Manager designated: Luis Herrera; alternate Maria Ortiz (OA Art. 9)", src:"S0"},
+    "Bank accounts and signers": {v:"Seacoast Bank; reserve account target $84,000; signatory card status not in file", src:"S0"},
+    "Insurance in force": {v:"Key-person term life $420,000 on Dana Ortiz, Company-owned, Company beneficiary, assigned to Seacoast; GL and WC in force; no disability buy-out", src:"S0"},
+    "Lease": {v:"4410 Industrial Blvd, Tampa; term ends 2027-01-31; renewal notice deadline 2026-08-04 passed; $6,200/mo; personal guaranty, uncapped", src:"S0"},
+    "Loans and credit lines": {v:"SBA 7(a) with Seacoast, ~$362,000 balance, matures 2034-02-15; personal guaranty; key-person insurance covenant; change-of-management default clause", src:"S0"},
+    "Key employees": {v:"Luis Herrera, operations manager (Interim Manager); no retention agreement on file", src:"S0"} },
+    Owner: {
+    "Name; role": {v:"Dana Ortiz, sole member", src:"S0"},
+    "Target exit and preferred exit": {v:"Target 2031-06-30 (client-set milestone); default branch continue 12 months then sell", src:"S0"},
+    "Personal documents in place (will, trust, DPOA, surrogate)": {v:"DPOA with business rider signed 2026-10-20 (Business Agent Luis Herrera; alternate Maria Ortiz); will/trust and surrogate not in file", src:"S0"},
+    "Who holds authority: POA agent / PR / trustee": {v:"POA agent Luis Herrera; PR/trustee unknown", src:"S0"},
+    "Personal guaranties": {v:"Lease (uncapped, full term) and SBA 7(a)", src:"S0"},
+    "Family and who is affected": {v:"Maria Ortiz (spouse) named as alternate manager and Family Liaison", src:"S0"} } },
+  conflicts: [],
+  intake_satisfied: [ {id:"B1", complete:true, note:"Operating agreement Art. 9 in file"}, {id:"B11", complete:true, note:"Lease abstract"}, {id:"B12", complete:true, note:"SBA loan terms"}, {id:"B8", complete:true, note:"Insurance schedule"} ],
+  node_facts: [ {node:"N10", fact:"Lease renewal option notice deadline passed 2026-08-04; guaranty uncapped.", src:"S0"}, {node:"N7", fact:"Key-person policy assigned to lender per SBA covenant; renews 2027-03-01.", src:"S0"} ],
+  gaps: ["Sunbiz record: document number, status, annual report date, registered agent", "County clerk: judgments or liens against the company or Dana Ortiz", "UCC search: lender's blanket lien and any equipment financing", "Will or trust: who takes the interest; whether a trust should hold it", "Bank signatory card and online-admin roster"]
+};
+function applyProfile(r){
+  state.profile = state.profile || {};
+  for (const sec in (r.profile || {})) { state.profile[sec] = state.profile[sec] || {}; for (const f in r.profile[sec]) if (PROFILE_SCHEMA[sec] && PROFILE_SCHEMA[sec].includes(f) && r.profile[sec][f] && r.profile[sec][f].v) state.profile[sec][f] = {v: String(r.profile[sec][f].v), src: String(r.profile[sec][f].src || "")}; }
+  state.conflicts = (r.conflicts || []).slice(0, 20);
+  for (const s of (r.intake_satisfied || [])) if (INTAKE.some(it => it.id === s.id) && intakeStatus(s.id) !== "received") { state.intake[s.id] = s.complete ? "received" : "requested"; }
+  saveState(); redraw();
+  const gaps = (r.gaps || []).length ? `<div class="small" style="margin-top:8px"><strong>Gaps the sources don't reach:</strong> ${esc(r.gaps.join(" · "))}</div>` : "";
+  const facts = (r.node_facts || []).length ? `<div class="small" style="margin-top:6px"><strong>Facts for the state file (confirm on the call):</strong> ${r.node_facts.map(f => `<span class="cite">${esc(f.node)}</span> ${esc(f.fact)}`).join(" · ")}</div>` : "";
+  $("buildStatus").innerHTML = `Profile updated from ${sources.filter(s => s.text).length + 1} source${sources.length ? "s" : ""}.` + gaps + facts;
+}
+$("buildStop").onclick = () => buildCtl?.abort();
+$("buildProfile").onclick = async () => {
+  if (!sample) { $("buildStatus").textContent = "Claude isn't available in this view; applying the example profile."; applyProfile(CANNED_PROFILE); return; }
+  buildCtl = new AbortController(); $("buildProfile").disabled = true; $("buildStop").hidden = false; $("buildStatus").textContent = "Reading sources and building the profile… (longer with PDFs)";
+  try { const r = await sample.json(buildProfilePrompt(), {signal: buildCtl.signal, modelTier: "default", cache: false}); if (!r || typeof r !== "object") throw {code: "invalid_json"}; applyProfile(r); }
+  catch (e) { const code = e && e.code ? e.code : "upstream_error"; $("buildStatus").textContent = COPY[code] ?? (code === "prompt_too_large" ? "Too much material at once; remove a source and try again." : "The build hit a problem. Try again."); if (code === "not_granted") { sample = null; applyProfile(CANNED_PROFILE); } }
+  finally { $("buildProfile").disabled = false; $("buildStop").hidden = true; buildCtl = null; }
+};
+
+// ---------- Intake assistant ----------
+const EX_ANSWER = "Payroll is through Gusto; I'm the only admin on it. Our main account is at Seacoast, I'm the only signer, Luis has view-only online access. Passwords are in a shared Google doc that Luis can see. We've got about $86k in the money market account.";
+function buildExtractPrompt(text){
+  const list = INTAKE.map(it => `${it.id} [${it.kind}, ${it.tier}] ${it.q} — currently ${intakeStatus(it.id)}`).join("\n");
+  return `You are the INTAKE ASSISTANT of a Florida law firm's client workspace. You read material a client pasted and decide which intake items it answers. You never advise and never evaluate the client's choices; you extract and classify only.
+
+INTAKE ITEMS
+${list}
+
+MATERIAL PASTED BY THE CLIENT
+${text}
+
+Reply with ONLY a JSON object:
+{"satisfies": [ {"id": "intake id", "extracted": "the fact or document detail in one sentence, as stated", "complete": true|false, "still_needed": "what is missing for this item to be complete, or empty"} ],
+ "node_facts": [ {"node": "N4 etc.", "fact": "a fact relevant to this node's red rule, stated neutrally (e.g. 'owner is the only payroll admin')"} ],
+ "follow_up_questions": [ "up to 4 concrete questions the attorney would ask next, in the client's words" ] }
+Only list an item under satisfies if the material actually addresses it. Mark complete=false if the item needs a document and only a description was given.`;
+}
+const CANNED_EXTRACT = { satisfies: [
+  {id:"B7", extracted:"Payroll provider is Gusto; the owner is the only admin.", complete:true, still_needed:""},
+  {id:"B5", extracted:"Main account at Seacoast; owner is the only signer; Luis has view-only online access.", complete:false, still_needed:"The signatory card or the bank's confirmation of authorized signers."},
+  {id:"B9", extracted:"Passwords are kept in a shared Google doc visible to Luis.", complete:false, still_needed:"MFA device locations, domain registrar, and software admin accounts."},
+  {id:"B6", extracted:"About $86,000 in the money market account.", complete:true, still_needed:""} ],
+  node_facts: [ {node:"N6", fact:"Owner is the sole payroll admin."}, {node:"N4", fact:"Owner is the only signer; manager has view-only access."}, {node:"N8", fact:"Credentials held in a shared document; MFA not described."}, {node:"N5", fact:"Reserve balance about $86,000 against an $84,000 target."} ],
+  follow_up_questions: ["Which phone receives the MFA codes for the bank and for Gusto?", "Can Luis be added as a Gusto admin this week?", "Is the $86k in the same account that pays payroll, or a separate reserve?", "Who, besides you, knows where the Google doc is?"] };
+function renderExtract(r){
+  $("extractOut").innerHTML = `<div class="tablewrap"><table><thead><tr><th>Item</th><th>Extracted</th><th>Status</th><th></th></tr></thead><tbody>` +
+    (r.satisfies || []).map(s => { const it = INTAKE.find(i => i.id === s.id); return `<tr><td class="cite">${esc(s.id)}</td><td>${esc(s.extracted)}${s.still_needed ? `<div class="small">Still needed: ${esc(s.still_needed)}</div>` : ""}</td><td>${s.complete ? "<span class='pill included'>complete</span>" : "<span class='pill quoted'>partial</span>"}</td><td>${it && intakeStatus(it.id) !== "received" ? `<button data-ik="${esc(s.id)}" data-is="${s.complete ? "received" : "requested"}" type="button" style="padding:2px 8px;font-size:11px">${s.complete ? "Mark received" : "Mark requested"}</button>` : ""}</td></tr>`; }).join("") +
+    `</tbody></table></div>` +
+    ((r.node_facts || []).length ? `<h2 style="margin-top:10px">Facts for the state file (attorney confirms)</h2><ul>${r.node_facts.map(f => `<li><span class="cite">${esc(f.node)}</span> ${esc(f.fact)}</li>`).join("")}</ul>` : "") +
+    ((r.follow_up_questions || []).length ? `<h2 style="margin-top:10px">Follow-up for the client</h2><ul>${r.follow_up_questions.map(q => `<li>${esc(q)}</li>`).join("")}</ul>` : "");
+  $("extractOut").querySelectorAll("button[data-ik]").forEach(b => b.onclick = () => { setIntake(b.dataset.ik, b.dataset.is); b.disabled = true; b.textContent = "Done"; });
+}
+$("ex3").onclick = () => { $("docPaste").value = EX_ANSWER; };
+$("extract").onclick = async () => {
+  const t = $("docPaste").value.trim(); if (!t) { $("extractStatus").textContent = "Paste something first."; return; }
+  if (!sample) { $("extractStatus").textContent = "Claude isn't available here; showing the example read."; renderExtract(CANNED_EXTRACT); return; }
+  $("extract").disabled = true; $("extractStatus").textContent = "Reading…";
+  try { const r = await sample.json(buildExtractPrompt(t), {modelTier: "quick", cache: false}); renderExtract(r); $("extractStatus").textContent = ""; }
+  catch (e) { const code = e && e.code ? e.code : "upstream_error"; $("extractStatus").textContent = COPY[code] ?? "The read hit a problem. Try again."; if (code === "not_granted") { sample = null; renderExtract(CANNED_EXTRACT); } }
+  finally { $("extract").disabled = false; }
+};
+$("reqDraft").onclick = async () => {
+  const missing = INTAKE.filter(it => intakeStatus(it.id) !== "received");
+  if (!missing.length) { $("extractStatus").textContent = "Nothing is missing."; return; }
+  const list = missing.map(it => `${it.id} (${it.kind}, ${it.tier === "P" ? "personal" : "company"}${it.core ? ", required before the plan can be assigned" : ""}): ${it.q}`).join("\n");
+  const prompt = `You are the intake assistant of a Florida law firm. Write a short, plain message to the client, ${CLIENT_FILE.owner.split(",")[0]}, listing the documents and answers still needed, grouped as "Needed before your plan can be assigned" and "Needed for later stages", with company items and personal items in separate short lists. No advice, no urgency language beyond the grouping, no fees. End with: "Reply here or upload to the workspace; anything you send is on Thursday's agenda." Items:\n${list}\n\nReply with the message text only.`;
+  if (!sample) { $("extractOut").innerHTML = `<p class="small">Claude isn't available here. Missing items:</p><ul>${missing.map(it => `<li>${esc(it.id)} · ${esc(it.q)}${it.core ? " <strong>(required)</strong>" : ""}</li>`).join("")}</ul>`; missing.forEach(it => { if (intakeStatus(it.id) === "missing") setIntake(it.id, "requested"); }); return; }
+  $("reqDraft").disabled = true; $("extractStatus").textContent = "Drafting…";
+  try { const { text } = await sample(prompt, {modelTier: "quick", cache: false}); $("extractOut").innerHTML = `<div class="card client" style="white-space:pre-wrap;font-size:13.5px">${esc(text)}</div><div class="small" style="margin-top:6px">Marked the listed items as requested.</div>`; missing.forEach(it => { if (intakeStatus(it.id) === "missing") setIntake(it.id, "requested"); }); $("extractStatus").textContent = ""; }
+  catch (e) { const code = e && e.code ? e.code : "upstream_error"; $("extractStatus").textContent = COPY[code] ?? "The draft hit a problem. Try again."; }
+  finally { $("reqDraft").disabled = false; }
+};
+
+// ---------- Scan wiring ----------
+const CANNED_SCAN = [
+  {node:"N12", status:"red", finding:"Article 9 names Luis Herrera as Interim Manager and the recorded status shows no retention term for him; the N12 rule fails where the plan names a person without a retention term.", cites:["OA-Art9 9.1(c)"], satisfying_document:"Retention agreement for the named Interim Manager", attorney_note:"Connects to the pending lease renewal, where the landlord is asking Luis for a personal guaranty."},
+  {node:"ANCHOR", status:"amber", finding:"Lease expires 2027-01-31 (91 days). The renewal option required notice by 2026-08-04, which has passed; the existing guaranty is uncapped with no release on assignment.", cites:["LEASE Term","LEASE Renewal option","LEASE Guaranty"], satisfying_document:"Updated lease abstract and guaranty schedule after the renewal is resolved (N10)", attorney_note:"N10 is already amber; a new guaranty would also move C5."},
+  {node:"N4", status:"amber", finding:"The DPOA naming Luis Herrera as Business Agent was signed 2026-10-20; the bank's written acceptance is not on file, and the SBA loan sits at the same bank.", cites:["DPOA Part A","LOAN"], satisfying_document:"Seacoast Bank acceptance letter and updated signatory card", attorney_note:"Until accepted, C3 stays amber: the OA grant is in place but the personal-side instrument is not recognized by the bank."},
+  {node:"C3", status:"amber", finding:"OA Article 9 and the DPOA name the same Interim Manager and alternate, so the instruments agree; the gap is bank recognition of the DPOA only.", cites:["OA-Art9 9.1(c)","DPOA Part A"], satisfying_document:"Bank acceptance (same as N4)", attorney_note:"Clears automatically when N4 clears."},
+  {node:"N8", status:"amber", finding:"Access list is dated 2025-09, older than 12 months.", cites:["Recorded node status"], satisfying_document:"Refreshed credentials and access list with the manager as emergency contact", attorney_note:"Quarterly-drift node; quick to clear on the call."},
+  {node:"C5", status:"amber", finding:"The lease guaranty and the SBA guaranty are both personal to Dana Ortiz; the documents on file do not show an estate-side exposure schedule, and a second lease guaranty is under discussion.", cites:["LEASE Guaranty","LOAN"], satisfying_document:"Guaranty schedule reviewed on both tiers after the lease is settled", attorney_note:"Personal-tier status only; content stays in the owner tier."},
+  {node:"ANCHOR", status:"amber", finding:"Key-person life policy renews 2027-03-01 (120 days); the SBA covenant requires $420,000 assigned to the lender while the loan is outstanding.", cites:["INS","LOAN Covenant"], satisfying_document:"Renewal confirmation and assignment in force (N7)", attorney_note:"Lender may ask for evidence at the 2027-02-15 anniversary, two weeks before renewal."},
+  {node:"N15a", status:"green", finding:"Default branch is continue for 12 months then sell; Schedule 2 lists sale authority. No buyer list or valuation reference is in the file for the sell step.", cites:["OA-Art9 9.5","OA-Art9 Schedule 2"], satisfying_document:"Valuation reference and buyer list (N15b) before the sell step would execute", attorney_note:"Not a red under N15a; worth noting as the first change-order candidate after the lease."}
+];
+let scanCtl = null, lastScan = [];
+function renderScan(findings){
+  lastScan = findings;
+  const cls = s => s === "red" ? "crit" : s === "amber" ? "warn" : s === "green" ? "good" : "";
+  $("scanWrap").hidden = false;
+  $("scanTable").querySelector("tbody").innerHTML = findings.map((f,i) => {
+    const already = state.items.some(it => it.finding === f.finding);
+    return `<tr><td class="cite">${esc(f.node)}</td><td><span class="pill" style="color:var(--${cls(f.status)});border-color:var(--${cls(f.status)})">${esc(f.status)}</span></td><td>${esc(f.finding)}</td><td class="cite">${esc((f.cites||[]).join("; "))}</td><td>${esc(f.satisfying_document)}</td><td class="small">${esc(f.attorney_note)}<div style="margin-top:6px"><button class="confirm" data-i="${i}" type="button" ${already ? "disabled" : ""}>${already ? "On the board" : "Confirm → Open Items"}</button></div></td></tr>`;
+  }).join("");
+  $("scanStatus").textContent = findings.length + " finding" + (findings.length === 1 ? "" : "s") + ". Confirm a finding to put it on the board; the client sees only that an item was added for Thursday.";
+  $("scanTable").querySelectorAll("button.confirm").forEach(b => b.onclick = () => confirmFinding(findings[Number(b.dataset.i)]));
+}
+function confirmFinding(f){
+  if (!f) return;
+  const node = (f.node || "").toUpperCase();
+  const status = /^(red|amber|green)$/.test(f.status) ? f.status : "amber";
+  if (node !== "ANCHOR") setNode(node, status);
+  state.items.push({ id: state.nextId++, node, status, title: f.satisfying_document || f.finding, finding: f.finding, column: "Identified", allowance: 0, price: 0 });
+  saveState(); redraw(); renderScan(lastScan);
+  agenda.push({ topic: node + " · " + (f.satisfying_document || "finding"), urgent: false, agenda_position: status === "red" ? 1 : 2, agenda_line: "Scan finding " + node + ": " + (f.satisfying_document || f.finding) });
+  renderAgenda();
+}
+function renderAgenda(){
+  agenda.sort((a,b) => (a.urgent?0:1)-(b.urgent?0:1) || a.agenda_position - b.agenda_position);
+  $("agenda").innerHTML = agenda.map((a,i) => `<li><span class="n">${i+1}</span><span>${esc(a.agenda_line)}${a.urgent ? ' <span class="pill urgent">urgent</span>' : ""}</span><span class="n">${esc(a.topic)}</span></li>`).join("");
+  $("agendaMeta").textContent = agenda.length + " item" + (agenda.length === 1 ? "" : "s");
+}
+
+// ---------- Open Items board and budget ----------
+const COLS = ["Identified", "Scoped", "In progress", "Done"];
+const money = n => "$" + Number(n || 0).toLocaleString("en-US");
+function renderKanban(){
+  $("kanban").innerHTML = COLS.map(col => {
+    const cards = state.items.filter(it => it.column === col);
+    return `<div class="col"><h3>${col} <span class="n">${cards.length}</span></h3>` + (cards.length ? cards.map(cardHtml).join("") : `<div class="small">—</div>`) + `</div>`;
+  }).join("");
+  $("kanban").querySelectorAll("[data-act]").forEach(b => b.onclick = () => act(Number(b.dataset.id), b.dataset.act));
+  $("kanban").querySelectorAll("input[data-field]").forEach(inp => inp.onchange = () => { const it = state.items.find(x => x.id === Number(inp.dataset.id)); if (it) { it[inp.dataset.field] = Number(inp.value) || 0; saveState(); renderBudget(); } });
+}
+function cardHtml(it){
+  const st = it.column === "Done" ? "green" : it.status;
+  let body = `<div class="t">${esc(it.title)}</div><div class="small">${esc(it.node)} · ${esc(it.finding).slice(0,140)}${it.finding.length > 140 ? "…" : ""}</div>`;
+  if (it.column === "Identified") body += `<label class="small" for="al${it.id}">Allowance (estimate)</label><input id="al${it.id}" type="number" min="0" step="100" value="${it.allowance || ""}" data-id="${it.id}" data-field="allowance" placeholder="e.g. 1200">` +
+    `<label class="small" for="pr${it.id}">Change-order price (for client approval on call)</label><input id="pr${it.id}" type="number" min="0" step="100" value="${it.price || ""}" data-id="${it.id}" data-field="price" placeholder="quoted on call">` +
+    `<div class="acts"><button data-act="scope" data-id="${it.id}" type="button">Client approved → Scoped</button></div>`;
+  else if (it.column === "Scoped") body += `<div class="small">Approved: ${money(it.price)}</div><div class="acts"><button data-act="start" data-id="${it.id}" type="button">Start</button><button class="ghost" data-act="back" data-id="${it.id}" type="button">Back</button></div>`;
+  else if (it.column === "In progress") body += `<div class="small">Approved: ${money(it.price)}</div><div class="acts"><button data-act="done" data-id="${it.id}" type="button">Done → node green</button></div>`;
+  else body += `<div class="small">Billable: ${money(it.price)} · ${esc(it.node)} green</div>`;
+  return `<div class="kcard ${st}">${body}</div>`;
+}
+function act(id, what){
+  const it = state.items.find(x => x.id === id); if (!it) return;
+  if (what === "scope") { if (!(it.price > 0)) { alertLine("Enter the change-order price the client approved on the call before moving the card."); return; } it.column = "Scoped"; }
+  if (what === "back") it.column = "Identified";
+  if (what === "start") it.column = "In progress";
+  if (what === "done") { it.column = "Done"; for (const k of (it.clears || [it.node])) if (k !== "ANCHOR") setNode(k, "green"); }
+  saveState(); redraw();
+}
+function alertLine(msg){ $("scanStatus").textContent = msg; }
+function renderBudget(){
+  const approved = state.items.filter(i => i.column !== "Identified").reduce((s,i) => s + (i.price||0), 0);
+  const done = state.items.filter(i => i.column === "Done").reduce((s,i) => s + (i.price||0), 0);
+  const allow = state.items.filter(i => i.column === "Identified").reduce((s,i) => s + (i.allowance||0), 0);
+  $("bBase").textContent = money(BASE_CONTRACT); $("bApproved").textContent = money(approved); $("bDone").textContent = money(done);
+  $("bAllow").textContent = money(allow); $("bTotal").textContent = money(BASE_CONTRACT + approved + allow);
+}
+$("scanStop").onclick = () => scanCtl?.abort();
+$("scan").onclick = async () => {
+  if ($("mode").value === "prospect") { $("scanStatus").textContent = "No client file in non-client mode; nothing to scan."; return; }
+  if (!sample) { $("scanStatus").textContent = "Claude isn't available in this view; showing the pre-run example scan."; renderScan(CANNED_SCAN); return; }
+  scanCtl = new AbortController(); $("scan").disabled = true; $("scanStop").hidden = false; $("scanStatus").textContent = "Scanning…";
+  try {
+    const r = await sample.json(buildScanPrompt(currentFile()), {signal: scanCtl.signal, modelTier: "default", cache: {gcTime: 3600000}});
+    if (!Array.isArray(r)) throw {code: "invalid_json", message: "shape"};
+    renderScan(r);
+  } catch (e) {
+    const code = e && e.code ? e.code : "upstream_error";
+    $("scanStatus").textContent = COPY[code] ?? "The scan hit a problem. Try again in a moment.";
+    if (code === "not_granted" || code === "sampling_disabled") { sample = null; renderScan(CANNED_SCAN); }
+  } finally { $("scan").disabled = false; $("scanStop").hidden = true; scanCtl = null; }
+};
+
+// Boot
+renderFile(CLIENT_FILE);
+state.nodes = nodeStatuses(CLIENT_FILE.node_status); state.intake = Object.assign({}, INTAKE_SEED); loadState(); if (!state.intake) state.intake = Object.assign({}, INTAKE_SEED);
+$("resetState").onclick = resetState;
+redraw();
+$("q").value = EX_Q; $("outside").value = EX_OUT;
+renderResult(CANNED, "check-this (example)");
+renderScan(CANNED_SCAN);
+$("status").textContent = "Example brief loaded. Edit the question and submit to run the engine live.";
+renderSources(); renderPublic();
+(async () => { try { mcp = await window.claude?.use?.("mcp"); } catch { mcp = null; } if (mcp) $("driveBox").hidden = false; })();
+(async () => { try { sample = await window.claude?.use?.("sample"); } catch { sample = null; } if (!sample) $("status").textContent = "Claude isn't reachable from this view; the example brief shows the output. Open the page in claude.ai to run it live."; })();
+</script>

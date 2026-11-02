@@ -1,0 +1,83 @@
+# Engagement Letter — Owner Personal (Draft v1)
+
+[FIRM LETTERHEAD]
+
+[Date]
+
+[Owner name]
+[Address]
+
+Re: Personal Planning Engagement and Consent — Coordination with [Entity]'s Exit Project
+
+Dear [Owner]:
+
+This letter confirms the terms on which [Firm] (the "Firm") will represent you personally, alongside its separate engagement by [Entity] (the "Company"). Please read it, sign, and return it. It takes effect when signed.
+
+## 1. Two clients, two engagements
+
+The Firm represents the Company under a separate letter dated [ ]. In that engagement the Company is the client, and the Firm owes its duties to the Company. Under this letter the Firm represents you individually. These are two engagements with two clients, and the Firm will keep two files.
+
+## 2. Scope of your personal engagement
+
+[Select:]
+
+**(A) Personal documents.** The Firm will prepare and maintain: a durable power of attorney with business powers coordinated to the Company's plan; [will / revocable trust] with provisions for your interest in the Company; a designation of health care surrogate and living will; and [other]. Fee: $[ ] flat, earned on delivery of signed documents. Maintenance of these documents is included in the Company's Phase 2 fee by allocation (Section 6), with no separate subscription charged to you.
+
+**(B) Coordination only.** Your personal documents are prepared by [other counsel]. The Firm will not draft them. The Firm's work for you is limited to reviewing your personal documents for consistency with the Company's plan at onboarding and annual review, reporting inconsistencies to you and, with your consent, to your other counsel, and advising you on the items in Section 4. No separate fee; this work is allocated as in Section 6.
+
+Anything else — Medicaid or long-term-care planning, asset-protection planning, estate or gift tax planning, guardianship, or representation in any dispute — is outside this engagement and will be proposed by change order under this letter if you want it.
+
+## 3. Conflict disclosure and consent (Rule 4-1.7)
+
+Your interests and the Company's are aligned on most of this work and may differ on some of it: who receives your interest and on what terms; whether the Company continues, is sold, or is wound down; valuation; how sale proceeds are paid and taxed; the treatment of guaranties; [and, if there are other owners, buyout terms and price]. If the Firm concludes that a difference has become a conflict it cannot resolve consistently with its duties to both, it will tell you and the Company and may have to withdraw from one or both engagements. Information you give the Firm in this engagement may be used in the Company's engagement for the purposes of Section 4, and the Company has given the corresponding consent; otherwise each file is confidential to its client.
+
+By signing, you confirm that the Firm has explained these risks, that you have had the opportunity to consult independent counsel, and that you consent to the Firm's representation of both you and the Company on these terms.
+
+## 4. Coordination consent
+
+You consent to the Firm:
+
+(a) reviewing your personal documents, whoever drafted them, for consistency with the Company's plan at the coordination points listed in Schedule C;
+(b) using what it learns from each engagement to keep the other consistent;
+(c) reporting the *status* of each coordination point (in place and consistent: yes/no) in the Company's workspace, where any other authorized Company user may see it, but never the contents of your personal documents; and
+(d) communicating with your other counsel, your CPA, and your financial advisor about coordination items, within the scope you approve on the weekly call.
+
+You may withdraw consent (d) at any time in writing. Withdrawing consents (a)–(c) ends the coordination work and the Firm's ability to keep the two plans consistent; the Firm will tell the Company that coordination has ended, without saying why.
+
+## 5. The workspace
+
+You have access to a personal tier of the Company's workspace that holds your personal documents and the full coordination record. The Company's tier does not. The terms of the Company's letter on use of AI, confidentiality, and the limits of the assistant apply here. Do not enter medical information in the workspace; raise health matters on the call. If a question about your own capacity ever arises, the Firm will address it with you directly and outside the workspace, under separate terms.
+
+## 6. Fees and allocation
+
+Fees under this letter are stated above and in any change order. Where the Company pays a fee that includes work for you (the Phase 2 allocation, or a change order resolving a coordination item), the Firm will state the allocation on the invoice, and you acknowledge that the Company's payment of a fee for your benefit is a matter between you and the Company [and its other owners, and your CPA, for tax treatment]. The Firm takes no position on the tax treatment of allocated fees. Nothing is collected in advance.
+
+## 7. Documents and termination
+
+Documents the Firm prepares for you are yours on delivery and remain valid regardless of the status of either engagement. Either of us may end this engagement on written notice; ending it does not end the Company's engagement, and ending the Company's engagement does not end this one, except that the coordination work in Section 2(B) and Section 4 depends on both.
+
+## 8. Other terms
+
+[Firm's standard provisions, as in the Company letter.]
+
+[Firm]
+By: ______________________
+[Attorney], Florida Bar No. [ ]
+
+**Accepted, and consent given under Sections 3 and 4:**
+______________________
+[Owner name]
+Date: __________
+
+---
+
+## Schedule C — Coordination points
+
+1. Who receives your interest in the Company (will/trust ↔ operating agreement, buy-sell, trust admission)
+2. Who runs the Company on day one (POA agent / personal representative / trustee ↔ interim manager)
+3. Authority instruments (durable POA ↔ operating-agreement grant; bank acceptance of each)
+4. Buy-sell funding (policy ownership and beneficiary ↔ entity's right to proceeds and structure)
+5. Guaranties (estate exposure ↔ Company schedule and negotiator)
+6. Exit proceeds (Medicaid, asset protection, basis and estate tax ↔ sale structure and timing)
+7. Lifetime transfer to an insider (gift/estate tax and equalization ↔ transfer mechanics and control)
+8. Family liaison (who speaks for the family ↔ who the manager takes direction from)

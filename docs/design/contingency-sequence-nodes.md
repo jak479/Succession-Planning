@@ -1,0 +1,61 @@
+# Contingency Sequence — Node List (v1)
+
+The dependency graph the state file, PM board, path diagram and calculator read from. Each node: what must be true, what satisfies it, what depends on it, and the rule that turns it red. "Owner out" = death, incapacity, or unavailability as defined in N0.
+
+Status values: GREEN (satisfied, in date) · AMBER (satisfied, review due) · RED (broken — a dependent node cannot execute). Red propagates downstream.
+
+| # | Node | Satisfied by | Depends on | Red rule |
+|---|---|---|---|---|
+| N0 | **Trigger defined** — what counts as "owner out," who declares it, and the evidence (death certificate; physician certification standard for incapacity; unreachable-for-X-days for unavailability) | Trigger clause in operating agreement amendment / plan | — | Clause unsigned, or incapacity standard undefined |
+| N1 | **Notice tree** — who is told, by whom, in what order (manager, family liaison, attorney, bank) | Instruction letter, contact tree | N0 | Any contact unreachable at last test; tree older than 12 months |
+| N2 | **Authority activates** — interim manager has express power to operate, sign, hire/fire, spend to the cash rule | OA amendment or resolution naming manager and powers (§ 605 default rules do not supply this); durable POA with business powers (ch. 709) for the owner's personal side | N0 | Manager resigned, left, or declined; document unsigned; manager consent not on file |
+| N3 | **Successor manager** — second name if N2's manager is unavailable | Same instrument, alternate named | N2 | No alternate; alternate left |
+| N4 | **Bank access** — manager is on the signatory card; online banking admin exists other than owner | Signatory card; bank's POA acceptance letter | N2 | Manager not on card; bank has not accepted POA; new account opened since last review |
+| N5 | **Cash reserve** — funds for 90 days' payroll and fixed costs, with the spending rule | Reserve account; cash rule in plan | — | Balance below 90-day figure; rule unsigned |
+| N6 | **Payroll runs** — payroll provider admin credentials held by manager; funding path from N4/N5 | Provider admin assignment | N4, N5, N8 | Owner is sole admin; provider changed |
+| N7 | **Insurance in force** — key-person, disability, GL/professional, with correct beneficiary/loss payee | Policy schedule; beneficiary designations | — | Any policy lapsed; beneficiary is the owner personally where entity should be |
+| N8 | **Credentials and access** — passwords, MFA devices, domain, software admin, physical keys | Password manager with manager as emergency contact; access list | N2 | List older than 12 months; MFA device is owner's phone only |
+| N9 | **Customer and referral-source notice** — list and script; continuity statement on file | Customer list; stakeholder continuity statement | N2, N8 | List older than 12 months; statement expired |
+| N10 | **Vendor, lease, and guaranty list** — what follows the owner personally; who negotiates | Guaranty schedule; lease abstract; negotiator named | N2 | Lease renewed or new guaranty signed since last review |
+| N11 | **License and regulatory** (licensed businesses only) — designee/administrator rules met; transfer notice path known | Designation on file; regulator's change-of-ownership rule abstract (e.g. AHCA § 408.807) | N2 | License renewal passed without review; designee changed |
+| N12 | **Key staff** — retention terms in place; staff know who the manager is | Retention agreements; disclosure timing decision | N2 | Key employee changed; no retention term for a person the plan names |
+| N13 | *(moved to C8)* | | | |
+| N14 | **Day-30 checkpoint** — who decides continue / sell / wind down, and on what information | Decision authority clause; information list (financials, pipeline, staff status) | N2, N4, N5, N6 | Decision-maker unnamed or same person as the incapacitated owner only |
+| N15a | **Continue branch** — operating plan for 12 months under the manager | Continue instruction | N14 | Default branch is "continue" and no instruction exists |
+| N15b | **Sell branch** — authority to sell, valuation reference, buyer list | Sale authority clause; valuation method; buyer list | N14, N9, N12 | Default branch is "sell" and valuation method or buyer list missing |
+| N15c | **Wind-down branch** — authority to close, sequence, funding | Wind-down instruction (§ 605.0701 et seq.) | N14, N5, N10 | Default branch is "wind down" and sequence or funding undefined |
+
+## Coordination nodes (estate plan ↔ exit plan)
+
+Status is computed from *consistency between the two documents*, not from either alone. Each depends on one entity node and one personal-tier node. The entity tier displays status only ("personal document in place and consistent: yes/no"); content is visible in the owner tier.
+
+| # | Coordination item | Entity-side document | Personal-side document | Red rule |
+|---|---|---|---|---|
+| C1 | **Who receives the interest** | OA transfer restrictions; buy-sell; trust-as-member admission (N15b) | Will / trust beneficiary designation of the interest | Different takers; OA bars the transfer the will or trust makes; trust not admitted |
+| C2 | **Who runs it on day one** | Interim manager (N2) | POA agent; later PR or trustee | Different persons with no coordination clause; same person with conflicting duties (PR to liquidate vs. manager to continue) |
+| C3 | **Authority instruments** | OA grant / resolution (N2) | Durable POA with business powers (ch. 709) | Either amended or revoked without the other; bank has accepted one but not the other (N4) |
+| C4 | **Buy-sell funding** | Entity's right to proceeds; redemption vs. cross-purchase (N7, N15b) | Policy ownership and beneficiary (owner, ILIT, trust) | Policy owned or payable inconsistently with the structure; premium payer inconsistent with tax treatment |
+| C5 | **Guaranties** | Guaranty schedule; negotiator (N10) | Estate exposure; exempt-asset plan | New guaranty since last review on either side |
+| C6 | **Exit proceeds** | Sale structure and timing; installment vs. lump sum (N15b/N15c) | Medicaid / long-term-care plan; asset protection; basis and estate tax | Proposed sale form or timing defeats the personal plan (countable assets; lost step-up) |
+| C7 | **Lifetime transfer to insider** | Transfer mechanics; valuation; control retention (N15b) | Gift/estate tax; equalization among heirs | Transfer executed on one side only |
+| C8 | **Family liaison** | Person the manager takes direction from (N1, N2) | Person who speaks for the family; health directive | Unnamed; liaison is also a disputing heir; liaison deceased or estranged per owner |
+
+Review: C1–C4 at onboarding and at every annual review; C5 on event; C6–C7 when a branch moves to Scoped; C8 at onboarding.
+
+## Critical path (default client: owner-dependent, wind-down default)
+N0 → N2 → N4 → N6 → N14 → N15c, with N5 and N8 as parallel inputs to N6. Nodes N7, N9, N10, N12 have float but gate N15b/N15c. C2 and C3 sit on the critical path: a red C2 or C3 makes N2 red.
+
+## Review cadence
+- Every weekly call: any node changed by this week's events
+- Quarterly: N4, N5, N8 (the three that drift silently)
+- Annual review (anchor date): all nodes; N9 statement reissued
+- On event (new lease, new account, staff change, policy renewal): the affected node only
+
+## Calculator hooks
+Protection return attaches at N2, N4, N5, N6 (value at risk if authority gap exists). Operating return attaches at N9 (continuity statement) and N7. Exit return attaches at N15b.
+
+## Journey page mapping
+Coordination nodes are drawn as rungs between the owner track and the business track at the station where each matters; a red rung is visible from both tracks.
+
+## PM board mapping
+Each node is a card in the Plan Status view; a RED node auto-creates a card in Open Items (Identified column) with the node's satisfying document as the task. Coordination items are a separate line group on the budget page, priced as change orders under whichever engagement does the drafting, with the invoice allocated accordingly.

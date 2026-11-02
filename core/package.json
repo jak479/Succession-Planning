@@ -1,0 +1,10 @@
+{
+  "name": "owner-exit-core",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seed": "node --experimental-strip-types src/seed.ts > db/002_catalog.sql",
+    "test": "node --experimental-strip-types --test test/*.test.ts"
+  },
+  "dependencies": { "pg": "8.13.1" }
+}
