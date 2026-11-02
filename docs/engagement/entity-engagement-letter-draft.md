@@ -63,7 +63,21 @@ The Firm provides a secure online workspace for the Company's engagement. It hol
 
 (b) **What it does not do.** The assistant does not give legal advice, evaluate whether any outside material is correct, make decisions, or quote fees. Nothing the assistant produces is advice of the Firm until an attorney has reviewed and released it. Only the attorney's statements on the call or in a released document are the Firm's advice.
 
-(c) **Confidentiality and consent.** The Firm uses third-party AI providers under terms that prohibit use of the Company's information for training and that require confidentiality. The Company consents to the Firm's use of such tools for its matter, and to the attorney's visibility into everything entered in the workspace. The Company agrees not to enter medical information about any individual in the workspace; if health is relevant to a matter, the Company will raise it on the call, and the Firm will handle it outside the workspace.
+(c) **Confidentiality, AI providers, and consent.**
+
+(1) *What is sent.* To produce the assistant's responses, the Firm's server sends the Company's question and the Company's workspace documents that bear on it to an AI model provider, currently Anthropic, PBC, through the provider's commercial application programming interface. The Firm does not use consumer AI products for the Company's matter.
+
+(2) *Provider terms.* The Firm uses the provider under commercial terms that prohibit use of the Company's information to train models and that require confidentiality. [The Firm's account operates under a zero-data-retention arrangement: the provider does not store the Company's questions, documents, or the responses after each response is returned.]
+
+(3) *Retention the Firm cannot prevent.* Even under that arrangement, the provider may retain a request and its response where the law requires it, and where the provider's automated safety systems flag the request, in which case the provider may keep it for up to two years. The Firm cannot control or guarantee against either.
+
+(4) *What the Firm does not send.* The Firm does not send any individual's health information. It does not send information from [Owner]'s personal tier with a request about the Company, or the Company's information with a request about [Owner]'s personal matters. It does not use the provider's file-storage, batch-processing, or hosted-agent services, which keep data after a response.
+
+(5) *Changes.* Before the Firm sends the Company's information to a different provider, or under materially different retention terms, it will tell the Company in writing.
+
+(6) *Consent.* The Company consents to the Firm's use of the provider on these terms for its matter, and to the attorney's visibility into everything entered in the workspace. The Company may withdraw this consent in writing at any time. The assistant then stops for the Company's matter, and the Firm continues the engagement by call and correspondence [at the same subscription fee].
+
+(7) *Health information.* The Company agrees not to enter medical information about any individual in the workspace. If health is relevant to a matter, the Company will raise it on the call, and the Firm will handle it outside the workspace.
 
 (d) **Public AI tools.** Communications between the Company and a public AI tool are not communications with the Firm and may not be privileged. The Firm recommends that the Company bring questions to the workspace or the call rather than to public tools, and the workspace is designed to accept whatever the Company has already obtained elsewhere.
 
@@ -117,3 +131,11 @@ Date: __________
 - Family governance when the exit is to a family member or insider: facilitated family meeting, family charter, next-generation readiness track
 - Drafting to resolve a coordination item (e.g., amending the operating agreement to admit a trust, restructuring buy-sell funding), allocated between this engagement and the personal engagement as the change order states
 - Any work for a person other than the Company
+
+---
+
+## Drafter's notes on § 6(c) (remove before sending)
+
+- **Brackets.** (2) The zero-data-retention sentence stays bracketed until Anthropic confirms the arrangement in writing for the Firm's organization. (6) "At the same subscription fee" is a business decision: keep it, or provide for a fee adjustment.
+- **Source for (2)–(4).** Anthropic, "API and data retention," platform.claude.com/docs/en/manage-claude/api-and-data-retention, read 2026-11-02. ZDR is arranged per organization through Anthropic sales. Retention "where required by law or where it has been flagged by Anthropic's automated trust and safety systems … up to 2 years." Files API, Batches, Managed Agents, Agent Skills, MCP connector and code execution are not ZDR-eligible. Re-read before each version of this letter goes out; provider terms change.
+- **Walk to before first execution:** Florida Bar Ethics Opinion 24-1 (Jan. 19, 2024), especially the passages on client informed consent before disclosing confidential information to a third-party generative AI program and on investigating the program's retention, sharing and self-learning policies. Also Rule 4-1.6, including (e). The opinion's text could not be retrieved in this drafting session, so the consent language was not checked against it.
