@@ -1,0 +1,8 @@
+**/node_modules
+.git
+.github
+docs
+prototype
+server/eval
+server/test
+core/test

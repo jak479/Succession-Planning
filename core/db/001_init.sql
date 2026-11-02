@@ -255,7 +255,6 @@ create trigger a after insert or update or delete on ws.board_item    for each r
 do $$ declare t text; begin
   foreach t in array array['source','node_status','coordination_detail','intake_status','profile_value','conflict','board_item','event_log'] loop
     execute format('alter table ws.%I enable row level security', t);
-    execute format('alter table ws.%I force row level security', t);
     execute format('create policy read on ws.%I for select using (ws.in_scope(workspace_id))', t);
   end loop;
 end $$;
@@ -275,6 +274,10 @@ create policy w on ws.board_item for all using (ws.in_scope(workspace_id) and ws
 
 -- Catalog and identity tables: readable, not writable, by the app role.
 do $$ begin if not exists (select from pg_roles where rolname = 'ws_app') then create role ws_app nologin; end if; end $$;  -- cluster-wide; shared by databases
+-- Requests run as ws_app (SET LOCAL ROLE), so row-level security always applies to them. The owner that runs these
+-- migrations is exempt (no FORCE), which is what lets the checked SECURITY DEFINER functions and triggers work on a
+-- managed database whose owner is not a superuser (e.g. Cloud SQL). The owner must be able to SET ROLE ws_app.
+grant ws_app to current_user;
 grant usage on schema ws to ws_app;
 grant select on ws.person, ws.client, ws.workspace, ws.membership, ws.node_def, ws.intake_def, ws.change_order_def, ws.profile_field_def to ws_app;
 grant select, insert, update on ws.source, ws.node_status, ws.coordination_detail, ws.intake_status, ws.profile_value, ws.board_item to ws_app;
@@ -291,10 +294,10 @@ grant select on ws.profile_view to ws_app;
 
 -- Identity tables: a session sees only its own workspace, its client, and the people in it.
 -- Without this, any signed-in person could list every client and person in the firm.
-alter table ws.workspace  enable row level security; alter table ws.workspace  force row level security;
-alter table ws.client     enable row level security; alter table ws.client     force row level security;
-alter table ws.membership enable row level security; alter table ws.membership force row level security;
-alter table ws.person     enable row level security; alter table ws.person     force row level security;
+alter table ws.workspace  enable row level security;
+alter table ws.client     enable row level security;
+alter table ws.membership enable row level security;
+alter table ws.person     enable row level security;
 create policy read on ws.workspace  for select using (ws.in_scope(id));
 create policy read on ws.client     for select using (exists (select 1 from ws.workspace w where w.client_id = client.id and ws.in_scope(w.id)));
 create policy read on ws.membership for select using (ws.in_scope(workspace_id));

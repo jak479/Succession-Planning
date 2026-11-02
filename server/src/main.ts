@@ -12,11 +12,47 @@ import { claudeModel } from "./engine/model.ts";
 import { clientTurn, requestConflictCheck, startSession, summary, uploadDocument } from "./engine/intake.ts";
 import { PUBLIC_RECORDS } from "../../core/src/intake.ts";
 import { buildProfile } from "./engine/profile.ts";
+import { createHash, timingSafeEqual } from "node:crypto";
+import { DEMO, seedDemo } from "./demo-seed.ts";
 
-const ENGINE = process.env.ENGINE_PERSON_ID ?? "";   // the agent identity the engine writes briefs as
+// Demo mode (hosted proof of concept): a site password, a persona page, fictional client only, resettable.
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? "";
+const DEMO_MODE = DEMO_PASSWORD.length > 0;
+const DEMO_COOKIE = DEMO_MODE ? createHash("sha256").update("oew-demo|" + DEMO_PASSWORD).digest("hex") : "";
+const ENGINE = process.env.ENGINE_PERSON_ID ?? (DEMO_MODE ? DEMO.engine : "");   // the agent identity the engine writes as
 const model = claudeModel();
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+// Cloud SQL from Cloud Run connects over a Unix socket; locally, DATABASE_URL.
+const pool = process.env.CLOUD_SQL_INSTANCE
+  ? new pg.Pool({ host: `/cloudsql/${process.env.CLOUD_SQL_INSTANCE}`, user: process.env.DB_USER ?? "postgres", password: process.env.DB_PASSWORD, database: process.env.DB_NAME ?? "oew", max: 5 })
+  : new pg.Pool({ connectionString: process.env.DATABASE_URL });
+if (DEMO_MODE) {
+  const has = (await pool.query("select to_regclass('ws.person') t")).rows[0].t;
+  if (!has) { const c = await pool.connect(); try { await seedDemo(c); } finally { c.release(); } console.log("demo data seeded"); }
+}
+const hasDemoCookie = (req: http.IncomingMessage) => {
+  const m = /(?:^|;\s*)oew_demo=([0-9a-f]{64})/.exec(req.headers.cookie ?? "");
+  return !!m && timingSafeEqual(Buffer.from(m[1]), Buffer.from(DEMO_COOKIE));
+};
+const DEMO_BANNER = `<div style="background:#7a1f1f;color:#fff;font:13px system-ui,sans-serif;padding:6px 16px">Demo: fictional client (Gulfside Mechanical, LLC). Do not enter real client information. <a href="/demo" style="color:#fff">Switch person</a></div>`;
+function demoPage(): string {
+  const link = (who: string, ws: string, page: string, label: string, note: string) => `<li><a href="/${page}?as=${who}&ws=${ws}">${label}</a> <span>${note}</span></li>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Owner Exit Demo</title>
+<style>body{margin:0;font:15px/1.5 system-ui,sans-serif;background:#f7f6f2;color:#1d2321}main{max-width:720px;margin:0 auto;padding:24px 16px}li{margin:10px 0}span{color:#5d6763;font-size:13px;display:block}a{color:#2d5b8a}
+@media (prefers-color-scheme: dark){body{background:#141716;color:#e8ebe9}span{color:#9aa5a0}a{color:#7fb0e0}}</style></head><body>${DEMO_BANNER}<main>
+<h1 style="font-size:20px">Owner exit workspace: proof of concept</h1>
+<p>One fictional client, Gulfside Mechanical, LLC, owned by Dana Ortiz. Choose whose view to open.</p><ul>
+${link(DEMO.dana, DEMO.entity, "workspace", "Dana Ortiz: client workspace", "Owner and authorized signer. Ask questions, intake, plan, profile.")}
+${link(DEMO.dana, DEMO.entity, "board", "Dana Ortiz: board and budget", "Approve proposed change orders.")}
+${link(DEMO.luis, DEMO.entity, "workspace", "Luis Herrera: client workspace", "Operations manager. Same company, cannot see Dana's intake or sign change orders.")}
+${link(DEMO.attorney, DEMO.entity, "attorney", "Josh: attorney console", "Conflicts, briefs and scope, intake agenda, profile.")}
+${link(DEMO.attorney, DEMO.entity, "board", "Josh: board", "Propose change orders, scope included work, mark done.")}
+</ul><form method="post" action="/demo/reset" onsubmit="return confirm('Reset all demo data to the starting point?')"><button type="submit">Reset demo data</button></form></main></body></html>`;
+}
+const loginPage = (bad: boolean) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Owner Exit Demo</title>
+<style>body{margin:0;font:15px/1.5 system-ui,sans-serif;background:#f7f6f2;color:#1d2321}main{max-width:420px;margin:12vh auto;padding:16px}input,button{font:inherit;padding:8px;width:100%;margin-top:8px}
+@media (prefers-color-scheme: dark){body{background:#141716;color:#e8ebe9}}</style></head><body><main><h1 style="font-size:20px">Demo sign-in</h1>
+<form method="post" action="/demo/login"><label for="p">Demo password</label><input id="p" name="p" type="password" autocomplete="current-password" required><button type="submit">Enter</button></form>${bad ? '<p style="color:#b23a3a">That password is not right.</p>' : ""}</main></body></html>`;
 const PAGE = new URL("../../web/board.html", import.meta.url);
 
 // DEV-ONLY identity: "Authorization: Dev <person-id>". Replace with OIDC before any client uses it.
@@ -131,9 +167,29 @@ function clientSafe(msg: string, role: string) {
 
 http.createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", "http://x");
+  const html = (code: number, body: string) => { res.writeHead(code, { "content-type": "text/html; charset=utf-8" }); res.end(body); };
+  if (DEMO_MODE) {
+    if (req.method === "POST" && url.pathname === "/demo/login") {
+      let raw = ""; for await (const ch of req) raw += ch;
+      const p = new URLSearchParams(raw).get("p") ?? "";
+      const ok = p.length === DEMO_PASSWORD.length && timingSafeEqual(Buffer.from(p), Buffer.from(DEMO_PASSWORD));
+      if (!ok) return html(401, loginPage(true));
+      res.writeHead(303, { location: "/demo", "set-cookie": `oew_demo=${DEMO_COOKIE}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000` }); res.end(); return;
+    }
+    if (!hasDemoCookie(req)) {
+      if (url.pathname.startsWith("/api/")) { res.writeHead(401, { "content-type": "application/json" }); res.end(JSON.stringify({ error: "Sign in to the demo." })); return; }
+      return html(200, loginPage(false));
+    }
+    if (req.method === "GET" && (url.pathname === "/demo" || url.pathname === "/")) return html(200, demoPage());
+    if (req.method === "POST" && url.pathname === "/demo/reset") {
+      const c = await pool.connect(); try { await seedDemo(c); } finally { c.release(); }
+      res.writeHead(303, { location: "/demo" }); res.end(); return;
+    }
+  }
   const pages: Record<string, string> = { "/": "board.html", "/board": "board.html", "/workspace": "workspace.html", "/attorney": "attorney.html" };
   if (req.method === "GET" && pages[url.pathname]) {
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); res.end(readFileSync(new URL("../../web/" + pages[url.pathname], import.meta.url))); return;
+    const page = readFileSync(new URL("../../web/" + pages[url.pathname], import.meta.url), "utf8");
+    return html(200, DEMO_MODE ? page.replace(/<body>/, "<body>" + DEMO_BANNER) : page);
   }
   if (req.method === "POST" && url.pathname === "/api/frontdoor") {
     const personId = who(req), workspaceId = url.searchParams.get("ws");
@@ -191,4 +247,4 @@ http.createServer(async (req, res) => {
   } catch (e: any) {
     send(400, { error: clientSafe(String(e.message ?? e), role) });
   }
-}).listen(Number(process.env.PORT ?? 8787), () => console.log("board on http://localhost:" + (process.env.PORT ?? 8787)));
+}).listen(Number(process.env.PORT ?? 8787), () => console.log(`listening on ${process.env.PORT ?? 8787}${DEMO_MODE ? " (demo mode)" : ""}`));

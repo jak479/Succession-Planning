@@ -29,7 +29,7 @@ create table ws.board_note (
   workspace_id uuid not null references ws.workspace(id),
   finding      text, attorney_note text
 );
-alter table ws.board_note enable row level security; alter table ws.board_note force row level security;
+alter table ws.board_note enable row level security;
 create policy a on ws.board_note for all using (ws.in_scope(workspace_id) and ws.my_role() = 'attorney') with check (ws.in_scope(workspace_id) and ws.my_role() = 'attorney');
 grant select, insert, update on ws.board_note to ws_app;
 
@@ -45,7 +45,7 @@ create table ws.change_order_approval (
   digest       text not null,       -- sha256 of scope_text || price, so the record proves what was signed
   signed_at    timestamptz not null default now()
 );
-alter table ws.change_order_approval enable row level security; alter table ws.change_order_approval force row level security;
+alter table ws.change_order_approval enable row level security;
 create policy read on ws.change_order_approval for select using (ws.in_scope(workspace_id));
 grant select on ws.change_order_approval to ws_app;
 
@@ -141,6 +141,6 @@ create table ws.external_ref (
   synced_at    timestamptz not null default now(),
   primary key (workspace_id, system, kind, local_id)
 );
-alter table ws.external_ref enable row level security; alter table ws.external_ref force row level security;
+alter table ws.external_ref enable row level security;
 create policy a on ws.external_ref for all using (ws.in_scope(workspace_id) and ws.my_role() in ('attorney','agent')) with check (ws.in_scope(workspace_id) and ws.my_role() in ('attorney','agent'));
 grant select, insert, update on ws.external_ref to ws_app;

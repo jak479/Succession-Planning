@@ -4,6 +4,7 @@
 // (test/zdr.test.ts fails the build if any appears in server/src).
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { oidcFederationProvider } from "@anthropic-ai/sdk/lib/credentials/oidc-federation";
 import type { z } from "zod";
 
 export const MODEL = "claude-opus-5-5";
@@ -19,17 +20,32 @@ export interface Model {
 const TRANSCRIBE_SYSTEM = `You transcribe scanned business documents for a law firm's file. Transcribe all text exactly as written, in reading order, page by page, starting each page with [page N]. Keep headings, section numbers, names, dates and amounts exactly. Write [illegible] for any word you cannot read. Do not summarize, correct, interpret or add anything. Output only the transcription.`;
 export const TRANSCRIBE_MEDIA = new Set(["application/pdf", "image/png", "image/jpeg", "image/gif", "image/webp"]);
 
+// On Google Cloud Run (K_SERVICE is set by Cloud Run), the server proves its identity with a Google-signed token
+// from the metadata server and exchanges it for a short-lived Anthropic token: no API key exists anywhere.
+// Source: platform.claude.com/docs/en/manage-claude/wif-providers/gcp (read 2026-11-02).
+const GCP_IDENTITY = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=https://api.anthropic.com&format=full";
+function newClient(): Anthropic {
+  if (process.env.K_SERVICE && process.env.ANTHROPIC_FEDERATION_RULE_ID && process.env.ANTHROPIC_ORGANIZATION_ID) {
+    return new Anthropic({ credentials: oidcFederationProvider({
+      identityTokenProvider: async () => (await fetch(GCP_IDENTITY, { headers: { "Metadata-Flavor": "Google" } })).text(),
+      federationRuleId: process.env.ANTHROPIC_FEDERATION_RULE_ID, organizationId: process.env.ANTHROPIC_ORGANIZATION_ID,
+      serviceAccountId: process.env.ANTHROPIC_SERVICE_ACCOUNT_ID, workspaceId: process.env.ANTHROPIC_WORKSPACE_ID,
+      baseURL: "https://api.anthropic.com", fetch,
+    }) } as ConstructorParameters<typeof Anthropic>[0]);
+  }
+  // ENGINE_ANTHROPIC_API_KEY lets the engine's key live under its own name; otherwise the SDK's default chain
+  // (ANTHROPIC_API_KEY, or the federation variables with an identity-token file, as in GitHub Actions).
+  const k = process.env.ENGINE_ANTHROPIC_API_KEY?.trim();
+  const w = process.env.ENGINE_ANTHROPIC_WORKSPACE_ID?.trim();
+  return new Anthropic({ ...(k ? { apiKey: k } : {}), ...(w ? { defaultHeaders: { "anthropic-workspace-id": w } } : {}) });
+}
+
 export function claudeModel(client?: Anthropic): Model {
   let c = client;
   return {
     async json({ system, user, schema, effort, maxTokens }) {
       try {
-        // ENGINE_ANTHROPIC_API_KEY lets the engine's key live under its own name, apart from any key the
-        // hosting platform or a developer tool uses. Falls back to the SDK's default (ANTHROPIC_API_KEY).
-        const k = process.env.ENGINE_ANTHROPIC_API_KEY?.trim();   // a pasted key often carries a trailing space or newline
-        // A key not scoped to one workspace must name the workspace on every request (anthropic-workspace-id).
-        const w = process.env.ENGINE_ANTHROPIC_WORKSPACE_ID?.trim();
-        c ??= new Anthropic({ ...(k ? { apiKey: k } : {}), ...(w ? { defaultHeaders: { "anthropic-workspace-id": w } } : {}) });
+        c ??= newClient();
         const r = await c.messages.parse({
           model: MODEL,
           max_tokens: maxTokens,
@@ -50,7 +66,7 @@ export function claudeModel(client?: Anthropic): Model {
     async transcribe({ bytes, mime }) {
       try {
         if (!TRANSCRIBE_MEDIA.has(mime)) return { ok: false, reason: `cannot transcribe ${mime}` };
-        c ??= new Anthropic();
+        c ??= newClient();
         const data = Buffer.from(bytes).toString("base64");
         const file = mime === "application/pdf"
           ? { type: "document" as const, source: { type: "base64" as const, media_type: "application/pdf" as const, data } }

@@ -36,9 +36,9 @@ create table ws.conflict_hit (
   primary key (check_id, party_id, queried_name)
 );
 
-alter table ws.firm_party enable row level security;     alter table ws.firm_party force row level security;
-alter table ws.conflict_check enable row level security; alter table ws.conflict_check force row level security;
-alter table ws.conflict_hit enable row level security;   alter table ws.conflict_hit force row level security;
+alter table ws.firm_party enable row level security;    
+alter table ws.conflict_check enable row level security;
+alter table ws.conflict_hit enable row level security;  
 create policy a on ws.firm_party for all using (ws.my_role() = 'attorney') with check (ws.my_role() = 'attorney');
 -- Members see the status of their own client's check (pending / cleared / declined), never the hits.
 create policy read on ws.conflict_check for select using (
@@ -111,7 +111,7 @@ create table ws.file_blob (
   sha256       text not null,
   foreign key (workspace_id, source_id) references ws.source(workspace_id, id)
 );
-alter table ws.file_blob enable row level security; alter table ws.file_blob force row level security;
+alter table ws.file_blob enable row level security;
 create policy read on ws.file_blob for select using (ws.in_scope(workspace_id) and (ws.my_role() in ('attorney','agent')
   or exists (select 1 from ws.source s where s.id = source_id and s.created_by = ws.me())));
 create policy ins on ws.file_blob for insert with check (ws.in_scope(workspace_id));
@@ -133,7 +133,7 @@ create table ws.record_pull (
   foreign key (workspace_id, source_id) references ws.source(workspace_id, id),
   check ((status = 'found') = (source_id is not null))
 );
-alter table ws.record_pull enable row level security; alter table ws.record_pull force row level security;
+alter table ws.record_pull enable row level security;
 create policy read on ws.record_pull for select using (ws.in_scope(workspace_id));
 create policy w on ws.record_pull for all using (ws.in_scope(workspace_id) and ws.my_role() in ('attorney','agent'))
   with check (ws.in_scope(workspace_id) and ws.my_role() in ('attorney','agent'));
@@ -158,8 +158,8 @@ create table ws.intake_turn_gate (
   gate         jsonb not null,
   flag         text                                   -- stop-rule reason, when the line stopped
 );
-alter table ws.intake_turn enable row level security;      alter table ws.intake_turn force row level security;
-alter table ws.intake_turn_gate enable row level security; alter table ws.intake_turn_gate force row level security;
+alter table ws.intake_turn enable row level security;     
+alter table ws.intake_turn_gate enable row level security;
 create policy read on ws.intake_turn for select using (ws.in_scope(workspace_id));
 create policy ins on ws.intake_turn for insert with check (ws.in_scope(workspace_id) and (speaker = 'agent') = (ws.my_role() = 'agent'));
 create policy read on ws.intake_turn_gate for select using (ws.in_scope(workspace_id) and ws.my_role() = 'attorney');

@@ -132,5 +132,21 @@ Not yet in item 3: automated record pulls; Google Drive import; Plaid and payrol
 - Only the attorney may start a conflict check or a profile build. Each intake turn belongs to one client's thread (`core/db/007_threads.sql`): a client never reads another client user's conversation.
 - Sign-in is still the development stub. Screenshots with demo data are in `docs/design/screens/`. The data comes from `npm run dev-db`, then `src/dev-demo.ts`: real engine code with a scripted model, labelled "scripted-demo".
 
+## Hosted proof of concept (decided 2026-11-02: Google Cloud, demo mode)
+- **Runtime:** Cloud Run service `oew-demo` (region us-east1) and Cloud SQL Postgres 16 (`oew-demo`, database `oew`).
+- **No stored keys:**
+  - GitHub deploys by identity federation (`.github/workflows/deploy.yml`; only this repository's `main` may deploy).
+  - The server reaches Anthropic by identity federation from its Google service account (`server/src/engine/model.ts`, Cloud Run branch).
+  - The only secrets are the database password and the demo password, in Secret Manager.
+- **Demo mode** (`DEMO_PASSWORD` set):
+  - a site password with a cookie;
+  - a persona page (`/demo`: Dana, Luis, Josh);
+  - a banner on every page ("Demo: fictional client … Do not enter real client information");
+  - reset to the seed;
+  - the database seeds itself when empty (`server/src/demo-seed.ts`, fixed ids).
+- **Managed-database compatibility:** row-level security is not FORCEd. Requests run as `ws_app` and are always subject to it; the migration owner is exempt, so the checked security-definer functions work when the owner is not a superuser (Cloud SQL). Verified locally against a non-superuser owner: all tests pass.
+- **One-time setup:** `deploy/gcp-setup.sh` in Cloud Shell, then an Anthropic Console rule for the runtime service account (claims `sub` and `email`; audience `https://api.anthropic.com`).
+- **Before any real client:** real sign-in in place of the demo; zero data retention confirmed; Google's terms checked under Op. 12-3; repository private; a separate production project and database.
+
 ## Not yet built in item 1
 Scan findings, front-door briefs, and scope classification (attorney-only until confirmed) are item 2–4 tables.

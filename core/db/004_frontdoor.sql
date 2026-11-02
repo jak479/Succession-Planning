@@ -56,7 +56,6 @@ create table ws.brief (
 do $$ declare t text; begin
   foreach t in array array['document_text','question','brief'] loop
     execute format('alter table ws.%I enable row level security', t);
-    execute format('alter table ws.%I force row level security', t);
   end loop;
 end $$;
 

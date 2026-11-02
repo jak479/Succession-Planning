@@ -9,7 +9,7 @@ create table ws.profile_run (
   model        text,
   result       jsonb not null
 );
-alter table ws.profile_run enable row level security; alter table ws.profile_run force row level security;
+alter table ws.profile_run enable row level security;
 create policy read on ws.profile_run for select using (ws.in_scope(workspace_id) and ws.my_role() = 'attorney');
 create policy ins on ws.profile_run for insert with check (ws.in_scope(workspace_id) and ws.my_role() = 'agent');
 grant select, insert on ws.profile_run to ws_app;
@@ -30,7 +30,7 @@ create table ws.profile_value_source (
   foreign key (workspace_id, field) references ws.profile_value(workspace_id, field) on delete cascade,
   foreign key (workspace_id, source_id) references ws.source(workspace_id, id)
 );
-alter table ws.profile_value_source enable row level security; alter table ws.profile_value_source force row level security;
+alter table ws.profile_value_source enable row level security;
 create policy read on ws.profile_value_source for select using (ws.in_scope(workspace_id));
 create policy w on ws.profile_value_source for all using (ws.in_scope(workspace_id) and ws.my_role() in ('attorney','agent'))
   with check (ws.in_scope(workspace_id) and ws.my_role() in ('attorney','agent'));

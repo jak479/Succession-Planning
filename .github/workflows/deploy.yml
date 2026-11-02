@@ -1,0 +1,64 @@
+# Deploy the proof of concept to Google Cloud Run. Authenticates to Google Cloud by identity federation
+# (no stored key); the running server reaches Anthropic the same way (server/src/engine/model.ts).
+# One-time setup: deploy/gcp-setup.sh. Values below come from its output and from the Anthropic Console.
+name: deploy
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+env:
+  GCP_PROJECT: REPLACE
+  GCP_REGION: us-east1
+  GCP_WIF_PROVIDER: REPLACE
+  GCP_DEPLOY_SA: REPLACE
+  GCP_RUN_SA: REPLACE
+  CLOUD_SQL_INSTANCE: REPLACE
+  ANTHROPIC_ORGANIZATION_ID: cd7121a4-669b-4dda-a1de-ad2f59a785bb
+  ANTHROPIC_SERVICE_ACCOUNT_ID: REPLACE
+  ANTHROPIC_FEDERATION_RULE_ID: REPLACE
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_HOST_AUTH_METHOD: trust }
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGURL: postgresql://postgres@localhost:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: npm ci
+        working-directory: core
+      - run: npm ci
+        working-directory: server
+      - run: (cd core && npm test) && (cd server && npm test)
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.GCP_WIF_PROVIDER }}
+          service_account: ${{ env.GCP_DEPLOY_SA }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Build and push the image
+        run: |
+          IMAGE="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/oew/server:${GITHUB_SHA}"
+          gcloud auth configure-docker "${GCP_REGION}-docker.pkg.dev" --quiet
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy oew-demo --image "$IMAGE" --region "$GCP_REGION" --project "$GCP_PROJECT" \
+            --service-account "$GCP_RUN_SA" --add-cloudsql-instances "$CLOUD_SQL_INSTANCE" \
+            --allow-unauthenticated --max-instances 2 --memory 512Mi \
+            --set-env-vars "CLOUD_SQL_INSTANCE=${CLOUD_SQL_INSTANCE},ANTHROPIC_ORGANIZATION_ID=${ANTHROPIC_ORGANIZATION_ID},ANTHROPIC_SERVICE_ACCOUNT_ID=${ANTHROPIC_SERVICE_ACCOUNT_ID},ANTHROPIC_FEDERATION_RULE_ID=${ANTHROPIC_FEDERATION_RULE_ID}" \
+            --set-secrets "DB_PASSWORD=oew-db-password:latest,DEMO_PASSWORD=oew-demo-password:latest"
+          echo "Demo URL: $(gcloud run services describe oew-demo --region "$GCP_REGION" --project "$GCP_PROJECT" --format='value(status.url)')"
