@@ -6,7 +6,7 @@ const base = process.env.PGURL ?? "postgresql://postgres@%2Fvar%2Ftmp:5433", nam
 const a = new pg.Client({ connectionString: base + "/postgres" }); await a.connect();
 await a.query(`drop database if exists ${name}`); await a.query(`create database ${name}`); await a.end();
 const c = new pg.Client({ connectionString: `${base}/${name}` }); await c.connect();
-for (const f of ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql", "005_intake.sql"]) await c.query(readFileSync(new URL("../../core/db/" + f, import.meta.url), "utf8"));
+for (const f of ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql", "005_intake.sql", "006_profile.sql"]) await c.query(readFileSync(new URL("../../core/db/" + f, import.meta.url), "utf8"));
 const one = async (q: string, p: unknown[] = []) => (await c.query(q + " returning id", p)).rows[0].id;
 const atty = await one("insert into ws.person(name, role) values ('Josh','attorney')");
 const dana = await one("insert into ws.person(name, role) values ('Dana Ortiz','client')");

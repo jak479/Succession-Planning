@@ -43,7 +43,7 @@ jobs:
           npm run -s dev-db > ids.txt
           node -e 'const s=require("fs").readFileSync("ids.txt","utf8"); const j=JSON.parse(s.slice(0, s.indexOf("}")+1));
             console.log("ENGINE_PERSON_ID="+j.engine); console.log("CLIENT_PERSON_ID="+j.dana); console.log("WORKSPACE_ID="+j.entity);' >> "$GITHUB_ENV"
-      - name: Live eval (12 front-door cases, then scan transcription)
+      - name: Live eval (12 front-door cases, scan transcription, profile builder)
         working-directory: server
         # GitHub identity tokens last about 5 minutes and Anthropic accepts each one once, so a fresh token is
         # written to the file every 2 minutes; the SDK re-reads the file whenever it renews its access token.
@@ -56,4 +56,5 @@ jobs:
           set +e
           npm run eval; e=$?
           npm run eval:scan; s=$?
-          exit $(( e || s ))
+          npm run eval:profile; p=$?
+          exit $(( e || s || p ))

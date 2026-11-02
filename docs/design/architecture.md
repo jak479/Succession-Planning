@@ -104,7 +104,15 @@ Known gaps: anchor dates are not yet stored, so the brief sees none; "repeated a
   - Scans and photos (PDF without a text layer, PNG, JPEG, GIF, WebP) are read by Claude (decided 2026-11-02). The file goes inline in the request (ZDR-eligible), never to the Files API. The transcript is labelled "transcribed from scan by AI; check against the original." A transcript with 5% or more illegible words, or one too long to finish, stays received, unread. Live check 2026-11-02 (State Department sample scan): redaction bars come back as "[redacted]" (not counted as illegible); stamps and seals come back as bracketed descriptions (accepted by the attorney); handwriting is mostly "[illegible]".
 - **Public records, checklist mode.** Each source (Sunbiz, UCC, clerk, appraiser, DBPR, AHCA, PACER) is listed with its link. A pull done by hand is recorded with `POST /api/intake/records` as a cited PUB source. Automated pulls come site by site, after each site's terms are read.
 
-Not yet in item 3: automated record pulls; Google Drive import; Plaid and payroll links; the profile builder (sources → 27 fields, conflicts); the three-way check (description vs document vs record); live eval cases for the intake agent; a client intake page.
+- **Profile builder** (`server/src/engine/profile.ts`, `core/db/006_profile.sql`; `POST /api/profile/build`, `GET /api/profile`):
+  - Reads one workspace's readable sources: document text, public-record citations, the client's own words, the attorney's call notes.
+  - Owner tier: source titles and dates only, never document contents.
+  - Fills only the fields the agent may fill in that tier.
+  - Every value must carry a quote that appears verbatim in the cited source, or it is dropped. Health information is dropped.
+  - Only a stronger source replaces a shown value (call > document > public record > connected system > client's description > agent). Any disagreement is listed in `ws.conflict`, never resolved. This is the three-way check: description vs. document vs. record.
+  - Each run is logged for the attorney: written, dropped and why, gaps.
+
+Not yet in item 3: automated record pulls; Google Drive import; Plaid and payroll links; live eval cases for the intake conversation; a client intake page.
 
 ## Not yet built in item 1
 Scan findings, front-door briefs, and scope classification (attorney-only until confirmed) are item 2–4 tables.

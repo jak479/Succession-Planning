@@ -10,6 +10,7 @@ import { askFrontDoor } from "./engine/pipeline.ts";
 import { claudeModel } from "./engine/model.ts";
 import { clientTurn, requestConflictCheck, startSession, summary, uploadDocument } from "./engine/intake.ts";
 import { PUBLIC_RECORDS } from "../../core/src/intake.ts";
+import { buildProfile } from "./engine/profile.ts";
 
 const ENGINE = process.env.ENGINE_PERSON_ID ?? "";   // the agent identity the engine writes briefs as
 const model = claudeModel();
@@ -46,6 +47,12 @@ const routes: [string, RegExp, (x: Ctx, m: RegExpExecArray) => Promise<unknown>]
     return { questions: qs.map(q => ({ ...q, brief: briefs.find(b => b.question_id === q.id) ?? null })) };
   }],
   ["POST", /^\/api\/frontdoor\/([0-9a-f-]{36})\/scope$/, ({ c, body }, m) => c.query("select ws.confirm_scope($1,$2)", [m[1], String(body.scope)])],
+  // ---- Profile (item 3) ----
+  ["GET", /^\/api\/profile$/, async ({ c, role }) => ({
+    profile: (await c.query("select field, value, source, basis from ws.profile_view order by field")).rows,
+    conflicts: (await c.query("select c.field, c.value_a, sa.label source_a, c.value_b, sb.label source_b from ws.conflict c join ws.source sa on sa.id = c.source_a join ws.source sb on sb.id = c.source_b")).rows,
+    lastRun: role === "attorney" ? (await c.query("select at, model, result from ws.profile_run order by at desc limit 1")).rows[0] ?? null : undefined,
+  })],
   // ---- Intake (item 3) ----
   ["GET", /^\/api\/intake\/conflict$/, async ({ c, role }) => {
     const checks = (await c.query("select id, names, status, requested_at, decided_at from ws.conflict_check order by requested_at desc")).rows;
@@ -120,7 +127,7 @@ http.createServer(async (req, res) => {
       return send(200, await askFrontDoor({ pool, model, enginePersonId: ENGINE }, { personId, workspaceId }, { question: String(b.question ?? ""), outside: b.outside ?? null, contextNode: b.context_node ?? null }));
     } catch { return send(400, { error: "That question couldn't be received. Please try again." }); }
   }
-  const engineRoute = req.method === "POST" && /^\/api\/intake\/(conflict|start|message|upload|summary)$/.exec(url.pathname);
+  const engineRoute = req.method === "POST" && /^\/api\/(?:intake\/(conflict|start|message|upload|summary)|profile\/(build))$/.exec(url.pathname);
   if (engineRoute) {
     const personId = who(req), workspaceId = url.searchParams.get("ws");
     const send = (code: number, obj: unknown) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(obj)); };
@@ -130,7 +137,8 @@ http.createServer(async (req, res) => {
     const raw = Buffer.concat(chunks);
     const deps = { pool, model, enginePersonId: ENGINE }, sess = { personId, workspaceId };
     try {
-      switch (engineRoute[1]) {
+      switch (engineRoute[1] ?? engineRoute[2]) {
+        case "build": return send(200, await buildProfile(deps, sess));
         case "conflict": return send(200, { id: await requestConflictCheck(deps, sess, JSON.parse(raw.toString() || "{}").names ?? []) });
         case "start": return send(200, await startSession(deps, sess));
         case "message": return send(200, await clientTurn(deps, sess, String(JSON.parse(raw.toString() || "{}").text ?? "")));
