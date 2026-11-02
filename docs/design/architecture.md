@@ -101,10 +101,10 @@ Known gaps: anchor dates are not yet stored, so the brief sees none; "repeated a
   - Uploads enter unread.
   - The server extracts text from PDF (pdf.js), DOCX and text.
   - "Received" only with at least 200 letters of readable text; otherwise "received, unread" and on the attorney's queue (`GET /api/intake/queue`).
-  - Scanned images are not OCR'd yet.
+  - Scans and photos (PDF without a text layer, PNG, JPEG, GIF, WebP) are read by Claude (decided 2026-11-02). The file goes inline in the request (ZDR-eligible), never to the Files API. The transcript is labelled "transcribed from scan by AI; check against the original." A transcript with 5% or more illegible words, or one too long to finish, stays received, unread.
 - **Public records, checklist mode.** Each source (Sunbiz, UCC, clerk, appraiser, DBPR, AHCA, PACER) is listed with its link. A pull done by hand is recorded with `POST /api/intake/records` as a cited PUB source. Automated pulls come site by site, after each site's terms are read.
 
-Not yet in item 3: OCR for scans; automated record pulls; Google Drive import; Plaid and payroll links; the profile builder (sources → 27 fields, conflicts); the three-way check (description vs document vs record); live eval cases for the intake agent; a client intake page.
+Not yet in item 3: automated record pulls; Google Drive import; Plaid and payroll links; the profile builder (sources → 27 fields, conflicts); the three-way check (description vs document vs record); live eval cases for the intake agent; a client intake page.
 
 ## Not yet built in item 1
 Scan findings, front-door briefs, and scope classification (attorney-only until confirmed) are item 2–4 tables.

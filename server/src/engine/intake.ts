@@ -10,7 +10,8 @@ import { INTAKE_Q, planIntake, sessionSummary } from "../../../core/src/intake.t
 import type { Model } from "./model.ts";
 import { ATTORNEY, CLASSIFY_SYSTEM, ClassifySchema, SCREEN_SYSTEM, ScreenSchema } from "./prompts.ts";
 import { BANNED, FACT_HEALTH, FEE, HEALTH } from "./gate.ts";
-import { extractText } from "./extract.ts";
+import { MIN_LETTERS, extractText } from "./extract.ts";
+import { TRANSCRIBE_MEDIA } from "./model.ts";
 
 export interface IntakeDeps { pool: pg.Pool; model: Model; enginePersonId: string }
 const engineOf = (d: IntakeDeps, s: Session): Session => ({ personId: d.enginePersonId, workspaceId: s.workspaceId });
@@ -141,17 +142,30 @@ export async function uploadDocument(d: IntakeDeps, s: Session, f: { item: strin
     await c.query("insert into ws.file_blob values ($1, ws.cur_ws(), $2, $3, $4, $5)", [id, f.filename, f.mime, Buffer.from(f.bytes), sha]);
     return id as string;
   });
-  const x = await extractText(f.bytes, f.filename, f.mime);
+  let x = await extractText(f.bytes, f.filename, f.mime);
+  let transcribed = false;
+  // A scan or photo has no text layer: Claude reads it (decided 2026-11-02). Sent inline, never stored by Anthropic
+  // under ZDR. The transcript is marked as such, and a mostly-illegible one stays "received, unread".
+  const mime = f.mime || (f.filename.toLowerCase().endsWith(".pdf") ? "application/pdf" : "");
+  if (!x.readable && d.model.transcribe && TRANSCRIBE_MEDIA.has(mime)) {
+    const t = await d.model.transcribe({ bytes: f.bytes, mime });
+    if (t.ok) {
+      const words = t.value.split(/\s+/).length, illegible = (t.value.match(/\[illegible\]/g) ?? []).length;
+      const letters = (t.value.match(/[A-Za-z]/g) ?? []).length;
+      x = letters >= MIN_LETTERS && illegible / Math.max(words, 1) < 0.05 ? { text: t.value, readable: true } : { text: "", readable: false, reason: "transcription mostly illegible" };
+      transcribed = x.readable;
+    } else x = { ...x, reason: `${x.reason}; transcription failed: ${t.reason}` };
+  }
   return inSession(d.pool, engineOf(d, s), async c => {
     if (x.readable) {
       await c.query("update ws.source set readable = true where id = $1", [sourceId]);
-      await c.query("insert into ws.document_text values ($1, ws.cur_ws(), $2, $3, $4)", [sourceId, `${f.item}-${sha.slice(0, 6)}`, f.filename, x.text]);
+      await c.query("insert into ws.document_text values ($1, ws.cur_ws(), $2, $3, $4)", [sourceId, `${f.item}-${sha.slice(0, 6)}`, transcribed ? `${f.filename} (transcribed from scan by AI; check against the original)` : f.filename, x.text]);
     }
     const status = x.readable ? "received" : "received_unread";
     await c.query(`insert into ws.intake_status(workspace_id, item_id, status, source_id) values (ws.cur_ws(), $1, $2, $3)
                    on conflict (workspace_id, item_id) do update set status = excluded.status, source_id = excluded.source_id, set_at = now()`, [f.item, status, sourceId]);
     const line = x.readable ? `Received. That goes toward ${def.feeds.join(", ") || "the plan"}.` : "Received. It couldn't be read here, so Josh will review it directly.".replace("Josh", ATTORNEY);
-    return { status, lines: [line], reason: x.reason };
+    return { status, lines: [line], reason: x.reason, transcribed };
   });
 }
 

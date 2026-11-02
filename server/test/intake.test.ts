@@ -12,7 +12,9 @@ import type { Model } from "../src/engine/model.ts";
 const base = process.env.PGURL ?? "postgresql://postgres@%2Fvar%2Ftmp:5433";
 const db = "oew_in_" + process.pid; let pool: pg.Pool; const id: Record<string, string> = {};
 const script = { screen: "none", extract: { answers: [] as any[], asks_for_advice: false }, flags: {} as any, calls: [] as string[] };
-const fake: Model = { async json({ system }) {
+const transcript = { value: "" };
+const fake: Model = { async transcribe() { return transcript.value ? { ok: true, value: transcript.value, model: "fake" } : { ok: false, reason: "fake: none" }; },
+  async json({ system }) {
   script.calls.push(system === SCREEN_SYSTEM ? "screen" : system === CLASSIFY_SYSTEM ? "classify" : "extract");
   if (system === SCREEN_SYSTEM) return { ok: true, value: { category: script.screen, explanation: "" }, model: "fake" } as any;
   if (system === CLASSIFY_SYSTEM) return { ok: true, value: { off_question_quotes: [], advice: false, recommendation: false, evaluation_of_outside_answer: false, prediction: false, fee_or_time_estimate: false, medical_information: false, explanation: "", ...script.flags }, model: "fake" } as any;
@@ -112,7 +114,7 @@ test("file drop: readable PDF and DOCX are received; a scan is received, unread"
   assert.equal(pdf.status, "received", pdf.reason);
   const docx = zipSync({ "word/document.xml": strToU8(`<w:document><w:body><w:p><w:r><w:t>${"Lease of 4410 Industrial Blvd. Tenant: Gulfside Mechanical LLC. Term ends January 31, 2027. Personal guaranty by Dana Ortiz. ".repeat(3)}</w:t></w:r></w:p></w:body></w:document>`) });
   const dx = await uploadDocument(deps(), dana(), { item: "B11", filename: "lease.docx", mime: "", bytes: docx }); assert.equal(dx.status, "received", "docx: " + dx.reason);
-  const scan = await uploadDocument(deps(), dana(), { item: "B8", filename: "dec-page.pdf", mime: "application/pdf", bytes: pdfWith("") });
+  const scan = await uploadDocument(deps(), dana(), { item: "B8", filename: "dec-page.pdf", mime: "application/pdf", bytes: pdfWith("") });   // transcription fails here
   assert.equal(scan.status, "received_unread");
   const rows = await as("atty", c => c.query("select i.item_id, i.status, s.readable from ws.intake_status i join ws.source s on s.id = i.source_id where item_id in ('B1','B8') order by item_id").then(r => r.rows));
   assert.deepEqual(rows.map((r: any) => [r.item_id, r.status, r.readable]), [["B1", "received", true], ["B8", "received_unread", false]]);
@@ -120,4 +122,14 @@ test("file drop: readable PDF and DOCX are received; a scan is received, unread"
   await assert.rejects(uploadDocument(deps(), dana(), { item: "C-1", filename: "will.pdf", mime: "application/pdf", bytes: pdfWith(OA_TEXT) }), /owner tier/);
   const s = (await summary(deps(), dana())).lines;
   assert.match(s[0], /Received this session: .*B1/);
+});
+
+test("a scan is read by Claude: received if legible (and marked as transcribed), received-unread if mostly illegible", async () => {
+  transcript.value = "[page 1]\n" + "Declarations Page. Named Insured: Gulfside Mechanical LLC. Key person life policy on Dana Ortiz, owner and beneficiary the Company, collaterally assigned to Seacoast Bank. ".repeat(3);
+  const ok = await uploadDocument(deps(), dana(), { item: "B10", filename: "customers-scan.pdf", mime: "application/pdf", bytes: pdfWith("") });
+  assert.deepEqual([ok.status, ok.transcribed], ["received", true]);
+  assert.match(await as("atty", c => c.query("select title from ws.document_text where doc_key like 'B10-%'").then(r => r.rows[0].title)), /transcribed from scan by AI/);
+  transcript.value = "[page 1]\n" + "[illegible] ".repeat(40) + "Seacoast Bank " + "x".repeat(250);
+  assert.equal((await uploadDocument(deps(), dana(), { item: "B13", filename: "license-photo.png", mime: "image/png", bytes: new Uint8Array([137, 80, 78, 71]) })).status, "received_unread");
+  transcript.value = "";
 });
