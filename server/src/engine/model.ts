@@ -22,7 +22,9 @@ export function claudeModel(client?: Anthropic): Model {
         // ENGINE_ANTHROPIC_API_KEY lets the engine's key live under its own name, apart from any key the
         // hosting platform or a developer tool uses. Falls back to the SDK's default (ANTHROPIC_API_KEY).
         const k = process.env.ENGINE_ANTHROPIC_API_KEY?.trim();   // a pasted key often carries a trailing space or newline
-        c ??= new Anthropic(k ? { apiKey: k } : {});
+        // A key not scoped to one workspace must name the workspace on every request (anthropic-workspace-id).
+        const w = process.env.ENGINE_ANTHROPIC_WORKSPACE_ID?.trim();
+        c ??= new Anthropic({ ...(k ? { apiKey: k } : {}), ...(w ? { defaultHeaders: { "anthropic-workspace-id": w } } : {}) });
         const r = await c.messages.parse({
           model: MODEL,
           max_tokens: maxTokens,

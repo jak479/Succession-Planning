@@ -40,4 +40,5 @@ jobs:
         working-directory: server
         env:
           ENGINE_ANTHROPIC_API_KEY: ${{ secrets.ENGINE_ANTHROPIC_API_KEY }}
+          ENGINE_ANTHROPIC_WORKSPACE_ID: ${{ vars.ENGINE_ANTHROPIC_WORKSPACE_ID }}
         run: npm run eval
