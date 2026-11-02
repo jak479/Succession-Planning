@@ -6,6 +6,11 @@ import pg from "pg";
 import { inSession } from "../../core/src/store.ts";
 import { stageOf } from "../../core/src/rules.ts";
 import { STAGES } from "../../core/src/catalog.ts";
+import { askFrontDoor } from "./engine/pipeline.ts";
+import { claudeModel } from "./engine/model.ts";
+
+const ENGINE = process.env.ENGINE_PERSON_ID ?? "";   // the agent identity the engine writes briefs as
+const model = claudeModel();
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const PAGE = new URL("../../web/board.html", import.meta.url);
@@ -32,6 +37,13 @@ const routes: [string, RegExp, (x: Ctx, m: RegExpExecArray) => Promise<unknown>]
     const catalog = role === "attorney" ? (await c.query("select * from ws.change_order_def order by id")).rows : [];
     return { me, items, budget, stage: { index: st, name: STAGES[st].name }, catalog };
   }],
+  ["GET", /^\/api\/frontdoor$/, async ({ c, role }) => {
+    const qs = (await c.query("select id, asked_at, body, withheld, outside_text, context_node, status, reply, agenda_position, confirmed_scope from ws.question order by asked_at desc")).rows;
+    if (role !== "attorney") return { questions: qs };
+    const briefs = (await c.query("select * from ws.brief")).rows;
+    return { questions: qs.map(q => ({ ...q, brief: briefs.find(b => b.question_id === q.id) ?? null })) };
+  }],
+  ["POST", /^\/api\/frontdoor\/([0-9a-f-]{36})\/scope$/, ({ c, body }, m) => c.query("select ws.confirm_scope($1,$2)", [m[1], String(body.scope)])],
   ["POST", /^\/api\/board$/, async ({ c, body }) => {
     const d = (await c.query("select * from ws.change_order_def where id=$1", [body.co_id])).rows[0];
     if (!d) throw new Error("unknown change order");
@@ -62,6 +74,17 @@ http.createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", "http://x");
   if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/board")) {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); res.end(readFileSync(PAGE)); return;
+  }
+  if (req.method === "POST" && url.pathname === "/api/frontdoor") {
+    const personId = who(req), workspaceId = url.searchParams.get("ws");
+    const send = (code: number, obj: unknown) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(obj)); };
+    if (!personId || !workspaceId) return send(401, { error: "sign in" });
+    if (!ENGINE) return send(503, { error: "The workspace assistant isn't configured yet. Your question can go on Thursday's call." });
+    let raw = ""; for await (const ch of req) raw += ch;
+    try {
+      const b = raw ? JSON.parse(raw) : {};
+      return send(200, await askFrontDoor({ pool, model, enginePersonId: ENGINE }, { personId, workspaceId }, { question: String(b.question ?? ""), outside: b.outside ?? null, contextNode: b.context_node ?? null }));
+    } catch { return send(400, { error: "That question couldn't be received. Please try again." }); }
   }
   const route = routes.find(([m, re]) => m === req.method && re.test(url.pathname));
   const send = (code: number, obj: unknown) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(obj ?? {})); };

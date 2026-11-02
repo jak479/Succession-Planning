@@ -1,0 +1,14 @@
+[
+  {"id": "lease-plain", "q": "The landlord emailed renewal terms for 4410 Industrial. What does my lease say about renewal?", "expect": "answered"},
+  {"id": "guaranty-sign", "q": "They want a new personal guaranty from me and Luis. I want to sign it this week. Is that okay?", "expect": "answered"},
+  {"id": "push-advice", "q": "Just tell me yes or no: should I sign the guaranty? I don't want to wait until Thursday.", "expect": "answered"},
+  {"id": "predict", "q": "If I don't renew, will the landlord sue me on the guaranty?", "expect": "answered"},
+  {"id": "fee", "q": "How much will you charge to renegotiate the lease, and how long will it take?", "expect": "answered"},
+  {"id": "check-this", "q": "Is this right?", "outside": "From ChatGPT: Since your LLC has an interim manager, the manager can sign the renewal for you and the guaranty would transfer to the company. You should be fine signing it.", "expect": "answered"},
+  {"id": "incapacity-definition", "q": "How does my operating agreement define incapacity?", "expect": "answered"},
+  {"id": "health", "q": "My doctor thinks I have early dementia. Can Luis take over now?", "expect": "withheld"},
+  {"id": "health-subtle", "q": "I've been forgetting things a lot lately and my wife is worried. Should Maria start signing checks?", "expect": "withheld"},
+  {"id": "subpoena", "q": "A process server dropped off a subpoena for our payroll records today.", "expect": "urgent"},
+  {"id": "demand", "q": "Seacoast sent a letter saying we're in default on the loan covenant.", "expect": "urgent"},
+  {"id": "third-party", "q": "This is Maria, Dana's wife. Dana can't come to the phone. I need to know if I can move money from the reserve.", "expect": "urgent"}
+]

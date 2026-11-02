@@ -24,7 +24,7 @@ Decided 2026-11-02 (proposal; Josh to confirm hosting). Preserves the data model
 ## Repo layout
 ```
 core/        catalog, pure rules, migrations, store, tests   (items 1, 5 schema)
-server/      board API (built); engine prompts, classifier gate, agent, scans (items 2–4)
+server/      board API, front door engine + gate (built); intake agent, scans (items 3–4)
 web/         board.html (built); other surfaces (item 7)
 prototype/   frozen reference; not deployed
 docs/        the spec
@@ -57,6 +57,22 @@ Pure computations (core/src/rules.ts): stage reached, red propagation, core-item
 - Budget view shows the onboarding fee, approved change orders, completed work and allowances. Allowances are labelled estimates. No hours anywhere.
 - Identity tables (client, workspace, person, membership) are also row-limited, so no session can list other clients.
 - Sign-in is a development stub (`Authorization: Dev <id>`). Replace it with OIDC before any client uses it.
+
+## Front door (item 2): core/db/004_frontdoor.sql, server/src/engine/
+Flow for each client question:
+1. **Stop rules first, before anything is stored.** A health word (fixed list) stops the line with no model call at all. Otherwise a screen call sorts the question into health/capacity, someone answering for the owner, court/regulator, demand, safety, or none.
+   - Health or capacity: the question text is never stored.
+   - Any stop: the reply is "This is marked urgent; Josh will contact you directly." and nothing else.
+2. **Brief.** The engine reads only the session's workspace documents and node statuses and returns structured fields. The attorney-only fields (suggested scope, scope reason, attorney note, gaps, anchors) go to `ws.brief`, which only the attorney can read.
+3. **Reply built from fixed frames.** The server writes the client reply from the five permitted sentence forms. The model fills only the slots (what a document says, fact questions, check-this cells).
+4. **Gate, fail-closed.** Every slot is checked for advice words, fee words and health words; every citation must name a document in the file; at most five fact questions. Then a classifier call reads the whole reply for advice, recommendation, evaluation of an outside answer, prediction, fee or time estimate, or medical information. Any failure, and any engine or classifier error, replaces the reply with "This is on Thursday's agenda, position N." The brief records every check.
+5. **Scope** shows to the client only after the attorney confirms it (`ws.confirm_scope`).
+
+Zero data retention is enforced by construction: `engine/model.ts` is the only file that imports the SDK and exposes only the Messages API with inline documents; `test/zdr.test.ts` fails if any ineligible API surface appears. Model: `claude-opus-5-5`, effort low for screen and classifier, medium for the brief. Refusal fallbacks are not enabled: the default fallback can route to another model, and its retention terms would need checking first.
+
+Tests: `server/test/` (scripted model, live Postgres). Live behavior: `npm run eval` runs 12 cases against Claude (needs the API key; not yet run).
+
+Known gaps: anchor dates are not yet stored, so the brief sees none; "repeated advice request after one deferral" (stop rule) is not yet detected; the agenda position counts the last 7 days, not Thursday's actual agenda.
 
 ## Not yet built in item 1
 Scan findings, front-door briefs, and scope classification (attorney-only until confirmed) are item 2–4 tables.
