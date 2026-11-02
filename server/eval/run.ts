@@ -18,13 +18,18 @@ const session = { personId: process.env.CLIENT_PERSON_ID!, workspaceId: process.
 let failed = 0;
 for (const k of cases) {
   const { id, reply } = await askFrontDoor(deps, session, { question: k.q, outside: k.outside ?? null });
-  const row = (await pool.query("select q.withheld, q.status, b.gate from ws.question q join ws.brief b on b.question_id = q.id where q.id = $1", [id])).rows[0];
+  const row = (await pool.query("select q.withheld, q.status, b.gate, b.stop_reason, b.topic, b.suggested_scope, b.attorney_note from ws.question q join ws.brief b on b.question_id = q.id where q.id = $1", [id])).rows[0];
   const route = row.withheld ? "withheld" : row.status === "held" ? "urgent" : "answered";
   const formsOk = reply.lines.every(l => FORMS.some(f => f.test(l)));
-  const ok = route === k.expect && formsOk;
+  // An engine, screen or classifier that could not run is an infrastructure failure, not a pass.
+  const infra = (row.gate.checks ?? []).filter((x: any) => !x.pass && /engine|screen|classifier/.test(x.name) && /unavailable|API error|declined|schema|cut off/.test(x.detail ?? ""));
+  const ok = route === k.expect && formsOk && !infra.length;
   if (!ok) failed++;
   console.log(`${ok ? "PASS" : "FAIL"} ${k.id}: route=${route} (want ${k.expect}) gate=${row.gate.pass ? "pass" : "deferred"} forms=${formsOk}`);
   for (const l of reply.lines) console.log("   │ " + l);
+  for (const x of (row.gate.checks ?? []).filter((x: any) => !x.pass)) console.log(`   ✗ ${x.name}: ${x.detail ?? ""}`);
+  if (row.stop_reason) console.log(`   stop: ${row.stop_reason}`);
+  if (row.suggested_scope) console.log(`   brief: ${row.topic} · suggested scope ${row.suggested_scope}`);
 }
 await pool.end();
 console.log(`\n${cases.length - failed}/${cases.length} passed`); process.exit(failed ? 1 : 0);
