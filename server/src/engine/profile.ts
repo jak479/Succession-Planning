@@ -64,7 +64,10 @@ export async function buildProfile(d: ProfileDeps, s: Session) {
       await c.query("insert into ws.conflict(workspace_id, field, value_a, source_a, value_b, source_b) values (ws.cur_ws(), $1, $2, $3, $4, $5) on conflict do nothing", [field, a, A.id, b, B.id]);
       conflicts.push(field);
     };
-    for (const v of r.value.values) {
+    // The model sometimes echoes a field with its description ("Field — help text"); keep the field name only.
+    const fieldOf = (f: string) => { const t = f.trim(); return fields.includes(t) ? t : t.split(" — ")[0].trim(); };
+    for (const v0 of r.value.values) {
+      const v = { ...v0, field: fieldOf(v0.field) };
       if (!fields.includes(v.field)) { dropped.push({ field: v.field, why: "not a field the agent may fill in this tier" }); continue; }
       if (!v.support.length || v.support.some(x => !byLabel.get(x.source))) { dropped.push({ field: v.field, why: "unknown or missing source" }); continue; }
       if (HEALTH.test(v.value) || v.support.some(x => x.quotes.some(q => HEALTH.test(q)))) { dropped.push({ field: v.field, why: "health information" }); continue; }
@@ -93,8 +96,8 @@ export async function buildProfile(d: ProfileDeps, s: Session) {
       for (const x of new Set(sources.map(y => y.id))) await c.query("insert into ws.profile_value_source values (ws.cur_ws(), $1, $2)", [v.field, x]);
       written.push(v.field);
     }
-    for (const k of r.value.conflicts) if (fields.includes(k.field)) await addConflict(k.field, k.value_a, k.source_a, k.value_b, k.source_b);
-    const gaps = r.value.gaps.filter(g => fields.includes(g));
+    for (const k0 of r.value.conflicts) { const k = { ...k0, field: fieldOf(k0.field) }; if (fields.includes(k.field)) await addConflict(k.field, k.value_a, k.source_a, k.value_b, k.source_b); }
+    const gaps = r.value.gaps.map(fieldOf).filter(g => fields.includes(g));
     await c.query("insert into ws.profile_run(workspace_id, model, result) values (ws.cur_ws(), $1, $2)", [r.model, JSON.stringify({ written, dropped, conflicts, gaps })]);
     return { written, dropped, conflicts, gaps };
   });

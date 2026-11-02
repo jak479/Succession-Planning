@@ -85,6 +85,12 @@ test("a value may rest on several sources; each quote is checked against its own
   assert.equal((await run(id.ent)).dropped[0].why, "quote not found in the cited source", "a quote from the loan attributed to the lease fails");
 });
 
+test("a field echoed back with its description is still recognized (live eval finding)", async () => {
+  script.out = { values: [{ field: "Key employees — employees the business depends on, with roles", value: "None stated in lease", support: [{ source: "LEASE", quotes: ["Term ends 2027-01-31."] }] }], conflicts: [], gaps: ["Insurance in force — every policy in force: carrier or type, insured, owner, beneficiary, amount, renewal"] };
+  const r = await run(id.ent);
+  assert.deepEqual([r.written, r.gaps], [["Key employees"], ["Insurance in force"]]);
+});
+
 test("ambiguous fields are described to the model", async () => {
   assert.match(script.prompt, /Name; role — the business owner's \(principal's\) own name/);
 });
