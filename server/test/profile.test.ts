@@ -41,9 +41,9 @@ after(async () => { await pool.end(); const a = new pg.Client({ connectionString
 
 test("a value is written only with a verbatim quote from the cited source", async () => {
   script.out = { values: [
-    { field: "Lease", value: "4410 Industrial Blvd; term ends 2027-01-31; uncapped personal guaranty by Dana Ortiz", source: "LEASE", quotes: ["Term ends 2027-01-31."] },
-    { field: "Loans and credit lines", value: "SBA 7(a) loan at Seacoast Bank", source: "LEASE", quotes: ["SBA 7(a) loan, Seacoast Bank"] },
-    { field: "Who holds authority: POA agent / PR / trustee", value: "Luis", source: "LEASE", quotes: ["Term ends"] },
+    { field: "Lease", value: "4410 Industrial Blvd; term ends 2027-01-31; uncapped personal guaranty by Dana Ortiz", support: [{ source: "LEASE", quotes: ["Term ends 2027-01-31."] }] },
+    { field: "Loans and credit lines", value: "SBA 7(a) loan at Seacoast Bank", support: [{ source: "LEASE", quotes: ["SBA 7(a) loan, Seacoast Bank"] }] },
+    { field: "Who holds authority: POA agent / PR / trustee", value: "Luis", support: [{ source: "LEASE", quotes: ["Term ends"] }] },
   ], conflicts: [], gaps: ["Bank accounts and signers", "Not a field"] };
   const r = await run(id.ent);
   assert.deepEqual(r.written, ["Lease"]);
@@ -54,7 +54,7 @@ test("a value is written only with a verbatim quote from the cited source", asyn
 });
 
 test("a client's description does not replace a document; the disagreement is listed, not resolved", async () => {
-  script.out = { values: [{ field: "Lease", value: "Runs to 2028; guaranty signed", source: "ANS-1", quotes: ["The lease runs to 2028"] }], conflicts: [], gaps: [] };
+  script.out = { values: [{ field: "Lease", value: "Runs to 2028; guaranty signed", support: [{ source: "ANS-1", quotes: ["The lease runs to 2028"] }] }], conflicts: [], gaps: [] };
   const r = await run(id.ent);
   assert.deepEqual([r.written, r.conflicts], [[], ["Lease"]]);
   assert.match((await profile(id.ent))[0].value, /2027-01-31/);
@@ -65,10 +65,24 @@ test("a client's description does not replace a document; the disagreement is li
 });
 
 test("several quotes may support one value; every one must be in the source", async () => {
-  script.out = { values: [{ field: "Personal guaranties", value: "Lease guaranty, full term, no cap", source: "LEASE", quotes: ["Personal guaranty by Dana Ortiz for the full term, no cap.", "Term ends 2027-01-31."] }], conflicts: [], gaps: [] };
+  script.out = { values: [{ field: "Personal guaranties", value: "Lease guaranty, full term, no cap", support: [{ source: "LEASE", quotes: ["Personal guaranty by Dana Ortiz for the full term, no cap.", "Term ends 2027-01-31."] }] }], conflicts: [], gaps: [] };
   assert.deepEqual((await run(id.ent)).written, ["Personal guaranties"]);
-  script.out = { values: [{ field: "Key employees", value: "Luis", source: "LEASE", quotes: ["Term ends 2027-01-31.", "Luis Herrera is the operations manager."] }], conflicts: [], gaps: [] };
+  script.out = { values: [{ field: "Key employees", value: "Luis", support: [{ source: "LEASE", quotes: ["Term ends 2027-01-31.", "Luis Herrera is the operations manager."] }] }], conflicts: [], gaps: [] };
   assert.equal((await run(id.ent)).dropped[0].why, "quote not found in the cited source");
+});
+
+test("a value may rest on several sources; each quote is checked against its own source", async () => {
+  await as("engine", id.ent, async c => {
+    const s = (await c.query("insert into ws.source(workspace_id,label,kind,name,readable) values (ws.cur_ws(),'LOAN','DOC','SBA loan',true) returning id")).rows[0].id;
+    await c.query("insert into ws.document_text values ($1, ws.cur_ws(), 'LOAN', 'SBA loan', 'SBA 7(a) loan, Seacoast Bank. Personal guaranty by Dana Ortiz.')", [s]);
+  });
+  script.out = { values: [{ field: "Personal guaranties", value: "Lease (full term, no cap) and Seacoast SBA loan", support: [
+    { source: "LEASE", quotes: ["Personal guaranty by Dana Ortiz for the full term, no cap."] }, { source: "LOAN", quotes: ["Personal guaranty by Dana Ortiz."] }] }], conflicts: [], gaps: [] };
+  assert.deepEqual((await run(id.ent)).written, ["Personal guaranties"]);
+  const n = await as("dana", id.ent, c => c.query("select count(*)::int n from ws.profile_value_source where field = 'Personal guaranties'").then(r => r.rows[0].n));
+  assert.equal(n, 2);
+  script.out = { values: [{ field: "Personal guaranties", value: "x", support: [{ source: "LEASE", quotes: ["SBA 7(a) loan, Seacoast Bank."] }] }], conflicts: [], gaps: [] };
+  assert.equal((await run(id.ent)).dropped[0].why, "quote not found in the cited source", "a quote from the loan attributed to the lease fails");
 });
 
 test("ambiguous fields are described to the model", async () => {
@@ -76,15 +90,15 @@ test("ambiguous fields are described to the model", async () => {
 });
 
 test("health information is never written to the profile", async () => {
-  script.out = { values: [{ field: "Key employees", value: "Luis Herrera, recovering from surgery", source: "LEASE", quotes: ["Term ends 2027-01-31."] }], conflicts: [], gaps: [] };
+  script.out = { values: [{ field: "Key employees", value: "Luis Herrera, recovering from surgery", support: [{ source: "LEASE", quotes: ["Term ends 2027-01-31."] }] }], conflicts: [], gaps: [] };
   const r = await run(id.ent);
   assert.deepEqual(r.dropped.map((x: any) => x.why), ["health information"]);
 });
 
 test("owner tier: the model sees titles and dates only, never the contents of personal documents", async () => {
   script.out = { values: [
-    { field: "Personal documents in place (will, trust, DPOA, surrogate)", value: "Will signed 2019-04-02, drafted by Smith & Co.", source: "WILL", quotes: ["Last Will of Dana Ortiz, signed 2019-04-02, drafted by Smith & Co."] },
-    { field: "Personal documents in place (will, trust, DPOA, surrogate)", value: "Leaves the interest to Ana", source: "WILL", quotes: ["I leave my membership interest"] },
+    { field: "Personal documents in place (will, trust, DPOA, surrogate)", value: "Will signed 2019-04-02, drafted by Smith & Co.", support: [{ source: "WILL", quotes: ["Last Will of Dana Ortiz, signed 2019-04-02, drafted by Smith & Co."] }] },
+    { field: "Personal documents in place (will, trust, DPOA, surrogate)", value: "Leaves the interest to Ana", support: [{ source: "WILL", quotes: ["I leave my membership interest"] }] },
   ], conflicts: [], gaps: [] };
   const r = await run(id.own);
   assert.ok(!script.prompt.includes("I leave my membership interest"), "will contents must not reach the model");

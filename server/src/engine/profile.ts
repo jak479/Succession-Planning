@@ -14,13 +14,13 @@ const RANK: Record<string, number> = { CALL: 6, DOC: 5, PUB: 4, API: 3, CLIENT: 
 const MAX_SOURCE_CHARS = 60000;
 
 export const ProfileSchema = z.object({
-  values: z.array(z.object({ field: z.string(), value: z.string(), source: z.string(), quotes: z.array(z.string()) })),
+  values: z.array(z.object({ field: z.string(), value: z.string(), support: z.array(z.object({ source: z.string(), quotes: z.array(z.string()) })) })),
   conflicts: z.array(z.object({ field: z.string(), value_a: z.string(), source_a: z.string(), value_b: z.string(), source_b: z.string() })),
   gaps: z.array(z.string()),
 });
 
 const SYSTEM = `You build the factual profile of a business client for a Florida law firm, from the sources listed. Extract only what a source states; never infer, estimate, summarize opinions, or advise.
-For each field you can fill: give a one-line "value" that covers everything the source states for that field (for example every policy, every guaranty), the label of the ONE source it comes from in "source", and in "quotes" one to four exact excerpts (each copied character for character, at most 300 characters) from that source that together state every part of the value. If you cannot quote it, do not fill the field.
+For each field you can fill: give a one-line "value" that covers everything the source states for that field (for example every policy, every guaranty), and in "support" every source it comes from: for each, the source label and one to four exact excerpts from that source (each copied character for character, at most 300 characters). Together the excerpts must state every part of the value. If you cannot quote it, do not fill the field.
 Use only the field names listed, exactly as written. Never record anyone's health, medical or capacity information.
 Where two sources state different things for the same field, list a conflict with both values and both source labels; do not choose between them.
 "gaps": fields no source addresses.`;
@@ -48,6 +48,7 @@ export async function buildProfile(d: ProfileDeps, s: Session) {
     const text = (r: any): string => tier === "owner" ? "" : (r.kind === "DOC" ? r.body ?? "" : r.citation ?? "");
     const block = srcs.map(r => `[${r.label}] (${r.kind}${r.kind === "CLIENT" ? ": the client's own words" : ""}) ${r.name}, ${String(r.pulled_at).slice(0, 10)}\n${text(r).slice(0, MAX_SOURCE_CHARS)}`).join("\n\n=====\n\n");
     const current = (await c.query("select p.field, p.value, s.label, s.kind from ws.profile_value p join ws.source s on s.id = p.source_id")).rows;
+    const currentSources = (await c.query("select field, source_id from ws.profile_value_source")).rows;
 
     const r = await d.model.json({ system: SYSTEM, user: `FIELDS\n${fields.map(f => FIELD_HELP[f] ? `${f} — ${FIELD_HELP[f]}` : f).join("\n")}\n\nCURRENT PROFILE\n${current.map(x => `${x.field}: ${x.value} [${x.label}]`).join("\n") || "(empty)"}\n\nSOURCES\n${block || "(none)"}`,
       schema: ProfileSchema, effort: "medium", maxTokens: 16000 });
@@ -64,21 +65,32 @@ export async function buildProfile(d: ProfileDeps, s: Session) {
       conflicts.push(field);
     };
     for (const v of r.value.values) {
-      const src = byLabel.get(v.source);
       if (!fields.includes(v.field)) { dropped.push({ field: v.field, why: "not a field the agent may fill in this tier" }); continue; }
-      if (!src) { dropped.push({ field: v.field, why: `unknown source ${v.source}` }); continue; }
-      if (HEALTH.test(v.value) || v.quotes.some(q => HEALTH.test(q))) { dropped.push({ field: v.field, why: "health information" }); continue; }
-      // Every quote must be in the source the model cited. Owner tier has no contents to quote: only titles and dates.
-      const haystack = norm(`${src.name} ${tier === "owner" ? String(src.pulled_at).slice(0, 10) : text(src)}`);
-      if (!v.quotes.length || v.quotes.length > 4 || v.quotes.some(q => !q.trim() || !haystack.includes(norm(q)))) { dropped.push({ field: v.field, why: "quote not found in the cited source" }); continue; }
+      if (!v.support.length || v.support.some(x => !byLabel.get(x.source))) { dropped.push({ field: v.field, why: "unknown or missing source" }); continue; }
+      if (HEALTH.test(v.value) || v.support.some(x => x.quotes.some(q => HEALTH.test(q)))) { dropped.push({ field: v.field, why: "health information" }); continue; }
+      // Every quote must be in the source it is attributed to. Owner tier has no contents to quote: only titles and dates.
+      const quoted = v.support.every(x => {
+        const src = byLabel.get(x.source)!;
+        const haystack = norm(`${src.name} ${tier === "owner" ? String(src.pulled_at).slice(0, 10) : text(src)}`);
+        return x.quotes.length >= 1 && x.quotes.length <= 4 && x.quotes.every(q => q.trim() && haystack.includes(norm(q)));
+      });
+      if (!quoted) { dropped.push({ field: v.field, why: "quote not found in the cited source" }); continue; }
+      const sources = v.support.map(x => byLabel.get(x.source)!);
+      const src = sources.reduce((a, b) => (RANK[b.kind] > RANK[a.kind] ? b : a));   // strongest source decides precedence
       const cur = current.find(x => x.field === v.field);
-      if (cur && norm(cur.value) !== norm(v.value)) {
-        await addConflict(v.field, cur.value, cur.label, v.value, v.source);
+      // A rebuild that rests on the same sources as the shown value (plus any new ones) restates it: replace it.
+      // Only a value from different sources is a disagreement between sources.
+      const curSources = new Set(currentSources.filter(x => x.field === v.field).map(x => x.source_id));
+      const restates = cur && curSources.size > 0 && [...curSources].every(id => sources.some(y => y.id === id));
+      if (cur && !restates && norm(cur.value) !== norm(v.value)) {
+        await addConflict(v.field, cur.value, cur.label, v.value, src.label);
         // Only a stronger source replaces the shown value; an equal or weaker one stays a listed conflict.
         if (RANK[src.kind] <= RANK[cur.kind]) continue;
       }
       await c.query(`insert into ws.profile_value(workspace_id, field, value, source_id) values (ws.cur_ws(), $1, $2, $3)
         on conflict (workspace_id, field) do update set value = excluded.value, source_id = excluded.source_id, set_at = now()`, [v.field, v.value, src.id]);
+      await c.query("delete from ws.profile_value_source where workspace_id = ws.cur_ws() and field = $1", [v.field]);
+      for (const x of new Set(sources.map(y => y.id))) await c.query("insert into ws.profile_value_source values (ws.cur_ws(), $1, $2)", [v.field, x]);
       written.push(v.field);
     }
     for (const k of r.value.conflicts) if (fields.includes(k.field)) await addConflict(k.field, k.value_a, k.source_a, k.value_b, k.source_b);
