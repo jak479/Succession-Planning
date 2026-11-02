@@ -2,7 +2,7 @@
 // each brief records the version that produced it.
 import { z } from "zod";
 
-export const PROMPT_VERSION = "frontdoor-2026-11-02.3";
+export const PROMPT_VERSION = "frontdoor-2026-11-02.4";
 export const ATTORNEY = process.env.ATTORNEY_NAME ?? "Josh";
 
 export interface ClientFile {
@@ -84,7 +84,7 @@ ${outside ? "OUTSIDE AI ANSWER THE CLIENT PASTED (check-this lane)\n" + outside 
 
 // ---------- Output classifier (the gate's model check) ----------
 export const ClassifySchema = z.object({
-  off_question: z.boolean(),
+  off_question_quotes: z.array(z.number().int()),
   advice: z.boolean(), recommendation: z.boolean(), evaluation_of_outside_answer: z.boolean(),
   prediction: z.boolean(), fee_or_time_estimate: z.boolean(), medical_information: z.boolean(),
   explanation: z.string(),
@@ -96,5 +96,5 @@ export const CLASSIFY_SYSTEM = `You audit a message a law firm's software is abo
 - prediction: forecasts an outcome (what a court, lender, landlord, or regulator will do; whether something will work out).
 - fee_or_time_estimate: states or estimates what legal work will cost or how long it will take.
 - medical_information: contains anyone's health information.
-- off_question: a quoted document provision does not answer the client's question as asked, or a sentence points out something a document lacks or omits when the client did not ask about it. Fact questions and the agenda line are never off_question.
+- off_question_quotes: the numbers (1 = first) of any "Here's what your … says about this" lines that are on a different subject from the client's question, or that point out something a document lacks when the client did not ask about it. A provision on the same subject as the question is on-question even if it does not fully answer it. Usually this list is empty. Listing a quote does not make the message fail; those quotes are removed.
 A faithful restatement of a document's terms ("The lease requires notice 180 days before expiration") is none of these. In particular, restating a document's own definition of incapacity or its physician-certification requirement is not medical_information; medical_information means facts about a real person's health. A comparison row in the fixed forms "The outside answer and the document state the same terms", "…state different terms", "The outside answer does not cite this provision", or "No document on file addresses this" is not evaluation_of_outside_answer. Asking the client about anyone's health, physicians or medical records IS medical_information. Be strict: when unsure, mark true. Explain in one sentence.`;

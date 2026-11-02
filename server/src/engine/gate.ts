@@ -17,7 +17,7 @@ export const FACT_HEALTH = /\b(health\w*|medical\w*|hipaa|physicians?|doctors?|i
 const ENGAGEMENT = /engagement letter/i;
 export const HEALTH = /\b(diagnos\w*|dementia|alzheimer\w*|cancer|chemo\w*|stroke|surgery|hospitali[sz]ed|hospital|medication|prescri\w*|terminal(ly)? ill|memory loss|mental health|depress\w*|seizure|heart attack|hospice|parkinson\w*)\b/i;
 
-export interface GateResult { pass: boolean; checks: { name: string; pass: boolean; detail?: string }[] }
+export interface GateResult { pass: boolean; checks: { name: string; pass: boolean; detail?: string }[]; dropQuotes?: number[] }
 
 export async function gate(b: Brief, reply: Reply, titles: Map<string, string>, model: Model, question = ""): Promise<GateResult> {
   const docKeys = new Set(titles.keys());
@@ -41,8 +41,13 @@ export async function gate(b: Brief, reply: Reply, titles: Map<string, string>, 
   const c = await model.json({ system: CLASSIFY_SYSTEM, user: `CLIENT'S QUESTION\n${question}\n\nMESSAGE TO AUDIT\n${replyText(reply)}`, schema: ClassifySchema, effort: "low", maxTokens: 2000 });
   if (!c.ok) checks.push({ name: "classifier", pass: false, detail: c.reason });
   else {
-    const flags = (["off_question", "advice", "recommendation", "evaluation_of_outside_answer", "prediction", "fee_or_time_estimate", "medical_information"] as const).filter(k => c.value[k]);
+    const flags = (["advice", "recommendation", "evaluation_of_outside_answer", "prediction", "fee_or_time_estimate", "medical_information"] as const).filter(k => c.value[k]);
     checks.push({ name: "classifier", pass: !flags.length, detail: flags.length ? `${flags.join(", ")}: ${c.value.explanation}` : undefined });
+    const drop = c.value.off_question_quotes.filter(n => Number.isInteger(n) && n >= 1);
+    if (drop.length) {
+      checks.push({ name: "off-question quotes removed", pass: true, detail: drop.join(", ") });
+      return { pass: checks.every(x => x.pass), checks, dropQuotes: drop };
+    }
   }
   return { pass: checks.every(x => x.pass), checks };
 }

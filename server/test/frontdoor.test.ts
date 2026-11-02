@@ -18,7 +18,7 @@ const GOOD: Brief = { topic: "Lease renewal", tier: "entity", urgent: false, sug
   no_clause_for: [], facts_needed: ["Has the landlord sent the renewal terms in writing?"], check_this: [], anchor_proximity: "Lease expiration 2027-01-31",
   agenda_line: "Lease renewal and new guaranty", attorney_note: "Option lapsed; uncapped guaranty. N10, C5." };
 const script = { screen: "none" as string, brief: GOOD as Brief | null, flags: {} as Record<string, boolean>, calls: [] as string[] };
-const fakeFlags = () => ({ off_question: false });
+const fakeFlags = () => ({ off_question_quotes: [] as number[] });
 const fake: Model = {
   async json({ system, user }) {
     script.calls.push(system === SCREEN_SYSTEM ? "screen:" + user : system === FRONT_DOOR_SYSTEM ? "brief" : "classify");
@@ -81,9 +81,15 @@ test("classifier flag (prediction) fails the gate even with clean words", async 
   assert.deepEqual(reply.lines.length, 1);
 });
 
-test("classifier flag off_question (a quote that doesn't answer the question asked) fails the gate", async () => {
-  reset(); script.flags = { off_question: true, explanation: "insurance gap quoted for a definition question" } as any;
-  assert.equal((await ask("How is incapacity defined?")).reply.lines.length, 1);
+test("off-question quotes are removed, the rest of the answer stays", async () => {
+  reset(); const on = GOOD.documents_say[0], off = { doc: "INS", section: "Disability buy-out", says: "The insurance schedule lists no disability buy-out coverage." };
+  script.brief = { ...GOOD, documents_say: [on, off] }; script.flags = { off_question_quotes: [2] } as any;
+  const { id: q, reply } = await ask("What does the lease say about renewal?");
+  assert.equal(reply.lines.filter(l => l.startsWith("Here's what your")).length, 1);
+  assert.ok(!reply.lines.some(l => l.includes("(INS,")));
+  const b = await inSession(pool, { personId: id.atty, workspaceId: id.ent }, c => c.query("select gate, documents_say from ws.brief where question_id=$1", [q]).then(r => r.rows[0]));
+  assert.ok(b.gate.checks.some((x: any) => x.name === "off-question quotes removed"));
+  assert.equal(b.documents_say.length, 1);
 });
 
 test("citation to a document not in the file fails the gate", async () => {

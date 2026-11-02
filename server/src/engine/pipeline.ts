@@ -6,7 +6,7 @@ import { inSession, type Session } from "../../../core/src/store.ts";
 import type { Model } from "./model.ts";
 import { BriefSchema, FRONT_DOOR_SYSTEM, PROMPT_VERSION, SCREEN_SYSTEM, ScreenSchema, frontDoorUser, type Brief, type ClientFile } from "./prompts.ts";
 import { HEALTH, gate } from "./gate.ts";
-import { agendaReply, renderReply, urgentReply, type Reply } from "./render.ts";
+import { MAX_QUOTES, agendaReply, renderReply, urgentReply, type Reply } from "./render.ts";
 import { NODES } from "../../../core/src/catalog.ts";
 
 export interface Ask { question: string; outside?: string | null; contextNode?: string | null }
@@ -57,7 +57,13 @@ export async function askFrontDoor(d: Deps, client: Session, ask: Ask): Promise<
         const titles = new Map(file.documents.map(x => [x.key, x.title]));
         const candidate = renderReply(brief, titles, position);
         const g = await gate(brief, candidate, titles, d.model, text);
-        reply = g.pass ? candidate : agendaReply(position); gateResult = g;
+        if (g.pass && g.dropQuotes?.length) {
+          // Removing a quote cannot add advice; the reply is rebuilt from the remaining, already-screened slots.
+          const shown = brief.documents_say.slice(0, MAX_QUOTES);
+          brief = { ...brief, documents_say: shown.filter((_, i) => !g.dropQuotes!.includes(i + 1)) };
+          reply = renderReply(brief, titles, position);
+        } else reply = g.pass ? candidate : agendaReply(position);
+        gateResult = g;
       }
     }
     await c.query(`insert into ws.brief(question_id, workspace_id, topic, urgent, stop_reason, suggested_scope, scope_reason, documents_say, no_clause_for,
