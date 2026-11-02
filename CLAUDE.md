@@ -42,7 +42,7 @@ import → profile → intake gate → path assigned → scan (findings, attorne
 
 ## Build order (from the decisions)
 1. Shared state file + per-client workspace with two tiers and attorney/client roles
-2. Engine prompts server-side; classifier gate on every client-facing turn — built (core/db/004, server/src/engine/); live eval not yet run
+2. Engine prompts server-side; classifier gate on every client-facing turn — built (core/db/004, server/src/engine/); live eval 12/12 on 2026-11-02 via GitHub Actions + identity federation
 3. Intake agent (entity tier) with conflict check first and ask-last pulls: Sunbiz, FL UCC, county clerk, property appraiser, DBPR/AHCA, PACER (scrape or checklist); file drop with server OCR; Google Drive; then Plaid + payroll API
 4. Scan on schedule (after each call's state update; anchor cadence), new findings only
 5. Client-facing board with change-order signature step; budget page — built (core/db/003, server/, web/board.html)

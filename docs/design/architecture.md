@@ -70,7 +70,9 @@ Flow for each client question:
 
 Zero data retention is enforced by construction: `engine/model.ts` is the only file that imports the SDK and exposes only the Messages API with inline documents; `test/zdr.test.ts` fails if any ineligible API surface appears. Model: `claude-opus-5-5`, effort low for screen and classifier, medium for the brief. Refusal fallbacks are not enabled: the default fallback can route to another model, and its retention terms would need checking first.
 
-Tests: `server/test/` (scripted model, live Postgres). Live behavior: `npm run eval` runs 12 cases against Claude (needs the API key; not yet run).
+Tests: `server/test/` (scripted model, live Postgres). Live behavior: `npm run eval` runs 12 cases against Claude; on GitHub, Actions → front-door-eval → Run workflow. Authentication is Workload Identity Federation (Console rule `gha-succession-main`, service account `front-door-eval-ci`, Default workspace); no API key exists. GitHub's subject claim uses the immutable form `repo:jak479@278461393/Succession-Planning@1443078919:ref:refs/heads/main`.
+
+Live eval history: first run found a health fact question reaching the client ("Is this question prompted by a current health event…"); fixed by a prompt rule plus a gate check. Check-this rows now use four fixed relation sentences written by the server. 12/12 on 2026-11-02 (run 41532654191). The classifier still occasionally holds back a plain restatement as "advice" (e.g., "the deadline has passed"); the client then gets only the agenda line.
 
 Known gaps: anchor dates are not yet stored, so the brief sees none; "repeated advice request after one deferral" (stop rule) is not yet detected; the agenda position counts the last 7 days, not Thursday's actual agenda.
 
