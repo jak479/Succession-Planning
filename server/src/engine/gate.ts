@@ -24,7 +24,10 @@ export async function gate(b: Brief, reply: Reply, titles: Map<string, string>, 
   const checks: GateResult["checks"] = [];
   const slots = modelSlots(b);
   const hit = (re: RegExp) => slots.map(s => s.match(re)?.[0]).filter(Boolean) as string[];
-  const banned = slots.filter(x => !b.documents_say.some(d => d.says === x && ENGAGEMENT.test(titles.get(d.doc) ?? ""))).map(x => x.match(BANNED)?.[0])
+  // The outside answer is the client's own pasted text, quoted back to them; advice words in it are not ours.
+  // It is still checked for fees and health below, and the classifier reads the whole reply.
+  const outside = new Set(b.check_this.map(r => r.outside_says));
+  const banned = slots.filter(x => !outside.has(x)).filter(x => !b.documents_say.some(d => d.says === x && ENGAGEMENT.test(titles.get(d.doc) ?? ""))).map(x => x.match(BANNED)?.[0])
     .concat(b.documents_say.filter(d => ENGAGEMENT.test(titles.get(d.doc) ?? "")).map(d => d.says.replace(/\badvis\w*/gi, "").match(BANNED)?.[0]))
     .filter(Boolean) as string[];
   const fee = hit(FEE), health = hit(HEALTH);

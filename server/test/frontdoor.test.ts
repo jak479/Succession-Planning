@@ -138,6 +138,13 @@ test("check-this: server writes the comparison sentence from a fixed category", 
   assert.equal(reply.lines.at(-1), "Josh will review this on Thursday.");
 });
 
+test("advice words inside the quoted outside answer are not the engine's advice (live eval finding)", async () => {
+  reset(); script.brief = { ...GOOD, check_this: [{ outside_says: "You should be fine signing it.", doc: "LEASE", section: "Personal guaranty", your_documents_say: "Dana Ortiz's guaranty covers the full term, with no cap.", relation: "document_not_cited_by_outside" }] };
+  assert.equal((await ask("Check this.", "You should be fine signing it.")).reply.check_this?.length, 1);
+  reset(); script.brief = { ...GOOD, check_this: [{ outside_says: "Sign it.", doc: "LEASE", section: "Guaranty", your_documents_say: "You should not sign.", relation: "different_terms" }] };
+  assert.equal((await ask("Check this.", "Sign it.")).reply.lines.length, 1, "advice words in our own cell still fail");
+});
+
 test("a fact question about health or capacity fails the gate (live eval finding, 2026-11-02)", async () => {
   reset(); script.brief = { ...GOOD, facts_needed: ["Is this question prompted by a current health event or concern affecting Dana Ortiz?"] };
   const { id: q, reply } = await ask("How does my operating agreement define incapacity?");

@@ -55,6 +55,6 @@ jobs:
           ( while sleep 120; do fetch; done ) &
           set +e
           npm run eval; e=$?
-          npm run eval:scan; s=$?
-          npm run eval:profile; p=$?
+          fetch; npm run eval:scan; s=$?        # each new process needs a token not yet exchanged
+          fetch; npm run eval:profile; p=$?
           exit $(( e || s || p ))
