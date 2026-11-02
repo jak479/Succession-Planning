@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attorney Console</title>
+<style>
+:root{--bg:#f7f6f2;--card:#fff;--ink:#1d2321;--muted:#5d6763;--line:#d9d6cc;--accent:#2d5b8a;--good:#2f7d4f;--warn:#b7791f;--crit:#b23a3a;--note:#fbf3e4}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#141716;--card:#1e2220;--ink:#e8ebe9;--muted:#9aa5a0;--line:#343a37;--accent:#7fb0e0;--good:#5cbf84;--warn:#e0a84a;--crit:#e57373;--note:#2b2618}}
+:root[data-theme="dark"]{--bg:#141716;--card:#1e2220;--ink:#e8ebe9;--muted:#9aa5a0;--line:#343a37;--accent:#7fb0e0;--good:#5cbf84;--warn:#e0a84a;--crit:#e57373;--note:#2b2618}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline}
+h1{font-size:18px;margin:0}.muted,.small{color:var(--muted)}.small{font-size:13px}
+nav{display:flex;gap:4px;padding:8px 16px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{background:transparent;color:var(--ink);border:1px solid transparent;border-radius:6px;padding:6px 12px;font:inherit;cursor:pointer;white-space:nowrap}
+nav button[aria-selected="true"]{border-color:var(--line);background:var(--card);font-weight:600}
+nav .count{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:999px;background:var(--warn);color:#fff;font-size:12px;text-align:center}
+main{max-width:1100px;margin:0 auto;padding:16px}
+section[hidden],[hidden]{display:none !important}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px}
+h2{font-size:16px;margin:0 0 8px}h3{font-size:14px;margin:12px 0 4px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+textarea,input,select{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+button{font:inherit;padding:6px 12px;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;margin:8px 6px 0 0}
+button.ghost{background:transparent;color:var(--accent)}button.warn{border-color:var(--crit);background:transparent;color:var(--crit)}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;vertical-align:top;padding:7px 6px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:600;font-size:13px}
+.note{background:var(--note);border-radius:6px;padding:8px 10px;margin:6px 0;font-size:14px}
+.client{border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:6px 0}
+.pill{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:999px;padding:1px 8px;margin-right:4px}
+.pill.good{border-color:var(--good);color:var(--good)}.pill.warn{border-color:var(--warn);color:var(--warn)}.pill.crit{border-color:var(--crit);color:var(--crit)}
+.err{color:var(--crit);min-height:1.3em}
+</style>
+</head>
+<body>
+<header><h1 id="title">Attorney console</h1><span id="who" class="muted"></span><span class="small">Nothing on this page is shown to the client.</span></header>
+<nav role="tablist">
+  <button role="tab" data-tab="conflicts" aria-selected="true">Conflicts<span class="count" id="nConf" hidden></span></button>
+  <button role="tab" data-tab="briefs">Front-door briefs<span class="count" id="nBriefs" hidden></span></button>
+  <button role="tab" data-tab="agenda">Intake agenda<span class="count" id="nAgenda" hidden></span></button>
+  <button role="tab" data-tab="queue">Unread documents<span class="count" id="nQueue" hidden></span></button>
+  <button role="tab" data-tab="profile">Profile</button>
+  <button role="tab" data-tab="intake">Intake transcript</button>
+  <button role="tab" data-tab="board">Board</button>
+</nav>
+<main>
+  <div class="err" id="err" role="alert"></div>
+
+  <section id="tab-conflicts">
+    <div class="card">
+      <h2>Run a conflict check</h2>
+      <p class="small">One name per line, optionally followed by " | relation" (client_entity, owner, co_owner, spouse, successor, family, other). No substantive intake for this client until you clear a check.</p>
+      <textarea id="names" placeholder="Gulfside Mechanical, LLC | client_entity&#10;Dana Ortiz | owner"></textarea>
+      <button id="runCheck" type="button">Run check</button>
+    </div>
+    <div id="checks"></div>
+  </section>
+
+  <section id="tab-briefs" hidden><div id="briefs"></div></section>
+  <section id="tab-agenda" hidden><div class="card"><h2>Deferred or flagged intake turns</h2><p class="small">Every time the assistant deferred to Thursday or stopped the line. These are the agenda items it promised the client.</p><div id="agenda"></div></div></section>
+  <section id="tab-queue" hidden><div class="card"><h2>Received, unread</h2><p class="small">Documents the server could not read (and Claude could not transcribe legibly). Review the originals.</p><table><thead><tr><th>Item</th><th>File</th><th>Received</th></tr></thead><tbody id="queue"></tbody></table></div></section>
+  <section id="tab-profile" hidden>
+    <div class="card"><h2>Profile</h2><button id="build" type="button">Rebuild profile from sources</button><span class="small" id="buildOut"></span>
+      <table style="margin-top:10px"><thead><tr><th>Field</th><th>Value</th><th>Source</th></tr></thead><tbody id="prof"></tbody></table></div>
+    <div class="card"><h2>Conflicts between sources</h2><table><thead><tr><th>Field</th><th>A</th><th>B</th></tr></thead><tbody id="pconf"></tbody></table></div>
+    <div class="card"><h2>Last build</h2><div id="lastRun" class="small"></div></div>
+  </section>
+  <section id="tab-intake" hidden><div class="card"><h2>Intake transcript (all clients in this workspace)</h2><div id="transcript"></div></div></section>
+  <section id="tab-board" hidden><div class="card"><h2>Board</h2><p>Add cards, propose change orders, scope Schedule A work, mark work done.</p><a id="boardLink" href="#">Open the board</a></div></section>
+</main>
+<script>
+const qs = new URLSearchParams(location.search), AS = qs.get("as"), WS = qs.get("ws");
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function api(path, body) {
+  const r = await fetch(path + (path.includes("?") ? "&" : "?") + "ws=" + encodeURIComponent(WS), { method: body !== undefined ? "POST" : "GET",
+    headers: { authorization: "Dev " + AS, "content-type": "application/json" }, body: body !== undefined ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || "Something went wrong."); return j;
+}
+const run = fn => async (...a) => { $("err").textContent = ""; try { await fn(...a); } catch (e) { $("err").textContent = e.message; } };
+const count = (id, n) => { $(id).hidden = !n; $(id).textContent = n; };
+const checkPills = g => (g?.checks || []).map(c => `<span class="pill ${c.pass ? "good" : "crit"}" title="${esc(c.detail || "")}">${esc(c.name)}${c.detail ? ": " + esc(c.detail) : ""}</span>`).join("");
+
+document.querySelectorAll("nav [data-tab]").forEach(b => b.onclick = run(async () => {
+  document.querySelectorAll("nav [data-tab]").forEach(x => x.setAttribute("aria-selected", x === b));
+  document.querySelectorAll("main > section").forEach(s => s.hidden = s.id !== "tab-" + b.dataset.tab);
+  await ({ conflicts: loadConflicts, briefs: loadBriefs, agenda: loadAgenda, queue: loadQueue, profile: loadProfile, intake: loadTranscript })[b.dataset.tab]?.();
+}));
+
+// ---- Conflicts ----
+async function loadConflicts() {
+  const { checks } = await api("/api/intake/conflict");
+  count("nConf", checks.filter(c => c.status === "pending").length);
+  $("checks").innerHTML = checks.map(c => `<div class="card"><h2>Check of ${new Date(c.requested_at).toLocaleString()} <span class="pill ${c.status === "cleared" ? "good" : c.status === "declined" ? "crit" : "warn"}">${c.status}</span></h2>
+    <div class="small">Names: ${c.names.map(n => `${esc(n.name)} (${esc(n.relation || "other")})`).join("; ")}</div>
+    <h3>Possible matches in other clients' files</h3>${c.hits.length ? `<table><thead><tr><th>Name checked</th><th>Matches</th><th>Relation</th><th>Similarity</th></tr></thead><tbody>${c.hits.map(h => `<tr><td>${esc(h.queried_name)}</td><td>${esc(h.name)}</td><td>${esc(h.relation)}</td><td>${Number(h.similarity).toFixed(2)}</td></tr>`).join("")}</tbody></table>` : '<p class="small">No matches.</p>'}
+    ${c.status === "pending" ? `<button data-decide="cleared" data-id="${c.id}">Clear</button><button class="warn" data-decide="declined" data-id="${c.id}">Decline</button>` : ""}</div>`).join("") || '<p class="small">No checks yet.</p>';
+  $("checks").querySelectorAll("[data-decide]").forEach(b => b.onclick = run(async () => { await api(`/api/intake/conflict/${b.dataset.id}/decide`, { decision: b.dataset.decide }); await loadConflicts(); }));
+}
+$("runCheck").onclick = run(async () => {
+  const names = $("names").value.split("\n").map(l => l.trim()).filter(Boolean).map(l => { const [name, relation] = l.split("|").map(x => x.trim()); return { name, relation: relation || "other" }; });
+  if (!names.length) return; await api("/api/intake/conflict", { names }); $("names").value = ""; await loadConflicts();
+});
+
+// ---- Briefs ----
+const STOP = { health_or_capacity: "health or capacity", third_party_answering: "someone else answering for the owner", court_or_regulator: "court or regulator", demand_letter: "demand or default letter", safety: "safety", repeated_advice_request: "advice asked again after a deferral", screen_unavailable: "stop-rule screen could not run" };
+const SCOPE = { included: "Included (Schedule A)", quoted: "Change order (Schedule B)", mixed: "Mixed" };
+async function loadBriefs() {
+  const { questions } = await api("/api/frontdoor");
+  count("nBriefs", questions.filter(q => q.brief && !q.confirmed_scope && !q.brief.urgent).length + questions.filter(q => q.brief?.urgent).length);
+  $("briefs").innerHTML = questions.map(q => { const b = q.brief || {};
+    return `<div class="card"><h2>${esc(STOP[b.topic] ? "Line stopped: " + STOP[b.topic] : b.topic || "(no brief)")} ${b.urgent ? '<span class="pill crit">urgent: contact the client</span>' : ""} ${b.stop_reason ? `<span class="pill crit">${esc(STOP[b.stop_reason] || b.stop_reason)}</span>` : ""}</h2>
+    <div class="client">${q.withheld ? "<em>Withheld: health or capacity. Not stored.</em>" : esc(q.body)}${q.outside_text ? `<div class="small">Outside answer pasted: ${esc(q.outside_text)}</div>` : ""}</div>
+    <h3>What the client was shown</h3><div class="small">${(q.reply?.lines || []).map(esc).join("<br>")}</div>
+    <h3>For you</h3>${b.attorney_note ? `<div class="note">${esc(b.attorney_note)}</div>` : ""}
+    ${b.suggested_scope ? `<div>Suggested scope: <strong>${SCOPE[b.suggested_scope]}</strong> <span class="small">${esc(b.scope_reason)}</span></div>` : ""}
+    ${(b.no_clause_for || []).length ? `<div class="small">No document governs: ${b.no_clause_for.map(esc).join("; ")}</div>` : ""}
+    ${b.anchor_proximity ? `<div class="small">Anchor date: ${esc(b.anchor_proximity)}</div>` : ""}
+    <div style="margin-top:6px">Gate: ${checkPills(b.gate)}</div><div class="small">Prompt ${esc(b.prompt_version)} · ${esc(b.model || "no model")}</div>
+    ${q.confirmed_scope ? `<div style="margin-top:6px">Confirmed: <strong>${SCOPE[q.confirmed_scope]}</strong></div>` : b.suggested_scope ? `<div>${Object.keys(SCOPE).map(k => `<button class="ghost" data-scope="${k}" data-id="${q.id}">Confirm ${SCOPE[k]}</button>`).join("")}</div>` : ""}</div>`; }).join("") || '<p class="small">No questions yet.</p>';
+  $("briefs").querySelectorAll("[data-scope]").forEach(b => b.onclick = run(async () => { await api(`/api/frontdoor/${b.dataset.id}/scope`, { scope: b.dataset.scope }); await loadBriefs(); }));
+}
+
+// ---- Agenda, queue, transcript ----
+async function loadAgenda() {
+  const { items } = await api("/api/intake/agenda"); count("nAgenda", items.length);
+  $("agenda").innerHTML = items.map(i => `<div class="card"><div class="client">${esc(i.client_message)}</div><div class="small">Shown: ${esc(i.reply)}</div>${i.flag ? `<span class="pill crit">${esc(STOP[i.flag] || i.flag)}</span>` : ""}<div style="margin-top:4px">${checkPills(i.gate)}</div></div>`).join("") || '<p class="small">Nothing deferred.</p>';
+}
+async function loadQueue() {
+  const { unread } = await api("/api/intake/queue"); count("nQueue", unread.length);
+  $("queue").innerHTML = unread.map(u => `<tr><td>${esc(u.item_id)}</td><td>${esc(u.filename)}</td><td>${new Date(u.set_at).toLocaleString()}</td></tr>`).join("") || '<tr><td colspan="3" class="small">None.</td></tr>';
+}
+async function loadTranscript() {
+  const { turns } = await api("/api/intake/turns");
+  $("transcript").innerHTML = turns.map(t => `<div class="${t.speaker === "agent" ? "note" : "client"}"><div class="small">${t.speaker === "agent" ? "Assistant" : esc(t.for_name || "Client")} · ${new Date(t.at).toLocaleString()}</div>${t.withheld ? "<em>Withheld: health or capacity.</em>" : esc(t.body).replace(/\n/g, "<br>")}</div>`).join("") || '<p class="small">No intake yet.</p>';
+}
+
+// ---- Profile ----
+async function loadProfile() {
+  const p = await api("/api/profile");
+  $("prof").innerHTML = p.profile.map(r => `<tr><td>${esc(r.field)}</td><td>${esc(r.value)}</td><td class="small">${esc(r.source)} · ${esc(r.basis)}</td></tr>`).join("") || '<tr><td colspan="3" class="small">Empty.</td></tr>';
+  $("pconf").innerHTML = p.conflicts.map(c => `<tr><td>${esc(c.field)}</td><td>${esc(c.value_a)} <span class="small">(${esc(c.source_a)})</span></td><td>${esc(c.value_b)} <span class="small">(${esc(c.source_b)})</span></td></tr>`).join("") || '<tr><td colspan="3" class="small">None.</td></tr>';
+  const r = p.lastRun?.result;
+  $("lastRun").innerHTML = !r ? "No build yet." : r.error ? `Failed: ${esc(r.error)}` :
+    `${new Date(p.lastRun.at).toLocaleString()} · ${esc(p.lastRun.model)}<br>Written: ${r.written.map(esc).join(", ") || "none"}<br>Dropped: ${r.dropped.map(d => `${esc(d.field)} (${esc(d.why)})`).join("; ") || "none"}<br>Gaps: ${r.gaps.map(esc).join("; ") || "none"}`;
+}
+$("build").onclick = run(async () => { $("buildOut").textContent = " Building…"; try { await api("/api/profile/build", {}); } finally { $("buildOut").textContent = ""; } await loadProfile(); });
+
+(async () => {
+  if (!AS || !WS) { $("err").textContent = "Development sign-in: add ?as=<person-id>&ws=<workspace-id> to the address."; return; }
+  $("boardLink").href = `/board?as=${encodeURIComponent(AS)}&ws=${encodeURIComponent(WS)}`;
+  try {
+    const me = await api("/api/me");
+    if (me.role !== "attorney") { $("err").textContent = "This page is for the attorney."; document.querySelector("main").querySelectorAll("section").forEach(s => s.hidden = true); return; }
+    $("title").textContent = me.client + " · attorney console"; $("who").textContent = `${me.name} · ${me.tier} tier`;
+    await loadConflicts();
+    await Promise.all([loadBriefs(), loadAgenda(), loadQueue()].map(p => p.catch(() => {})));
+  } catch (e) { $("err").textContent = e.message; }
+})();
+</script>
+</body>
+</html>

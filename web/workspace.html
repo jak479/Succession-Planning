@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Client Workspace</title>
+<style>
+:root{--bg:#f7f6f2;--card:#fff;--ink:#1d2321;--muted:#5d6763;--line:#d9d6cc;--accent:#2d5b8a;--good:#2f7d4f;--warn:#b7791f;--crit:#b23a3a;--plan:#9aa5a0;--auto:#eef3f8}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#141716;--card:#1e2220;--ink:#e8ebe9;--muted:#9aa5a0;--line:#343a37;--accent:#7fb0e0;--good:#5cbf84;--warn:#e0a84a;--crit:#e57373;--plan:#5d6763;--auto:#1b2733}}
+:root[data-theme="dark"]{--bg:#141716;--card:#1e2220;--ink:#e8ebe9;--muted:#9aa5a0;--line:#343a37;--accent:#7fb0e0;--good:#5cbf84;--warn:#e0a84a;--crit:#e57373;--plan:#5d6763;--auto:#1b2733}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline}
+h1{font-size:18px;margin:0}.muted,.small{color:var(--muted)}.small{font-size:13px}
+nav{display:flex;gap:4px;padding:8px 16px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{background:transparent;color:var(--ink);border:1px solid transparent;border-radius:6px;padding:6px 12px;font:inherit;cursor:pointer;white-space:nowrap}
+nav button[aria-selected="true"]{border-color:var(--line);background:var(--card);font-weight:600}
+main{max-width:980px;margin:0 auto;padding:16px}
+section[hidden]{display:none}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px}
+h2{font-size:16px;margin:0 0 8px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+textarea,input,select{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+textarea{min-height:80px}
+button.primary{font:inherit;padding:8px 14px;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;margin-top:10px}
+button.ghost{font:inherit;padding:6px 12px;border-radius:6px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;margin-top:10px}
+button:disabled{opacity:.5;cursor:default}
+.auto{background:var(--auto);border-left:3px solid var(--accent);border-radius:6px;padding:10px 12px;margin:8px 0}
+.auto .tag{font-size:12px;color:var(--muted);margin-bottom:4px}
+.mine{background:transparent;border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin:8px 0 8px 15%}
+.thread{max-height:520px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;vertical-align:top;padding:7px 6px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:600;font-size:13px}
+.err{color:var(--crit);min-height:1.3em}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px}.step{padding:4px 10px;border-radius:999px;border:1px solid var(--line);font-size:13px}.step.on{background:var(--accent);color:#fff;border-color:var(--accent)}.step.done{border-color:var(--good);color:var(--good)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+svg text{font:12px system-ui,sans-serif;fill:var(--ink)}
+.pill{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:999px;padding:1px 8px}
+</style>
+</head>
+<body>
+<header><h1 id="title">Workspace</h1><span id="who" class="muted"></span><span id="stageLine" class="muted"></span></header>
+<nav role="tablist">
+  <button role="tab" data-tab="ask" aria-selected="true">Ask</button>
+  <button role="tab" data-tab="intake">Intake</button>
+  <button role="tab" data-tab="plan">Plan</button>
+  <button role="tab" data-tab="profile">Profile</button>
+  <button role="tab" data-tab="board">Board &amp; budget</button>
+</nav>
+<main>
+  <div class="err" id="err" role="alert"></div>
+
+  <section id="tab-ask">
+    <div class="card">
+      <h2>Ask a question</h2>
+      <p class="small">The assistant answers with what your own documents say, the facts Josh will need, and where your question sits on Thursday's agenda. It does not give legal advice. Josh answers on the call.</p>
+      <label for="q">Your question</label><textarea id="q" placeholder="e.g. The landlord sent renewal terms. What does my lease say?"></textarea>
+      <label for="outside">Check this (optional): paste an answer you got from another AI tool</label><textarea id="outside" style="min-height:60px"></textarea>
+      <button class="primary" id="askBtn" type="button">Send to the assistant</button>
+    </div>
+    <div id="answers"></div>
+  </section>
+
+  <section id="tab-intake" hidden>
+    <div class="card">
+      <h2>Intake</h2>
+      <p class="small">The assistant collects facts and documents for your plan. It asks only for what your documents and public records don't already show.</p>
+      <div class="thread" id="thread"></div>
+      <label for="msg">Your answer</label><textarea id="msg" style="min-height:60px"></textarea>
+      <button class="primary" id="sendBtn" type="button">Send</button>
+      <button class="ghost" id="startBtn" type="button">Start or resume intake</button>
+      <button class="ghost" id="sumBtn" type="button">Where are we?</button>
+    </div>
+    <div class="card">
+      <h2>Send a document</h2>
+      <label for="docItem">Which document is this?</label>
+      <select id="docItem">
+        <option value="B1">Operating agreement or bylaws, with amendments</option>
+        <option value="B5">Bank signatory card or signer confirmation</option>
+        <option value="B8">Insurance schedule or declarations pages</option>
+        <option value="B10">Top customers and referral sources; contracts with renewal dates</option>
+        <option value="B11">Lease and amendments; other personal guaranties</option>
+        <option value="B12">Loan documents: note, loan agreement, guaranty</option>
+        <option value="B13">License certificates</option>
+      </select>
+      <label for="file">File (PDF, Word, text, or a photo)</label><input type="file" id="file" accept=".pdf,.docx,.txt,image/*">
+      <button class="primary" id="upBtn" type="button">Send document</button>
+      <div id="upOut"></div>
+    </div>
+  </section>
+
+  <section id="tab-plan" hidden>
+    <div class="card">
+      <h2>Your plan</h2>
+      <div class="steps" id="steps"></div>
+      <div class="legend"><span><i class="dot" style="background:var(--good)"></i>in place</span><span><i class="dot" style="background:var(--warn)"></i>in place, review due</span><span><i class="dot" style="background:var(--crit)"></i>gap</span><span><i class="dot" style="background:var(--plan)"></i>not yet assessed</span></div>
+      <svg id="path" viewBox="0 0 960 400" role="img" aria-label="Plan path: what must be in place if you are out"></svg>
+      <div id="nodeInfo" class="small">Select a step to see what it needs.</div>
+    </div>
+    <div class="card">
+      <h2>Coordination with your personal plan</h2>
+      <p class="small">Whether each point is in place and consistent. Your personal documents themselves are not shown here.</p>
+      <table><thead><tr><th>Point</th><th>Status</th></tr></thead><tbody id="rungs"></tbody></table>
+    </div>
+  </section>
+
+  <section id="tab-profile" hidden>
+    <div class="card">
+      <h2>What your file shows</h2>
+      <p class="small">Each entry names the source it came from. "Described" means it rests on your own description, not a document or record.</p>
+      <table><thead><tr><th>Item</th><th>What the source shows</th><th>Source</th></tr></thead><tbody id="prof"></tbody></table>
+    </div>
+    <div class="card">
+      <h2>Sources that disagree</h2>
+      <p class="small">Listed for Josh to review on the call. Nothing here has been decided.</p>
+      <table><thead><tr><th>Item</th><th>One source says</th><th>Another says</th></tr></thead><tbody id="conf"></tbody></table>
+    </div>
+  </section>
+
+  <section id="tab-board" hidden>
+    <div class="card"><h2>Board &amp; budget</h2><p>Open items, change orders to approve, and the budget.</p><a id="boardLink" href="#">Open the board</a></div>
+  </section>
+</main>
+<script>
+const qs = new URLSearchParams(location.search), AS = qs.get("as"), WS = qs.get("ws");
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const TAG = '<div class="tag">Automated assistant · not a lawyer · Josh reviews on Thursday</div>';
+async function api(path, opts = {}) {
+  const r = await fetch(path + (path.includes("?") ? "&" : "?") + "ws=" + encodeURIComponent(WS), { method: opts.body ? "POST" : (opts.method || "GET"),
+    headers: { authorization: "Dev " + AS, "content-type": opts.type || "application/json" }, body: opts.body });
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || "Something went wrong."); return j;
+}
+const run = fn => async () => { $("err").textContent = ""; try { await fn(); } catch (e) { $("err").textContent = e.message; } };
+function autoBlock(reply) {
+  let h = TAG + (reply.lines || []).map(l => `<div>${esc(l)}</div>`).join("");
+  if (reply.check_this?.length) h += `<table style="margin-top:8px"><thead><tr><th>The outside answer says</th><th>Your documents say</th><th></th></tr></thead><tbody>${reply.check_this.map(r => `<tr><td>${esc(r.outside_says)}</td><td>${esc(r.your_documents_say)}</td><td>${esc(r.difference)}</td></tr>`).join("")}</tbody></table>`;
+  return `<div class="auto">${h}</div>`;
+}
+
+// ---- tabs ----
+document.querySelectorAll("nav [data-tab]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("nav [data-tab]").forEach(x => x.setAttribute("aria-selected", x === b));
+  document.querySelectorAll("main > section").forEach(s => s.hidden = s.id !== "tab-" + b.dataset.tab);
+  ({ ask: loadAsk, intake: loadThread, plan: loadPlan, profile: loadProfile })[b.dataset.tab]?.();
+});
+
+// ---- Ask ----
+async function loadAsk() {
+  const { questions } = await api("/api/frontdoor");
+  $("answers").innerHTML = questions.map(q => `<div class="card"><div class="mine">${q.withheld ? "<em>Your message was sent to Josh directly and is not stored here.</em>" : esc(q.body)}${q.outside_text ? `<div class="small">Pasted for checking: ${esc(q.outside_text)}</div>` : ""}</div>${q.reply ? autoBlock(q.reply) : ""}${q.confirmed_scope ? `<div class="small">Josh confirmed: ${q.confirmed_scope === "included" ? "included in your subscription" : q.confirmed_scope === "quoted" ? "a change order (quoted before work starts)" : "partly included, partly a change order"}</div>` : ""}</div>`).join("");
+}
+$("askBtn").onclick = run(async () => {
+  if (!$("q").value.trim()) return; $("askBtn").disabled = true;
+  try { await api("/api/frontdoor", { body: JSON.stringify({ question: $("q").value, outside: $("outside").value || null }) }); $("q").value = ""; $("outside").value = ""; await loadAsk(); }
+  finally { $("askBtn").disabled = false; }
+});
+
+// ---- Intake ----
+async function loadThread() {
+  const { turns } = await api("/api/intake/turns");
+  $("thread").innerHTML = turns.map(t => t.speaker === "agent" ? autoBlock({ lines: (t.body || "").split("\n") }) :
+    `<div class="mine">${t.withheld ? "<em>Sent to Josh directly; not stored here.</em>" : esc(t.body)}</div>`).join("") || '<p class="small">No intake conversation yet. Select "Start or resume intake".</p>';
+  $("thread").scrollTop = $("thread").scrollHeight;
+}
+$("startBtn").onclick = run(async () => { await api("/api/intake/start", { body: "{}" }); await loadThread(); });
+$("sendBtn").onclick = run(async () => {
+  if (!$("msg").value.trim()) return; $("sendBtn").disabled = true;
+  try { await api("/api/intake/message", { body: JSON.stringify({ text: $("msg").value }) }); $("msg").value = ""; await loadThread(); } finally { $("sendBtn").disabled = false; }
+});
+$("sumBtn").onclick = run(async () => { const s = await api("/api/intake/summary", { body: "{}" }); $("thread").insertAdjacentHTML("beforeend", autoBlock(s)); $("thread").scrollTop = 1e9; });
+$("upBtn").onclick = run(async () => {
+  const f = $("file").files[0]; if (!f) return; $("upBtn").disabled = true;
+  try {
+    const r = await api(`/api/intake/upload?item=${encodeURIComponent($("docItem").value)}&name=${encodeURIComponent(f.name)}`, { body: await f.arrayBuffer(), type: f.type || "application/octet-stream" });
+    $("upOut").innerHTML = autoBlock(r); $("file").value = "";
+  } finally { $("upBtn").disabled = false; }
+});
+
+// ---- Plan ----
+const POS = { N0:[0,2], N2:[1,2], N5:[1,0], N7:[1,4], N3:[2,3], N4:[2,2], N8:[2,1], N1:[2,0], N10:[2,4], N12:[3,4], N6:[3,2], N9:[3,1], N11:[3,0], N14:[4,2], N15a:[5,1], N15b:[5,2], N15c:[5,3] };
+const LABEL = { N0:"Trigger", N1:"Notice tree", N2:"Authority", N3:"Alternate manager", N4:"Bank access", N5:"Cash reserve", N6:"Payroll", N7:"Insurance", N8:"Credentials", N9:"Customers", N10:"Lease & guaranties", N11:"Licenses", N12:"Key staff", N14:"Day-30 decision", N15a:"Continue", N15b:"Sell", N15c:"Wind down" };
+const EDGES = [["N0","N2"],["N0","N1"],["N2","N3"],["N2","N4"],["N2","N8"],["N2","N10"],["N2","N12"],["N2","N11"],["N4","N6"],["N5","N6"],["N8","N6"],["N8","N9"],["N2","N9"],["N2","N14"],["N4","N14"],["N6","N14"],["N14","N15a"],["N14","N15b"],["N14","N15c"],["N9","N15b"],["N12","N15b"],["N5","N15c"],["N10","N15c"],["N7","N15b"]];
+const COLOR = { green: "var(--good)", amber: "var(--warn)", red: "var(--crit)" };
+const WORD = { green: "In place", amber: "In place, review due", red: "Gap", planned: "Planned", unassessed: "Not yet assessed" };
+async function loadPlan() {
+  const p = await api("/api/plan");
+  $("steps").innerHTML = p.stages.map((n, i) => `<span class="step ${i === p.stage.index ? "on" : i < p.stage.index ? "done" : ""}">${i}. ${esc(n)}</span>`).join("");
+  const xy = id => [75 + POS[id][0] * 162, 40 + POS[id][1] * 80];
+  let svg = EDGES.map(([a, b]) => { const [x1, y1] = xy(a), [x2, y2] = xy(b); return `<line x1="${x1 + 60}" y1="${y1}" x2="${x2 - 60}" y2="${y2}" stroke="var(--line)" stroke-width="1.5"/>`; }).join("");
+  svg += Object.keys(POS).map(id => { const [x, y] = xy(id), st = p.nodes[id], fill = COLOR[st] || "var(--plan)";
+    return `<g data-node="${id}" style="cursor:pointer" tabindex="0"><rect x="${x - 60}" y="${y - 16}" width="120" height="32" rx="6" fill="var(--card)" stroke="${fill}" stroke-width="2.5"/><circle cx="${x - 48}" cy="${y}" r="5" fill="${fill}"/><text x="${x - 38}" y="${y + 4}">${LABEL[id]}</text></g>`; }).join("");
+  $("path").innerHTML = svg;
+  const defs = Object.fromEntries(p.defs.map(d => [d.id, d]));
+  $("path").querySelectorAll("[data-node]").forEach(g => g.onclick = g.onkeydown = () => {
+    const id = g.dataset.node, d = defs[id];
+    $("nodeInfo").innerHTML = `<strong>${esc(LABEL[id])}</strong>: ${esc(WORD[p.nodes[id]] || "Not yet assessed")}. Needs: ${esc(d.satisfiedBy)}.${p.blocked[id] ? ` Waiting on: ${p.blocked[id].map(x => esc(LABEL[x] || x)).join(", ")}.` : ""}`;
+  });
+  const RUNG = { C1:"Who receives the business interest", C2:"Who runs it on day one", C3:"Authority documents", C4:"Buy-sell funding", C5:"Guaranties", C6:"Exit proceeds", C7:"Lifetime transfers", C8:"Family liaison" };
+  $("rungs").innerHTML = Object.keys(RUNG).map(k => `<tr><td>${RUNG[k]}</td><td><span class="pill" style="border-color:${COLOR[p.nodes[k]] || "var(--line)"}">${esc(WORD[p.nodes[k]] || "Not yet assessed")}</span></td></tr>`).join("");
+}
+
+// ---- Profile ----
+async function loadProfile() {
+  const p = await api("/api/profile");
+  const basis = b => b === "described" ? "described by you" : b;
+  $("prof").innerHTML = p.profile.map(r => `<tr><td>${esc(r.field)}</td><td>${esc(r.value)}</td><td class="small">${esc(r.source)} · ${esc(basis(r.basis))}</td></tr>`).join("") || '<tr><td colspan="3" class="small">Nothing yet.</td></tr>';
+  $("conf").innerHTML = p.conflicts.map(c => `<tr><td>${esc(c.field)}</td><td>${esc(c.value_a)} <span class="small">(${esc(c.source_a)})</span></td><td>${esc(c.value_b)} <span class="small">(${esc(c.source_b)})</span></td></tr>`).join("") || '<tr><td colspan="3" class="small">None.</td></tr>';
+}
+
+(async () => {
+  if (!AS || !WS) { $("err").textContent = "Development sign-in: add ?as=<person-id>&ws=<workspace-id> to the address."; return; }
+  $("boardLink").href = `/board?as=${encodeURIComponent(AS)}&ws=${encodeURIComponent(WS)}`;
+  try {
+    const me = await api("/api/me"); $("title").textContent = me.client; $("who").textContent = me.name;
+    const p = await api("/api/plan"); $("stageLine").textContent = `Stage ${p.stage.index}: ${p.stage.name}`;
+    await loadAsk();
+  } catch (e) { $("err").textContent = e.message; }
+})();
+</script>
+</body>
+</html>

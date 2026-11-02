@@ -45,15 +45,15 @@ const OA_TEXT = "Operating Agreement of Gulfside Mechanical LLC. Article 9 Conti
 before(async () => {
   const a = new pg.Client({ connectionString: base + "/postgres" }); await a.connect(); await a.query(`create database ${db}`); await a.end();
   pool = new pg.Pool({ connectionString: `${base}/${db}` });
-  for (const f of ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql", "005_intake.sql", "006_profile.sql"]) await pool.query(readFileSync(new URL("../../core/db/" + f, import.meta.url), "utf8"));
+  for (const f of ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql", "005_intake.sql", "006_profile.sql", "007_threads.sql"]) await pool.query(readFileSync(new URL("../../core/db/" + f, import.meta.url), "utf8"));
   const one = async (q: string, p: unknown[] = []) => (await pool.query(q + " returning id", p)).rows[0].id;
-  for (const [k, n, r] of [["atty", "Josh", "attorney"], ["dana", "Dana", "client"], ["engine", "engine", "agent"]]) id[k] = await one("insert into ws.person(name, role) values ($1,$2)", [n, r]);
+  for (const [k, n, r] of [["atty", "Josh", "attorney"], ["dana", "Dana", "client"], ["engine", "engine", "agent"], ["luis", "Luis", "client"]]) id[k] = await one("insert into ws.person(name, role) values ($1,$2)", [n, r]);
   const other = await one("insert into ws.client(name) values ('Ortiz Holdings')");
   await pool.query("insert into ws.firm_party(client_id, name, relation) values ($1, 'Dana M. Ortiz', 'owner'), ($1, 'Ortiz Holdings, LLC', 'client_entity')", [other]);
   const cl = await one("insert into ws.client(name) values ('Gulfside Mechanical, LLC')");
   id.cl = cl;
   id.ent = await one("insert into ws.workspace(client_id, tier) values ($1,'entity')", [cl]);
-  for (const p of [id.dana, id.engine]) await pool.query("insert into ws.membership values ($1,$2,false)", [p, id.ent]);
+  for (const p of [id.dana, id.engine, id.luis]) await pool.query("insert into ws.membership values ($1,$2,false)", [p, id.ent]);
 });
 after(async () => { await pool.end(); const a = new pg.Client({ connectionString: base + "/postgres" }); await a.connect(); await a.query(`drop database ${db}`); await a.end(); });
 
@@ -80,7 +80,7 @@ test("session start: one document list, then the first open question (core, earl
 test("an answer is recorded as stated, restated for confirmation, and the next question follows", async () => {
   reset(); script.extract = { answers: [{ item_id: "B2", restatement: "Payroll, signing on the bank account, and the DBPR license qualifier stop without you.", complete: true }], asks_for_advice: false };
   const { lines } = await clientTurn(deps(), dana(), "Payroll stops, nobody else can sign at the bank, and I'm the license qualifier.");
-  assert.deepEqual(lines.slice(0, 2), ["I have: Payroll, signing on the bank account, and the DBPR license qualifier stop without you. Correct?", "Noted as stated. That goes toward N2, N4, N6, N8, N11."]);
+  assert.deepEqual(lines.slice(0, 2), ["I have: Payroll, signing on the bank account, and the DBPR license qualifier stop without you. Correct?", "Noted as stated. That goes toward: Authority activates, Bank access, Payroll runs, Credentials and access, License and regulatory."]);
   assert.match(lines[2], /^Who could run the business for 90 days/);
   const st = await as("atty", c => c.query("select i.status, s.kind from ws.intake_status i join ws.source s on s.id = i.source_id where item_id='B2'").then(r => r.rows[0]));
   assert.deepEqual([st.status, st.kind], ["stated", "CLIENT"]);
@@ -90,7 +90,7 @@ test("a restatement with advice words is not shown, but the answer is still reco
   reset(); script.extract = { answers: [{ item_id: "B3", restatement: "Luis Herrera should run it; he probably would.", complete: true }], asks_for_advice: false };
   const { lines } = await clientTurn(deps(), dana(), "Luis could run it, I think he'd do it.");
   assert.ok(!lines.some(l => l.startsWith("I have:")));
-  assert.equal(lines[0], "Noted as stated. That goes toward N2, N12.");
+  assert.equal(lines[0], "Noted as stated. That goes toward: Authority activates, Key staff.");
 });
 
 test("advice: deferred once; asked again, the line stops and the attorney is flagged", async () => {
@@ -132,4 +132,11 @@ test("a scan is read by Claude: received if legible (and marked as transcribed),
   transcript.value = "[page 1]\n" + "[illegible] ".repeat(40) + "Seacoast Bank " + "x".repeat(250);
   assert.equal((await uploadDocument(deps(), dana(), { item: "B13", filename: "license-photo.png", mime: "image/png", bytes: new Uint8Array([137, 80, 78, 71]) })).status, "received_unread");
   transcript.value = "";
+});
+
+test("each client reads only their own intake conversation", async () => {
+  const mine = await as("dana", c => c.query("select count(*)::int n from ws.intake_turn").then(r => r.rows[0].n));
+  assert.ok(mine > 0);
+  assert.equal(await as("luis", c => c.query("select count(*)::int n from ws.intake_turn").then(r => r.rows[0].n)), 0);
+  assert.equal(await as("atty", c => c.query("select count(*)::int n from ws.intake_turn").then(r => r.rows[0].n)), mine);
 });

@@ -5,7 +5,8 @@ import { readFileSync } from "node:fs";
 import pg from "pg";
 import { inSession } from "../../core/src/store.ts";
 import { stageOf } from "../../core/src/rules.ts";
-import { STAGES } from "../../core/src/catalog.ts";
+import { STAGES, NODES } from "../../core/src/catalog.ts";
+import { blockedBy } from "../../core/src/rules.ts";
 import { askFrontDoor } from "./engine/pipeline.ts";
 import { claudeModel } from "./engine/model.ts";
 import { clientTurn, requestConflictCheck, startSession, summary, uploadDocument } from "./engine/intake.ts";
@@ -47,9 +48,26 @@ const routes: [string, RegExp, (x: Ctx, m: RegExpExecArray) => Promise<unknown>]
     return { questions: qs.map(q => ({ ...q, brief: briefs.find(b => b.question_id === q.id) ?? null })) };
   }],
   ["POST", /^\/api\/frontdoor\/([0-9a-f-]{36})\/scope$/, ({ c, body }, m) => c.query("select ws.confirm_scope($1,$2)", [m[1], String(body.scope)])],
+  // ---- Shared by the client workspace and the attorney console ----
+  ["GET", /^\/api\/me$/, async ({ c }) => {
+    const me = (await c.query("select p.name, p.role, w.tier, cl.name client, coalesce(m.signer,false) signer from ws.person p, ws.workspace w join ws.client cl on cl.id=w.client_id left join ws.membership m on m.workspace_id=w.id and m.person_id=ws.me() where p.id=ws.me() and w.id=ws.cur_ws()")).rows[0];
+    if (!me) throw new Error("not in scope");
+    return me;
+  }],
+  ["GET", /^\/api\/plan$/, async ({ c }) => {
+    const nodes = Object.fromEntries((await c.query("select node_id, status from ws.node_status")).rows.map(r => [r.node_id, r.status]));
+    const st = stageOf(nodes);
+    return { stage: { index: st, name: STAGES[st].name }, stages: STAGES.map(s => s.name), nodes, blocked: blockedBy(nodes),
+      defs: NODES.map(n => ({ id: n.id, name: n.name, satisfiedBy: n.satisfiedBy })) };
+  }],
+  ["GET", /^\/api\/intake\/turns$/, ({ c }) => c.query(`select t.id, t.speaker, t.body, t.withheld, t.at, p.name for_name
+     from ws.intake_turn t left join ws.person p on p.id = t.for_person order by t.id`).then(r => ({ turns: r.rows }))],
   // ---- Profile (item 3) ----
   ["GET", /^\/api\/profile$/, async ({ c, role }) => ({
-    profile: (await c.query("select field, value, source, basis from ws.profile_view order by field")).rows,
+    profile: (await c.query(`select v.field, v.value, v.basis,
+        coalesce((select string_agg(s.label, ', ' order by s.label) from ws.profile_value_source x join ws.source s on s.id = x.source_id
+                   where x.workspace_id = v.workspace_id and x.field = v.field), v.source) source
+      from ws.profile_view v order by v.field`)).rows,
     conflicts: (await c.query("select c.field, c.value_a, sa.label source_a, c.value_b, sb.label source_b from ws.conflict c join ws.source sa on sa.id = c.source_a join ws.source sb on sb.id = c.source_b")).rows,
     lastRun: role === "attorney" ? (await c.query("select at, model, result from ws.profile_run order by at desc limit 1")).rows[0] ?? null : undefined,
   })],
@@ -113,8 +131,9 @@ function clientSafe(msg: string, role: string) {
 
 http.createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", "http://x");
-  if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/board")) {
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); res.end(readFileSync(PAGE)); return;
+  const pages: Record<string, string> = { "/": "board.html", "/board": "board.html", "/workspace": "workspace.html", "/attorney": "attorney.html" };
+  if (req.method === "GET" && pages[url.pathname]) {
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); res.end(readFileSync(new URL("../../web/" + pages[url.pathname], import.meta.url))); return;
   }
   if (req.method === "POST" && url.pathname === "/api/frontdoor") {
     const personId = who(req), workspaceId = url.searchParams.get("ws");
@@ -137,6 +156,11 @@ http.createServer(async (req, res) => {
     const raw = Buffer.concat(chunks);
     const deps = { pool, model, enginePersonId: ENGINE }, sess = { personId, workspaceId };
     try {
+      const kind = engineRoute[1] ?? engineRoute[2];
+      if (kind === "conflict" || kind === "build") {
+        const role = await inSession(pool, sess, async c => (await c.query("select ws.my_role() r, ws.in_scope(ws.cur_ws()) ok")).rows[0]);
+        if (role.r !== "attorney" || !role.ok) return send(403, { error: "That action isn't available to you." });
+      }
       switch (engineRoute[1] ?? engineRoute[2]) {
         case "build": return send(200, await buildProfile(deps, sess));
         case "conflict": return send(200, { id: await requestConflictCheck(deps, sess, JSON.parse(raw.toString() || "{}").names ?? []) });

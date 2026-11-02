@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import type pg from "pg";
 import { z } from "zod";
 import { inSession, type Session } from "../../../core/src/store.ts";
-import { INTAKE_BY_ID } from "../../../core/src/catalog.ts";
+import { INTAKE_BY_ID, NODES } from "../../../core/src/catalog.ts";
 import { INTAKE_Q, planIntake, sessionSummary } from "../../../core/src/intake.ts";
 import type { Model } from "./model.ts";
 import { ATTORNEY, CLASSIFY_SYSTEM, ClassifySchema, SCREEN_SYSTEM, ScreenSchema } from "./prompts.ts";
@@ -16,6 +16,9 @@ import { TRANSCRIBE_MEDIA } from "./model.ts";
 export interface IntakeDeps { pool: pg.Pool; model: Model; enginePersonId: string }
 const engineOf = (d: IntakeDeps, s: Session): Session => ({ personId: d.enginePersonId, workspaceId: s.workspaceId });
 
+// Client-facing names for plan steps: clients see "Bank access", never "N4".
+const STEP = new Map(NODES.map(n => [n.id, n.name]));
+const goesToward = (feeds: string[]) => feeds.length ? feeds.map(f => STEP.get(f) ?? f).join(", ") : "your plan";
 export const URGENT = `This is marked urgent; ${ATTORNEY} will contact you directly.`;
 export const DEFERRAL = "That's a Thursday question; I've put it on the agenda.";
 
@@ -41,7 +44,7 @@ export function openingLines(status: Record<string, string>): { lines: string[];
 export async function startSession(d: IntakeDeps, s: Session) {
   return inSession(d.pool, engineOf(d, s), async c => {
     const { lines, askItem } = openingLines(await statuses(c));
-    if (lines.length) await c.query("insert into ws.intake_turn(workspace_id, speaker, body, item_id) values (ws.cur_ws(), 'agent', $1, $2)", [lines.join("\n"), askItem]);
+    if (lines.length) await c.query("insert into ws.intake_turn(workspace_id, speaker, body, item_id, for_person) values (ws.cur_ws(), 'agent', $1, $2, $3)", [lines.join("\n"), askItem, s.personId]);
     return { lines };
   });
 }
@@ -65,14 +68,14 @@ export async function clientTurn(d: IntakeDeps, s: Session, message: string): Pr
     stop = !r.ok ? "screen_unavailable" : r.value.category !== "none" ? r.value.category : null;
   }
   const withhold = stop === "health_or_capacity";
-  await inSession(d.pool, s, c => c.query("insert into ws.intake_turn(workspace_id, speaker, body, withheld) values (ws.cur_ws(), 'client', $1, $2)", [withhold ? null : text, withhold]));
+  await inSession(d.pool, s, c => c.query("insert into ws.intake_turn(workspace_id, speaker, body, withheld, for_person) values (ws.cur_ws(), 'client', $1, $2, ws.me())", [withhold ? null : text, withhold]));
 
   return inSession(d.pool, engineOf(d, s), async c => {
     const status = await statuses(c);
-    const recent = (await c.query("select item_id, deferred from ws.intake_turn where speaker = 'agent' order by id desc limit 20")).rows;
+    const recent = (await c.query("select item_id, deferred from ws.intake_turn where speaker = 'agent' and for_person = $1 order by id desc limit 20", [s.personId])).rows;
     const lastAsk = recent.find(r => r.item_id)?.item_id ?? null;
     const record = async (lines: string[], gate: unknown, flag: string | null, deferred = false, askItem: string | null = null) => {
-      const t = (await c.query("insert into ws.intake_turn(workspace_id, speaker, body, item_id, deferred) values (ws.cur_ws(), 'agent', $1, $2, $3) returning id", [lines.join("\n"), askItem, deferred])).rows[0].id;
+      const t = (await c.query("insert into ws.intake_turn(workspace_id, speaker, body, item_id, deferred, for_person) values (ws.cur_ws(), 'agent', $1, $2, $3, $4) returning id", [lines.join("\n"), askItem, deferred, s.personId])).rows[0].id;
       await c.query("insert into ws.intake_turn_gate values ($1, ws.cur_ws(), $2, $3)", [t, JSON.stringify(gate), flag]);
       return { lines };
     };
@@ -116,7 +119,7 @@ export async function clientTurn(d: IntakeDeps, s: Session, message: string): Pr
         status[a.item_id] = "stated";
       }
       if (restate) lines.push(`I have: ${a.restatement.replace(/\s*$/, "")} Correct?`);
-      lines.push(a.complete ? `Noted as stated. That goes toward ${INTAKE_BY_ID.get(a.item_id)!.feeds.join(", ") || "the plan"}.` : `Noted. To finish ${a.item_id}: ${INTAKE_Q[a.item_id]}`);
+      lines.push(a.complete ? `Noted as stated. That goes toward: ${goesToward(INTAKE_BY_ID.get(a.item_id)!.feeds)}.` : `Noted. To finish this one: ${INTAKE_Q[a.item_id]}`);
     }
     const deferred = r.value.asks_for_advice;
     if (deferred) lines.push(DEFERRAL);
@@ -171,7 +174,7 @@ export async function uploadDocument(d: IntakeDeps, s: Session, f: { item: strin
     const status = x.readable ? "received" : "received_unread";
     await c.query(`insert into ws.intake_status(workspace_id, item_id, status, source_id) values (ws.cur_ws(), $1, $2, $3)
                    on conflict (workspace_id, item_id) do update set status = excluded.status, source_id = excluded.source_id, set_at = now()`, [f.item, status, sourceId]);
-    const line = x.readable ? `Received. That goes toward ${def.feeds.join(", ") || "the plan"}.` : "Received. It couldn't be read here, so Josh will review it directly.".replace("Josh", ATTORNEY);
+    const line = x.readable ? `Received. That goes toward: ${goesToward(def.feeds)}.` : "Received. It couldn't be read here, so Josh will review it directly.".replace("Josh", ATTORNEY);
     return { status, lines: [line], reason: x.reason, transcribed };
   });
 }

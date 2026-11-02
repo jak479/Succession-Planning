@@ -28,7 +28,7 @@ Entity-paid monthly subscription (Phase 2) with an onboarding flat fee (Phase 1)
 import → profile → intake gate → path assigned → scan (findings, attorney-only) → confirm → Open Items card → client approves change order on call (Scoped) → In progress → Done ⇒ node green ⇒ stage advances. Front-door questions carry node context into the brief and the agenda.
 
 ## Where things are
-- `server/` + `web/board.html` — board API and page (`npm run dev-db`, then `npm start`).
+- `web/workspace.html` (client), `web/attorney.html` (attorney console), `web/board.html` — served by `server/` at /workspace, /attorney, /board (`npm run dev-db`, optional `node --experimental-strip-types src/dev-demo.ts <ids file>`, then `npm start`). Screenshots: `docs/design/screens/`.
 - `core/` — build item 1: catalog (`src/catalog.ts`, generates `db/002_catalog.sql`), pure rules, Postgres schema with RLS (`db/001_init.sql`), tests (`npm test`, needs Postgres on PGURL). Design: `docs/design/architecture.md`.
 - `prototype/front-door.html` — single-file working prototype (vanilla JS, SVG diagrams, `claude.use("sample")` for the engine, `claude.use("mcp")` for Google Drive import, pdf.js from cdnjs, in-browser .docx unzip). Published as a claude.ai artifact; the prompts in it are the current engine prompts and should move server-side.
 - `docs/design/front-door-spec.md` — intake flow, permitted outputs, hard constraints

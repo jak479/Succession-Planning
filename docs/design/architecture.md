@@ -114,5 +114,23 @@ Known gaps: anchor dates are not yet stored, so the brief sees none; "repeated a
 
 Not yet in item 3: automated record pulls; Google Drive import; Plaid and payroll links; live eval cases for the intake conversation; a client intake page.
 
+## Screens: web/workspace.html (client), web/attorney.html (attorney), web/board.html
+- **Client workspace** (`/workspace`):
+  - **Ask:** front door, with the check-this paste box.
+  - **Intake:** the client's own conversation thread, plus document upload.
+  - **Plan:** stage steps, the contingency path diagram coloured by node status (select a step to see what it needs and what it waits on), and the coordination points as status only.
+  - **Profile:** each value with its source; client descriptions are marked "described by you"; conflicts are listed as undecided.
+  - **Board and budget.**
+  - Every assistant message carries the label "Automated assistant · not a lawyer · Josh reviews on Thursday" (Op. 24-1). Client status lines name plan steps, never node codes.
+- **Attorney console** (`/attorney`; refuses non-attorneys):
+  - conflict checks (run, review hits, clear or decline);
+  - front-door briefs (what the client was shown, attorney note, suggested scope with reason, every gate check, confirm scope);
+  - intake agenda (deferred and flagged turns);
+  - unread documents;
+  - profile (rebuild, all sources, conflicts, last build's written, dropped and gaps);
+  - full intake transcript; board.
+- Only the attorney may start a conflict check or a profile build. Each intake turn belongs to one client's thread (`core/db/007_threads.sql`): a client never reads another client user's conversation.
+- Sign-in is still the development stub. Screenshots with demo data are in `docs/design/screens/`. The data comes from `npm run dev-db`, then `src/dev-demo.ts`: real engine code with a scripted model, labelled "scripted-demo".
+
 ## Not yet built in item 1
 Scan findings, front-door briefs, and scope classification (attorney-only until confirmed) are item 2–4 tables.
