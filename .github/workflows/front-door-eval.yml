@@ -1,0 +1,43 @@
+# Live evaluation of the front door (build item 2) against Claude.
+# Runs only when started by hand (Actions tab → front-door-eval → Run workflow).
+# Needs repository secret ENGINE_ANTHROPIC_API_KEY. Uses only the fictional sample client.
+name: front-door-eval
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGURL: postgresql://postgres@localhost:5432
+      DATABASE_URL: postgresql://postgres@localhost:5432/oew_dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+        working-directory: core
+      - run: npm ci
+        working-directory: server
+      - name: Unit and database tests
+        run: (cd core && npm test) && (cd server && npm test)
+      - name: Build sample database
+        working-directory: server
+        run: |
+          npm run -s dev-db > ids.txt
+          node -e 'const s=require("fs").readFileSync("ids.txt","utf8"); const j=JSON.parse(s.slice(0, s.indexOf("}")+1));
+            console.log("ENGINE_PERSON_ID="+j.engine); console.log("CLIENT_PERSON_ID="+j.dana); console.log("WORKSPACE_ID="+j.entity);' >> "$GITHUB_ENV"
+      - name: Live eval (12 cases)
+        working-directory: server
+        env:
+          ENGINE_ANTHROPIC_API_KEY: ${{ secrets.ENGINE_ANTHROPIC_API_KEY }}
+        run: npm run eval
