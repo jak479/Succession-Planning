@@ -14,7 +14,7 @@ before(async () => {
   const admin = new pg.Client({ connectionString: base + "/postgres" }); await admin.connect();
   await admin.query(`create database ${db}`); await admin.end();
   pool = new pg.Pool({ connectionString: `${base}/${db}` });
-  for (const f of ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "008_estimate_terms.sql"]) await pool.query(sql(f));
+  for (const f of ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "008_estimate_terms.sql", "009_estimate_costs.sql"]) await pool.query(sql(f));
   const one = async (q: string, p: unknown[] = []) => (await pool.query(q + " returning id", p)).rows[0].id;
   id.atty = await one("insert into ws.person(name, role) values ('Josh','attorney')");
   id.owner = await one("insert into ws.person(name, role) values ('Dana','client')");
@@ -84,7 +84,7 @@ test("every profile value carries a source from its own tier", async () => {
   await assert.rejects(as("owner", "ent", c => c.query("insert into ws.profile_value(workspace_id,field,value,source_id) values (ws.cur_ws(),'Lease','x',(select id from ws.source where label='S-DESC'))")), /row-level security/);
 });
 test("board: Scoped only by signed approval or Schedule A; Done ⇒ nodes green; Done is final", async () => {
-  const ins = (co: string, clears: string) => `insert into ws.board_item(workspace_id,co_id,title,clears,allowance) values (ws.cur_ws(),'${co}','${co}','${clears}',1200) returning id`;
+  const ins = (co: string, clears: string) => `insert into ws.board_item(workspace_id,co_id,title,clears,allowance,estimate_costs) values (ws.cur_ws(),'${co}','${co}','${clears}',1200,'None') returning id`;
   await assert.rejects(as("owner", "ent", c => c.query(ins("CO-RET", "{N12}"))), /row-level security/);
   await assert.rejects(as("atty", "ent", c => c.query("insert into ws.board_item(workspace_id,title,clears,col,price,approval_ref,approved_at) values (ws.cur_ws(),'x','{N12}','Done',1,'x',now())")), /start in Identified/);
   // Schedule A: included, no change order
@@ -111,10 +111,12 @@ test("board: Scoped only by signed approval or Schedule A; Done ⇒ nodes green;
   assert.deepEqual([bud.onboarding_fee, Number(bud.approved), Number(bud.completed)], [3500, 1200, 1200]);
 });
 test("estimates and offers: good through at least 90 days; lowered, never raised, before then; expired offers cannot be approved", async () => {
-  const id = await as("atty", "ent", c => c.query("insert into ws.board_item(workspace_id,co_id,title,clears,allowance) values (ws.cur_ws(),'CO-RET','Retention, second person','{N12}',1200) returning id, estimate_good_through, current_date + 90 as min").then(r => r.rows[0])) as any;
+  await assert.rejects(as("atty", "ent", c => c.query("insert into ws.board_item(workspace_id,co_id,title,clears,allowance) values (ws.cur_ws(),'CO-RET','No costs stated','{N12}',1200)")), /filing or third-party costs/);
+  const id = await as("atty", "ent", c => c.query("insert into ws.board_item(workspace_id,co_id,title,clears,allowance,estimate_costs) values (ws.cur_ws(),'CO-RET','Retention, second person','{N12}',1200,'None') returning id, estimate_good_through, current_date + 90 as min").then(r => r.rows[0])) as any;
   assert.equal(String(id.estimate_good_through), String(id.min));
   await assert.rejects(as("atty", "ent", c => c.query("update ws.board_item set allowance = 1500 where id = $1", [id.id])), /lowered, not raised/);
   await as("atty", "ent", c => c.query("update ws.board_item set allowance = 1000 where id = $1", [id.id]));
+  await assert.rejects(as("atty", "ent", c => c.query("update ws.board_item set estimate_costs = 'Recording fee' where id = $1", [id.id])), /fixed through/);
   await assert.rejects(as("atty", "ent", c => c.query("select ws.propose_change_order($1, 1200, 'Retention agreement, second key person', '')", [id.id])), /third-party costs/);
   await as("atty", "ent", c => c.query("select ws.propose_change_order($1, 1200, 'Retention agreement, second key person', 'None', current_date + 10)", [id.id]));
   const o = await as("atty", "ent", c => c.query("select offer_good_through, current_date + 90 as min from ws.board_item where id = $1", [id.id]).then(r => r.rows[0])) as any;

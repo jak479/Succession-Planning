@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import type pg from "pg";
 import { SAMPLE_DOCS } from "./sample-docs.ts";
 
-export const MIGRATIONS = ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql", "005_intake.sql", "006_profile.sql", "007_threads.sql", "008_estimate_terms.sql"];
+export const MIGRATIONS = ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql", "005_intake.sql", "006_profile.sql", "007_threads.sql", "008_estimate_terms.sql", "009_estimate_costs.sql"];
 export const DEMO = {
   attorney: "00000000-0000-4000-8000-000000000001", dana: "00000000-0000-4000-8000-000000000002",
   luis: "00000000-0000-4000-8000-000000000003", engine: "00000000-0000-4000-8000-000000000004",
@@ -43,7 +43,7 @@ export async function seedDemo(c: Q) {
       await c.query("insert into ws.node_status(workspace_id,node_id,status) values (ws.cur_ws(),$1,$2)", [s, n]);
     for (const [co, f] of [["CO-BANK","Seacoast signatory card lists Dana only; Luis view-only."],["CO-RET","OA Art. 9 names Luis as Interim Manager; no retention term."],["CO-GUAR","Landlord renewal asks for new guaranties from Dana and Luis."]]) {
       const d = (await c.query("select * from ws.change_order_def where id=$1", [co])).rows[0];
-      const id = (await c.query("insert into ws.board_item(workspace_id,co_id,title,clears,allowance) values (ws.cur_ws(),$1,$2,$3,$4) returning id", [co, d.name, d.clears, d.low])).rows[0].id;
+      const id = (await c.query("insert into ws.board_item(workspace_id,co_id,title,clears,allowance,estimate_costs) values (ws.cur_ws(),$1,$2,$3,$4,$5) returning id", [co, d.name, d.clears, d.low, d.low > 0 ? "None" : null])).rows[0].id;
       await c.query("insert into ws.board_note values ($1, ws.cur_ws(), $2, null)", [id, f]);
     }
   });

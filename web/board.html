@@ -66,6 +66,7 @@ section.add{background:var(--page);border:1px solid var(--rule);border-radius:12
   <section class="add" id="add" hidden>
     <h2>Add an item</h2>
     <label for="co">Change-order catalog</label><select id="co"></select>
+    <label for="costs">Filing or third-party costs the client may owe for this work (or "None"; shown to the client with the estimate)</label><input id="costs">
     <label for="finding">Finding (attorney only)</label><textarea id="finding"></textarea>
     <button id="addBtn" type="button">Add to Identified</button>
   </section>
@@ -101,13 +102,13 @@ function card(it){
   let h = `<div class="t">${esc(it.title)}</div><div class="small">${att ? esc((it.clears||[]).join(", ")) + (it.schedule ? " · Schedule " + esc(it.schedule) : "") : "Moves forward: " + esc((it.clears||[]).map(c => LABEL[c] || c).join(", ")) + (it.schedule === "A" ? " · included in your subscription" : it.schedule === "B" ? " · change order" : "")}</div>`;
   if (att && (it.finding || it.attorney_note)) h += `<div class="note">${esc(it.finding)}${it.attorney_note ? "<br>" + esc(it.attorney_note) : ""}</div>`;
   if (it.col === "Identified") {
-    if (it.schedule !== "A" && !pending) h += `<div class="small">Estimate: ${money(it.allowance)} for the legal work. Any filing or third-party costs are listed in the change order.${it.estimate_good_through ? " Good through " + day(it.estimate_good_through) + "." : ""}</div>`;
+    if (it.schedule !== "A" && !pending) h += `<div class="small">Estimate: ${money(it.allowance)} for the legal work. Other costs you may owe: ${esc(it.estimate_costs || "none stated")}.${it.estimate_good_through ? " Good through " + day(it.estimate_good_through) + "." : ""}</div>`;
     if (pending) h += `<div class="small" style="margin-top:6px"><strong>Change order proposed: ${money(it.proposed_price)}</strong>${it.offer_good_through ? " · price good through " + day(it.offer_good_through) : ""}<br>Other costs you may owe: ${esc(it.other_costs || "none stated")}<br>${esc(it.scope_text)}</div>`;
     if (att) {
       if (it.schedule === "A") h += `<div class="acts"><button data-a="included" data-id="${it.id}">Scope as included (Schedule A)</button></div>`;
       else h += `<label for="p${it.id}">Change-order price</label><input id="p${it.id}" type="number" min="0" step="100" value="${it.proposed_price ?? ""}">
         <label for="s${it.id}">Written scope the client signs</label><textarea id="s${it.id}">${esc(it.scope_text ?? "")}</textarea>
-        <label for="o${it.id}">Filing or third-party costs the client may owe (or "None")</label><input id="o${it.id}" value="${esc(it.other_costs ?? "")}">
+        <label for="o${it.id}">Filing or third-party costs the client may owe (or "None")</label><input id="o${it.id}" value="${esc(it.other_costs ?? it.estimate_costs ?? "")}">
         <label for="g${it.id}">Price good through (at least 90 days)</label><input id="g${it.id}" type="date" min="${iso90()}" value="${String(it.offer_good_through ?? "").slice(0, 10) || iso90()}">
         ${it.offered_price != null && it.offer_good_through ? `<div class="small">Offered ${money(it.offered_price)} through ${day(it.offer_good_through)}: before then the price can be lowered, not raised.</div>` : ""}
         <div class="acts"><button data-a="propose" data-id="${it.id}">${pending ? "Revise proposal" : "Propose change order"}</button></div>`;
@@ -147,7 +148,7 @@ function render(){
   });
 }
 async function load(){ try { data = await api("/api/board"); render(); } catch (e) { $("err").textContent = e.message; } }
-$("addBtn").onclick = () => act("/api/board", {co_id: $("co").value, finding: $("finding").value || null}).then(() => { $("finding").value = ""; });
+$("addBtn").onclick = () => act("/api/board", {co_id: $("co").value, finding: $("finding").value || null, estimate_costs: $("costs").value || null}).then(() => { $("finding").value = ""; $("costs").value = ""; });
 if (!AS || !WS) $("err").textContent = "Development sign-in: add ?as=<person-id>&ws=<workspace-id> to the address."; else load();
 </script>
 </body>
