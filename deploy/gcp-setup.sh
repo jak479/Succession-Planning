@@ -25,27 +25,32 @@ gcloud sql instances describe "$INSTANCE" >/dev/null 2>&1 || \
   gcloud sql instances create "$INSTANCE" --database-version=POSTGRES_16 --edition=enterprise \
     --tier=db-f1-micro --region="$REGION" --storage-size=10GB --storage-auto-increase
 gcloud sql databases describe oew --instance="$INSTANCE" >/dev/null 2>&1 || gcloud sql databases create oew --instance="$INSTANCE"
-DB_PASS="$(openssl rand -base64 30 | tr -dc 'A-Za-z0-9' | head -c 32)"
-gcloud sql users set-password postgres --instance="$INSTANCE" --password="$DB_PASS"
+echo "== Secrets (kept as they are if this script already created them)"
+if ! gcloud secrets describe oew-db-password >/dev/null 2>&1; then
+  DB_PASS="$(openssl rand -base64 30 | tr -dc 'A-Za-z0-9' | head -c 32)"
+  gcloud sql users set-password postgres --instance="$INSTANCE" --password="$DB_PASS"
+  printf %s "$DB_PASS" | gcloud secrets create oew-db-password --data-file=-
+fi
+if ! gcloud secrets describe oew-demo-password >/dev/null 2>&1; then
+  read -r -s -p "Choose a password for the demo site (you'll type it to open the demo): " DEMO_PASS; echo
+  [ ${#DEMO_PASS} -ge 10 ] || { echo "Use at least 10 characters."; exit 1; }
+  printf %s "$DEMO_PASS" | gcloud secrets create oew-demo-password --data-file=-
+fi
 
-echo "== Secrets"
-put_secret() { if gcloud secrets describe "$1" >/dev/null 2>&1; then printf %s "$2" | gcloud secrets versions add "$1" --data-file=-; else printf %s "$2" | gcloud secrets create "$1" --data-file=-; fi; }
-put_secret oew-db-password "$DB_PASS"
-read -r -s -p "Choose a password for the demo site (you'll type it to open the demo): " DEMO_PASS; echo
-[ ${#DEMO_PASS} -ge 10 ] || { echo "Use at least 10 characters."; exit 1; }
-put_secret oew-demo-password "$DEMO_PASS"
+# Google applies new service accounts with a short delay; retry a step until it succeeds (up to ~2 minutes).
+retry() { for i in $(seq 1 12); do if "$@" >/dev/null 2>&1; then return 0; fi; echo "  waiting for Google to register the new account ($i/12)..."; sleep 10; done; "$@"; }
 
 echo "== Service accounts"
 RUN_SA="oew-run@${PROJECT_ID}.iam.gserviceaccount.com"; DEPLOY_SA="oew-deploy@${PROJECT_ID}.iam.gserviceaccount.com"
 gcloud iam service-accounts describe "$RUN_SA" >/dev/null 2>&1 || gcloud iam service-accounts create oew-run --display-name="Owner exit demo: runtime"
 gcloud iam service-accounts describe "$DEPLOY_SA" >/dev/null 2>&1 || gcloud iam service-accounts create oew-deploy --display-name="Owner exit demo: GitHub deployer"
-gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="serviceAccount:$RUN_SA" --role=roles/cloudsql.client --condition=None >/dev/null
+retry gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="serviceAccount:$RUN_SA" --role=roles/cloudsql.client --condition=None
 for s in oew-db-password oew-demo-password; do
-  gcloud secrets add-iam-policy-binding "$s" --member="serviceAccount:$RUN_SA" --role=roles/secretmanager.secretAccessor >/dev/null
+  retry gcloud secrets add-iam-policy-binding "$s" --member="serviceAccount:$RUN_SA" --role=roles/secretmanager.secretAccessor
 done
-gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="serviceAccount:$DEPLOY_SA" --role=roles/run.admin --condition=None >/dev/null
-gcloud artifacts repositories add-iam-policy-binding oew --location="$REGION" --member="serviceAccount:$DEPLOY_SA" --role=roles/artifactregistry.writer >/dev/null
-gcloud iam service-accounts add-iam-policy-binding "$RUN_SA" --member="serviceAccount:$DEPLOY_SA" --role=roles/iam.serviceAccountUser >/dev/null
+retry gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="serviceAccount:$DEPLOY_SA" --role=roles/run.admin --condition=None
+retry gcloud artifacts repositories add-iam-policy-binding oew --location="$REGION" --member="serviceAccount:$DEPLOY_SA" --role=roles/artifactregistry.writer
+retry gcloud iam service-accounts add-iam-policy-binding "$RUN_SA" --member="serviceAccount:$DEPLOY_SA" --role=roles/iam.serviceAccountUser
 
 echo "== GitHub deploy link (only this repository's main branch may deploy)"
 gcloud iam workload-identity-pools describe github --location=global >/dev/null 2>&1 || \
@@ -55,8 +60,8 @@ gcloud iam workload-identity-pools providers describe succession-planning --loca
     --issuer-uri="https://token.actions.githubusercontent.com" \
     --attribute-mapping="google.subject=assertion.sub,attribute.repository_id=assertion.repository_id,attribute.ref=assertion.ref" \
     --attribute-condition="assertion.repository_id == '${REPO_ID}' && assertion.ref == 'refs/heads/main'"
-gcloud iam service-accounts add-iam-policy-binding "$DEPLOY_SA" --role=roles/iam.workloadIdentityUser \
-  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github/attribute.repository_id/${REPO_ID}" >/dev/null
+retry gcloud iam service-accounts add-iam-policy-binding "$DEPLOY_SA" --role=roles/iam.workloadIdentityUser \
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github/attribute.repository_id/${REPO_ID}"
 
 RUN_SA_ID="$(gcloud iam service-accounts describe "$RUN_SA" --format='value(uniqueId)')"
 cat <<OUT
