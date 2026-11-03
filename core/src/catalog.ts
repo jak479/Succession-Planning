@@ -26,7 +26,7 @@ export const NODES: NodeDef[] = [
   { id: "N15a", name: "Continue branch", satisfiedBy: "Continue instruction", dependsOn: ["N14"], redRule: "Default branch is 'continue' and no instruction exists" },
   { id: "N15b", name: "Sell branch", satisfiedBy: "Sale authority clause; valuation method; buyer list", dependsOn: ["N14", "N9", "N12"], redRule: "Default branch is 'sell' and valuation method or buyer list missing" },
   { id: "N15c", name: "Wind-down branch", satisfiedBy: "Wind-down instruction (§ 605.0701 et seq.)", dependsOn: ["N14", "N5", "N10"], redRule: "Default branch is 'wind down' and sequence or funding undefined" },
-  // Retirement (S3). R1 is advisor-owned: the entity tier stores its status only, never amounts or contents.
+  // Retirement (S3). R1 is advisor-owned; R2 is personal-engagement work. The entity tier stores their status only, never amounts or contents.
   { id: "R1", name: "Retirement income confirmed", satisfiedBy: "Owner's financial advisor confirms the retirement plan does not depend on business income past the exit date (status only)", dependsOn: [], redRule: "No advisor named; advisor has not confirmed; exit date moved since confirmation" },
   { id: "R2", name: "Your role after you step back", satisfiedBy: "Consulting or employment agreement; redemption or buy-sell terms; non-compete; step-down of authority", dependsOn: ["N2", "C4"], redRule: "No written role or redemption terms; terms conflict with the chosen branch" },
   // Coordination rungs. Entity tier stores status only; contents live in the owner tier.
@@ -96,7 +96,7 @@ export const COVERAGE: Record<string, Coverage> = {
   N4: "sub", N6: "sub", N7: "sub", N8: "sub", N11: "sub",
   N12: "co", N15a: "co", N15b: "co", N15c: "co",
   C1: "co", C2: "sub", C3: "sub", C4: "co", C5: "sub", C6: "personal", C7: "co", C8: "sub",
-  R1: "advisor", R2: "co",
+  R1: "advisor", R2: "personal",
 };
 
 // Profile fields (27). section = where it displays; tier = where it is stored.

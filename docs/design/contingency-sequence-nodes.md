@@ -30,11 +30,11 @@ Status values: GREEN (satisfied, in date) · AMBER (satisfied, review due) · RE
 | # | Node | Satisfying document | Depends on | Red rule |
 |---|---|---|---|---|
 | R1 | **Retirement income confirmed** — advisor-owned; the entity tier stores status only, never amounts or contents | Owner's financial advisor confirms the retirement plan does not depend on business income past the exit date | — | No advisor named; advisor has not confirmed; exit date moved since confirmation |
-| R2 | **Your role after you step back** | Consulting or employment agreement; redemption or buy-sell terms; non-compete; step-down of authority | N2, C4 | No written role or redemption terms; terms conflict with the chosen branch |
+| R2 | **Your role after you step back** — personal-engagement work (owner letter § 2(C)); the entity tier stores status only | Consulting or employment agreement; redemption or buy-sell terms; non-compete; step-down of authority | N2, C4 | No written role or redemption terms; terms conflict with the chosen branch |
 
 ## Stage mapping (decided 2026-11-03)
 S0 where you stand today · S1 short-term disability covered (N0, N2, N4, N5, N6) · S2 long-term disability covered (N7, N14, C1, C2, C3, C8) · S3 ready to retire (N15a–c, R1, R2) · S4 your next chapter (exit event). The S1/S2 boundary is the day the owner's disability benefit starts, read from the policy (N7); 90 days if there is no policy. N5's reserve is sized to that boundary. Client surfaces say "disability"; no medical information is stored, and each stage page carries the line "Your plan covers being out, not the reason."
-Open: R2 has no change-order price (pro-forma prices are locked; set one before R2 is offered). N10 and N12 show as Stage 1 gaps on the home page but are not in the S1 gate; decide whether they join it.
+Open: R2 is priced as a change order under the owner letter; no price set yet (pro-forma prices are locked). N10 and N12 show as Stage 1 gaps on the home page but are not in the S1 gate; decide whether they join it.
 
 ## Coordination nodes (estate plan ↔ exit plan)
 
