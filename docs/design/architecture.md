@@ -160,6 +160,9 @@ Wireframes: Design canvas artifact "Owner Exit Workspace: Structure & Flow" (pri
   5. Reserved in-house slot (Schedule A), 10 of 30 minutes, oldest first.
   6. Overflow goes to the next call: "Next in line for <date>: this call is full." Items that depend on a later stage are held: "Taken up at Stage <n>: it depends on <step>."
   7. The attorney may move any item; moving requires a reason, and the client sees it.
+- **Client wording (language pass 2026-11-03).** Internal term → client surface:
+  Stage 0 Statutory default → Florida's default rules · S1 Emergency egress → Runs without you · S2 Coordinated → Both plans agree · S3 Branches drafted → Exit options ready · S4 Chosen exit → Your exit · N-trigger → When the plan starts · Authority → Who is in charge · Day-30 decision → 30-day decision · Family liaison → Family contact · C-rungs → Where the two plans meet · Schedule A in-house → Everyday business questions, included in your subscription · Statuses: In place / Gap / Waiting (on a named step) / Review due / Not yet checked / Not yet reached. Received-unread documents read "Received, not yet read" (rule 6). Dates on client surfaces are written out (January 31, 2027).
+
 - Not built: the ordering engine (node dependencies, deadline extraction, per-item time estimates).
 - The client sees ordering reasons only; scope classification stays attorney-only until confirmed on the call (rule 2).
 
