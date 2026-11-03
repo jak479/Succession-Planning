@@ -58,6 +58,6 @@ import → profile → intake gate → path assigned → scan (findings, attorne
 - C-node checks are subscription; C-node drafting is change order; C6 is personal-engagement only. Confirm.
 
 ## Conventions
-- Florida statutes cited by section; confirm against the current Online Sunshine text before relying. Statutes already confirmed: § 605.0602, § 709.2202 (2026-11-01), § 605.0405, § 605.0102(17), § 605.0406, § 605.04091 (2026-11-03).
+- Florida statutes cited by section; confirm against the current Online Sunshine text before relying. Statutes already confirmed: § 605.0602, § 709.2202 (2026-11-01), § 605.0405, § 605.0102(17), § 605.0406, § 605.04091, § 605.04092 (2026-11-03).
 - Vocabulary on client surfaces: scope, budget, change order, inspection, as-built, maintenance. Avoid: retainer, hours, matter, billing.
 - Never put hours anywhere a client can see them.
