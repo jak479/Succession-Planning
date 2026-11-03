@@ -11,7 +11,7 @@ The advisor team the Firm coordinates for the family: [legal: the Firm]; [tax: ]
 ## 3. Scope
 (a) Keep the family governance document (F1), advisor roster (F2), holding structure (F3), and the personal estate documents current.
 (b) Coordinate the advisors on the legal side: [agenda, information requests, consistency review].
-(c) [Annual family meeting: prepare the legal agenda and attend.] Before any meeting, each attendee who is not the client (adult children, spouses who are not clients, advisors) receives a written notice that the Firm represents [the client] and not them, and that anything the Firm provides to them is not legal services to them and carries no client-lawyer protection (Rule 4-5.7(b), (d)).
+(c) [Annual family meeting: prepare the legal agenda and attend.] Before any meeting, each attendee who is not the client (adult children, spouses who are not clients, advisors) receives a written notice that the Firm represents [the client] and not them; that the client's interests may differ from theirs; that anything the Firm provides to them is not legal services to them and carries no client-lawyer protection; and that the Firm cannot give them legal advice other than that they may want their own lawyer (Rules 4-5.7(b), (d); 4-4.3(a)). At the meeting the Firm may explain its own view of what the family's documents mean (4-4.3 comment) but does not advise attendees who are not clients.
 (d) [Next generation: legal side of education and transfers, coordinated with C7.]
 (e) Everything else by change order, approved in writing before work starts.
 
@@ -29,7 +29,7 @@ AI disclosure as in the entity letter § 6(c); separate consent. Coordination co
 - Rule 4-5.4 read 2026-11-03 (docs/sources/fl-rule-4-5-4.md); applied in § 2. No bundled family-office price that the Firm collects and splits with advisors, and no package in which an advisor collects and pays the Firm out of it.
 - Rule 4-5.7 read 2026-11-03 (docs/sources/fl-rule-4-5-7.md); applied in § 2 and § 3(c).
 - Rule 4-1.8 read 2026-11-03 (docs/sources/fl-rule-4-1-8.md); (f) and the fiduciary comment applied in § 2.
-- Rule 4-4.3 (dealing with unrepresented persons), for non-client family members at meetings.
+- Rule 4-4.3 read 2026-11-03 (docs/sources/fl-rule-4-4-3.md); applied in § 3(c).
 - Rules 4-7.13 and 4-7.14 (misleading advertising), for promoting the family-office theme; the 4-5.7 comment says promotion must comply with the advertising rules.
 - Rule 4-1.7 and its comment on estate planning for several family members (text in docs/sources/fl-rule-4-1-7.md).
 - SEC family office rule, 17 C.F.R. § 275.202(a)(11)(G)-1, read 2026-11-03 (docs/sources/sec-17cfr-275-202a11G-1.md). The exclusion covers a "company" that has no clients other than family clients, "is wholly owned by family clients and is exclusively controlled … by one or more family members and/or family entities," and "does not hold itself out to the public as an investment adviser" ((b)(1)–(3)). Consequences: (1) the Firm is not a family office under the rule (it has other clients and is not family-owned), so its perimeter stays legal and it gives no investment advice; (2) an F3 family entity that itself advises the family on securities can fit the exclusion only if family-owned and family-controlled with family clients only; (3) on client surfaces the office is always the client's ("your family office"), never the Firm's.

@@ -68,7 +68,9 @@ Except as amended here, the Agreement remains in full force.
 [COMPANY], LLC
 By: ______________________ [Principal], [Member/Manager]
 
-**Consent of Interim Manager:** I accept designation as Interim Manager on the terms of this Article.
+**Notice to the Interim Manager and Alternate (delivered with this Article, before signature):** [Counsel] represents the Company and [Principal], not you. Their interests in this Article may differ from yours, including on your compensation, authority and indemnity. [Counsel] cannot give you legal advice about it, other than that you may want your own lawyer to review it before you sign. [Drafter: Rule 4-4.3(a). The comment allows Counsel to explain its own view of what the Article means once this is said.]
+
+**Consent of Interim Manager:** I accept designation as Interim Manager on the terms of this Article, and I received the notice above before signing.
 ______________________ [Name] Date: ______
 
 **Consent of Alternate:** ______________________ [Name] Date: ______
