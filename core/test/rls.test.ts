@@ -14,7 +14,7 @@ before(async () => {
   const admin = new pg.Client({ connectionString: base + "/postgres" }); await admin.connect();
   await admin.query(`create database ${db}`); await admin.end();
   pool = new pg.Pool({ connectionString: `${base}/${db}` });
-  for (const f of ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "008_estimate_terms.sql", "009_estimate_costs.sql"]) await pool.query(sql(f));
+  for (const f of ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "008_estimate_terms.sql", "009_estimate_costs.sql", "010_agenda.sql"]) await pool.query(sql(f));
   const one = async (q: string, p: unknown[] = []) => (await pool.query(q + " returning id", p)).rows[0].id;
   id.atty = await one("insert into ws.person(name, role) values ('Josh','attorney')");
   id.owner = await one("insert into ws.person(name, role) values ('Dana','client')");
@@ -126,6 +126,15 @@ test("estimates and offers: good through at least 90 days; lowered, never raised
   // An expired offer cannot be approved: simulate expiry with superuser access to the column.
   await pool.query("update ws.board_item set offer_good_through = current_date - 1 where id = $1", [id.id]);
   await assert.rejects(as("owner", "ent", c => c.query("select ws.approve_change_order($1,'Dana Ortiz')", [id.id])), /offered again/);
+});
+test("agenda moves and deadlines: the client reads them, only the attorney writes them", async () => {
+  const key = "q:00000000-0000-4000-8000-0000000000aa";
+  await assert.rejects(as("owner", "ent", c => c.query("insert into ws.agenda_override(workspace_id,item_key,action,reason) values (ws.cur_ws(),$1,'first','I want it first')", [key])), /row-level security/);
+  await as("atty", "ent", c => c.query("insert into ws.agenda_override(workspace_id,item_key,action,reason) values (ws.cur_ws(),$1,'hold','waiting for the bank form')", [key]));
+  const seen = await as("owner", "ent", c => c.query("select reason from ws.agenda_override").then(r => r.rows)) as any[];
+  assert.equal(seen[0].reason, "waiting for the bank form");
+  await assert.rejects(as("atty", "ent", c => c.query("insert into ws.agenda_override(workspace_id,item_key,action,reason) values (ws.cur_ws(),'q:x','hold','no')")), /check/);
+  await assert.rejects(as("owner", "ent", c => c.query("insert into ws.deadline(workspace_id,node_id,label,due,source_id) select ws.cur_ws(),'N10','the lease term ends','2027-01-31',id from ws.source limit 1")), /row-level security|null value/);
 });
 test("attorney notes on cards are invisible to clients", async () => {
   const bid = await as("atty", "ent", async c => { const b = (await c.query("insert into ws.board_item(workspace_id,co_id,title,clears) values (ws.cur_ws(),'CO-GUAR','Guaranty schedule','{N10,C5}') returning id")).rows[0].id;

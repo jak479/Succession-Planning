@@ -117,7 +117,7 @@ function card(it){
         <label class="check"><input type="checkbox" id="c${it.id}"> I am authorized to sign for ${esc(data.me.client)} and approve this scope and price in writing.</label>
         <div class="acts"><button data-a="approve" data-id="${it.id}">Approve change order</button></div>`;
     } else if (pending) h += `<div class="small">Waiting for approval by the company's authorized signer.</div>`;
-    else h += `<div class="small">On Thursday's agenda.</div>`;
+    else h += `<div class="small">See Thursday's agenda for when it comes up.</div>`;
   } else {
     h += `<div class="small">${it.price === 0 ? "Included in your subscription" : "Approved: " + money(it.price)}${it.signed_by ? " · signed by " + esc(it.signed_by) + " " + new Date(it.signed_at).toLocaleDateString() : ""}</div>`;
     if (att && it.col === "Scoped") h += `<div class="acts"><button data-a="move" data-col="In progress" data-id="${it.id}">Start</button><button class="ghost" data-a="move" data-col="Identified" data-id="${it.id}">Withdraw</button></div>`;

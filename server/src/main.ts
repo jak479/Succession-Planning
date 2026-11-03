@@ -7,6 +7,7 @@ import { inSession } from "../../core/src/store.ts";
 import { stageOf } from "../../core/src/rules.ts";
 import { STAGES, NODES } from "../../core/src/catalog.ts";
 import { blockedBy } from "../../core/src/rules.ts";
+import { planAgenda, callDates, type AgendaSource } from "../../core/src/agenda.ts";
 import { askFrontDoor } from "./engine/pipeline.ts";
 import { claudeModel } from "./engine/model.ts";
 import { clientTurn, requestConflictCheck, startSession, summary, uploadDocument } from "./engine/intake.ts";
@@ -27,8 +28,8 @@ const pool = process.env.CLOUD_SQL_INSTANCE
   ? new pg.Pool({ host: `/cloudsql/${process.env.CLOUD_SQL_INSTANCE}`, user: process.env.DB_USER ?? "postgres", password: process.env.DB_PASSWORD, database: process.env.DB_NAME ?? "oew", max: 5 })
   : new pg.Pool({ connectionString: process.env.DATABASE_URL });
 if (DEMO_MODE) {
-  // Demo data only: (re)seed when the schema is missing or older than the newest migration (009 adds board_item.estimate_costs).
-  const current = (await pool.query("select exists (select 1 from information_schema.columns where table_schema = 'ws' and table_name = 'board_item' and column_name = 'estimate_costs') ok")).rows[0].ok;
+  // Demo data only: (re)seed when the schema is missing or older than the newest migration (010 adds ws.deadline).
+  const current = (await pool.query("select to_regclass('ws.deadline') is not null ok")).rows[0].ok;
   if (!current) { const c = await pool.connect(); try { await seedDemo(c); } finally { c.release(); } console.log("demo data seeded"); }
 }
 const hasDemoCookie = (req: http.IncomingMessage) => {
@@ -96,6 +97,30 @@ const routes: [string, RegExp, (x: Ctx, m: RegExpExecArray) => Promise<unknown>]
     const st = stageOf(nodes);
     return { stage: { index: st, name: STAGES[st].name }, stages: STAGES.map(s => s.name), nodes, blocked: blockedBy(nodes),
       defs: NODES.map(n => ({ id: n.id, name: n.name, satisfiedBy: n.satisfiedBy })) };
+  }],
+  // Thursday agenda (core/src/agenda.ts): the same order and reasons for the client and the attorney.
+  ["GET", /^\/api\/agenda$/, async ({ c }) => {
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });   // the practice's calendar day (Florida, Eastern)
+    const nodes = Object.fromEntries((await c.query("select node_id, status from ws.node_status")).rows.map(r => [r.node_id, r.status]));
+    const qs = (await c.query("select id, asked_at, body, withheld, context_node, status from ws.question where status in ('answered','held') order by asked_at")).rows;
+    const cards = (await c.query("select id, title, clears, proposed_price, proposed_at, coalesce(proposed_at, now()) at from ws.board_item where col = 'Identified' order by title")).rows;
+    const sources: AgendaSource[] = [
+      ...qs.map(q => ({ key: "q:" + q.id, kind: "question" as const, title: q.withheld ? "Sent to Josh directly" : q.body, node: q.context_node, at: new Date(q.asked_at).toISOString(), urgent: q.status === "held" })),
+      ...cards.map(b => ({ key: "co:" + b.id, kind: "change_order" as const, node: (b.clears ?? [])[0] ?? null, at: new Date(b.at).toISOString(),
+        title: b.proposed_at ? `Change order waiting for your signature: ${b.title}` : `To discuss: ${b.title}` })),
+    ];
+    const deadlines = (await c.query("select node_id node, label, to_char(due,'YYYY-MM-DD') due from ws.deadline")).rows;
+    const overrides = (await c.query("select item_key key, action, reason, to_char(until_date,'YYYY-MM-DD') until from ws.agenda_override")).rows;
+    return planAgenda({ nodes, sources, deadlines, overrides, ...callDates(today) });
+  }],
+  ["POST", /^\/api\/agenda\/move$/, async ({ c, body, role }) => {
+    if (role !== "attorney") throw new Error("not permitted");
+    const key = String(body.key ?? ""), action = String(body.action ?? "");
+    if (action === "clear") { await c.query("delete from ws.agenda_override where workspace_id = ws.cur_ws() and item_key = $1", [key]); return { ok: true }; }
+    await c.query(`insert into ws.agenda_override(workspace_id, item_key, action, reason, until_date) values (ws.cur_ws(),$1,$2,$3,$4)
+      on conflict (workspace_id, item_key) do update set action = excluded.action, reason = excluded.reason, until_date = excluded.until_date, set_by = ws.me(), set_at = now()`,
+      [key, action, String(body.reason ?? ""), body.until ? String(body.until) : null]);
+    return { ok: true };
   }],
   ["GET", /^\/api\/intake\/turns$/, ({ c }) => c.query(`select t.id, t.speaker, t.body, t.withheld, t.at, p.name for_name
      from ws.intake_turn t left join ws.person p on p.id = t.for_person order by t.id`).then(r => ({ turns: r.rows }))],

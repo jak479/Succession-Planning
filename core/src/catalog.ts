@@ -57,6 +57,22 @@ export const STAGES = [
   { key: "S4", name: "Your family office is in place", gate: null }, // reached at the exit event, never by gates; content F1–F3, C6, C7. Phase 3 follows.
 ];
 
+// Which stage each step belongs to, and its name on client surfaces (docs/design/architecture.md glossary;
+// lanes as on the client home). Used by the agenda planner and the client pages.
+export const NODE_STAGE: Record<string, number> = {
+  N0: 1, N1: 1, N2: 1, N3: 1, N4: 1, N5: 1, N6: 1, N8: 1, C2: 1, C3: 1,
+  N7: 2, N9: 2, N11: 2, N14: 2, C1: 2, C5: 2, C8: 2,
+  N10: 3, N12: 3, N15a: 3, N15b: 3, N15c: 3, C4: 3, R1: 3, R2: 3,
+  C6: 4, C7: 4, F1: 4, F2: 4, F3: 4,
+};
+export const CLIENT_LABEL: Record<string, string> = {
+  N0: "When the plan starts", N1: "Who is told, in what order", N2: "Who is in charge", N3: "Alternate manager", N4: "Bank access", N5: "Cash reserve", N6: "Payroll",
+  N7: "Disability insurance", N8: "Passwords and access", N9: "Customers and referral sources", N10: "Lease and guaranties", N11: "Licenses", N12: "Key staff",
+  N14: "30-day decision", N15a: "Continue option", N15b: "Sale option", N15c: "Wind-down option",
+  R1: "Retirement income", R2: "Your role after you step back", F1: "Family governance", F2: "Advisor team", F3: "Holding structure for the proceeds",
+  C1: "Who receives the business", C2: "Who runs it on day one", C3: "Authority documents", C4: "Buy-sell funding", C5: "Guaranties", C6: "Exit proceeds", C7: "Lifetime transfers", C8: "Family contact",
+};
+
 // Intake. askedBy: "agent" = agent may ask (entity tier); "attorney" = asked only on the call (rule 4).
 export type AskedBy = "agent" | "attorney";
 export interface IntakeDef { id: string; kind: "doc" | "fact"; tier: Tier; core: boolean; askedBy: AskedBy; feeds: string[]; }

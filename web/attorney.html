@@ -51,12 +51,18 @@ section[hidden],[hidden]{display:none !important}
 .card{background:var(--page);border:1px solid var(--rule);border-radius:12px;padding:18px;margin-bottom:16px}
 .note{background:var(--wait-soft);border-radius:8px;padding:9px 12px;margin:6px 0;font-size:14px}
 .client{border-left:3px solid var(--pine);padding:4px 0 4px 12px;margin:8px 0}
+.agi{border-top:1px solid var(--rule);padding:12px 0;display:flex;flex-direction:column;gap:6px}
+.agi:first-child{border-top:0}
+.agi .mv{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+.agi .mv input{flex:1 1 260px;width:auto} .agi .mv input[type=date]{flex:0 0 160px}
+.agi .mv button{margin:0}
 </style>
 </head>
 <body>
 <header class="top atty"><div class="wrap"><div class="firm"><span id="title">Practice console</span><small>Attorney only · nothing here is shown to the client</small></div><span id="who" class="who"></span></div></header>
 <nav class="tabs" role="tablist" aria-label="Console"><div class="wrap">
   <button role="tab" data-tab="conflicts" aria-selected="true">Conflicts<span class="count" id="nConf" hidden></span></button>
+  <button role="tab" data-tab="thursday">Thursday agenda</button>
   <button role="tab" data-tab="briefs">Front-door briefs<span class="count" id="nBriefs" hidden></span></button>
   <button role="tab" data-tab="agenda">Intake agenda<span class="count" id="nAgenda" hidden></span></button>
   <button role="tab" data-tab="queue">Unread documents<span class="count" id="nQueue" hidden></span></button>
@@ -77,6 +83,11 @@ section[hidden],[hidden]{display:none !important}
     <div id="checks"></div>
   </section>
 
+  <section id="tab-thursday" hidden>
+    <div class="card"><h2 id="agTitle">Thursday agenda</h2>
+      <p class="small">Ordered by the plan: deadlines within 90 days, then the path to the next stage, then other gaps; the in-house slot last; overflow to the next call. The reason under each item is what the client sees. Moving an item needs a reason, which the client also sees.</p>
+      <div id="agUrgent"></div><h3>Plan</h3><div id="agPlan"></div><h3>In-house slot</h3><div id="agIn"></div><h3>Held</h3><div id="agHeld"></div></div>
+  </section>
   <section id="tab-briefs" hidden><div id="briefs"></div></section>
   <section id="tab-agenda" hidden><div class="card"><h2>Deferred or flagged intake turns</h2><p class="small">Every time the assistant deferred to Thursday or stopped the line. These are the agenda items it promised the client.</p><div id="agenda"></div></div></section>
   <section id="tab-queue" hidden><div class="card"><h2>Received, unread</h2><p class="small">Documents the server could not read (and Claude could not transcribe legibly). Review the originals.</p><table><thead><tr><th>Item</th><th>File</th><th>Received</th></tr></thead><tbody id="queue"></tbody></table></div></section>
@@ -105,7 +116,7 @@ const checkPills = g => (g?.checks || []).map(c => `<span class="pill ${c.pass ?
 document.querySelectorAll("nav [data-tab]").forEach(b => b.onclick = run(async () => {
   document.querySelectorAll("nav [data-tab]").forEach(x => x.setAttribute("aria-selected", x === b));
   document.querySelectorAll("main > section").forEach(s => s.hidden = s.id !== "tab-" + b.dataset.tab);
-  await ({ conflicts: loadConflicts, briefs: loadBriefs, agenda: loadAgenda, queue: loadQueue, profile: loadProfile, intake: loadTranscript })[b.dataset.tab]?.();
+  await ({ conflicts: loadConflicts, thursday: loadAgendaPlan, briefs: loadBriefs, agenda: loadAgenda, queue: loadQueue, profile: loadProfile, intake: loadTranscript })[b.dataset.tab]?.();
 }));
 
 // ---- Conflicts ----
@@ -140,6 +151,25 @@ async function loadBriefs() {
     <div style="margin-top:6px">Gate: ${checkPills(b.gate)}</div><div class="small">Prompt ${esc(b.prompt_version)} · ${esc(b.model || "no model")}</div>
     ${q.confirmed_scope ? `<div style="margin-top:6px">Confirmed: <strong>${SCOPE[q.confirmed_scope]}</strong></div>` : b.suggested_scope ? `<div>${Object.keys(SCOPE).map(k => `<button class="ghost" data-scope="${k}" data-id="${q.id}">Confirm ${SCOPE[k]}</button>`).join("")}</div>` : ""}</div>`; }).join("") || '<p class="small">No questions yet.</p>';
   $("briefs").querySelectorAll("[data-scope]").forEach(b => b.onclick = run(async () => { await api(`/api/frontdoor/${b.dataset.id}/scope`, { scope: b.dataset.scope }); await loadBriefs(); }));
+}
+
+// ---- Thursday agenda (core/src/agenda.ts) ----
+async function loadAgendaPlan() {
+  const a = await api("/api/agenda");
+  $("agTitle").textContent = `Thursday agenda · ${new Date(a.callDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" })} · plan ${a.plan.reduce((n, i) => n + i.minutes, 0)} of ${a.planMinutes} min`;
+  const row = (i, n, held) => `<div class="agi"><div><strong>${n ? n + ". " : ""}${esc(i.title)}</strong> <span class="small">${esc(i.kind === "question" ? "question" : "board card")}${i.node ? " · " + esc(i.node) : ""}${i.minutes ? " · est. " + i.minutes + " min" : ""}</span></div>
+    <div><span class="pill ${held ? "warn" : i.tier === "deadline" ? "crit" : i.tier === "path" ? "good" : ""}">Client sees: ${esc(i.reason)}</span></div>
+    <div class="mv"><input id="r-${i.key}" placeholder="Reason the client will see"><input id="u-${i.key}" type="date" title="Hold until">
+      <button class="ghost" data-mv="first" data-k="${i.key}">Move first</button><button class="ghost" data-mv="hold" data-k="${i.key}">Hold</button><button class="ghost" data-mv="done" data-k="${i.key}">Taken up</button><button class="ghost" data-mv="clear" data-k="${i.key}">Undo move</button></div></div>`;
+  $("agUrgent").innerHTML = a.urgent.length ? `<div class="note"><strong>Outside the agenda, urgent:</strong> ${a.urgent.map(u => esc(u.title)).join("; ")}</div>` : "";
+  $("agPlan").innerHTML = a.plan.map((i, n) => row(i, n + 1)).join("") || '<p class="small">Nothing.</p>';
+  $("agIn").innerHTML = a.inHouse.map((i, n) => row(i, n + 1)).join("") || '<p class="small">Nothing.</p>';
+  $("agHeld").innerHTML = a.held.map(i => row(i, 0, true)).join("") || '<p class="small">Nothing.</p>';
+  document.querySelectorAll("[data-mv]").forEach(b => b.onclick = run(async () => {
+    const k = b.dataset.k, reason = $("r-" + k).value.trim();
+    if (b.dataset.mv !== "clear" && reason.length < 4) throw new Error("Give the reason the client will see.");
+    await api("/api/agenda/move", { key: k, action: b.dataset.mv, reason, until: $("u-" + k).value || null }); await loadAgendaPlan();
+  }));
 }
 
 // ---- Agenda, queue, transcript ----

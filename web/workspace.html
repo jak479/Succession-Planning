@@ -88,6 +88,17 @@ label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
 textarea,input,select{width:100%;font:inherit;padding:10px;border:1px solid var(--rule);border-radius:10px;background:var(--page);color:var(--ink)}
 textarea{min-height:80px}
 .row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.budget{display:flex;height:30px;border-radius:999px;overflow:hidden;font-size:12px;font-weight:600;margin-top:16px}
+.budget div{display:flex;align-items:center;padding:0 14px;white-space:nowrap;overflow:hidden}
+.budget .p{flex:2;background:var(--pine);color:var(--on-pine)} .budget .e{flex:1;background:var(--pine-soft);color:var(--pine)}
+.urgent{border:1.5px solid var(--ink);border-radius:12px;background:var(--page);padding:14px 18px;font-size:15px}
+.ag{display:grid;grid-template-columns:36px minmax(0,1fr);gap:4px 14px;padding:14px 0;border-top:1px solid var(--rule)}
+.ag:first-child{border-top:0}
+.ag .num{font-family:var(--display);font-size:24px;font-weight:600;color:var(--pine);line-height:1}
+.ag h3{margin:0;font-size:17px}
+.why{display:inline-block;margin-top:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;border:1px solid var(--rule);color:var(--ink)}
+.why.deadline{border-color:var(--gap);background:var(--gap-soft)} .why.path{border-color:var(--pine);background:var(--pine-soft);color:var(--pine)}
+.why.held{border:1px dashed var(--wait);color:var(--wait)} .why.moved{border-color:var(--brass);color:var(--brass)}
 @media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.lhead{display:none}.step{grid-template-columns:minmax(0,1fr)}.meet{border:0;border-top:1px solid var(--rule)}.step>div:empty{display:none}.items[data-lane]:not(:empty)::before{content:attr(data-lane);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}}
 </style>
 </head>
@@ -127,9 +138,14 @@ textarea{min-height:80px}
 
   <section class="tab" id="tab-thursday" hidden>
     <div class="col">
-      <div><div class="eyebrow">Thursday · 30 minutes with Josh</div><h1>This week's call</h1>
-      <p class="lede">Your plan sets the order. Each item shows where it sits; Josh's answers appear on the question after the call.</p></div>
-      <section class="panel"><h2>Your questions on the agenda</h2><ul class="list" id="agendaList"></ul></section>
+      <div><div class="eyebrow" id="thuEyebrow">Thursday · 30 minutes with Josh</div><h1>This week's call</h1>
+      <p class="lede">Your plan sets the order: deadlines first, then the steps to your next stage, then everything else. Each item says why it is where it is. What doesn't fit is held for a named date.</p>
+      <div class="budget" role="img" id="thuBar" aria-label="Time on the call"></div></div>
+      <section class="urgent" id="thuUrgent" hidden></section>
+      <section class="panel"><h2 id="thuPlanH">Your plan</h2><div id="thuPlan"></div></section>
+      <section class="panel"><h2 id="thuInH">Everyday business questions</h2><p>Legal questions about running the business, outside the plan. Included in your subscription. Taken up oldest first.</p><ul class="list" id="thuIn"></ul></section>
+      <section class="panel"><h2>Held for a later call</h2><p>Not dropped. Each one shows when it comes up and why.</p><ul class="list" id="thuHeld"></ul></section>
+      <p class="note">A new question is placed by the same order. You will see where it lands and why before the call.</p>
     </div>
   </section>
 
@@ -266,19 +282,29 @@ async function loadHome() {
   });
   $("openNow").innerHTML = open.join("") || '<li class="meta">Nothing open right now.</li>';
   figs(b?.budget, "figs");
-  const { questions } = await api("/api/frontdoor");
-  const onAgenda = questions.filter(q => q.agenda_position != null && !q.confirmed_scope).length;
-  $("thuSum").textContent = onAgenda ? `${onAgenda} of your question${onAgenda === 1 ? "" : "s"} on the agenda, in the order your plan needs them.` : "No questions on the agenda yet. Ask one any time.";
+  const ag = await api("/api/agenda");
+  const n = ag.plan.length + ag.inHouse.length;
+  $("thuSum").textContent = n ? `${n} item${n === 1 ? "" : "s"} on ${longDay(ag.callDate)}, in the order your plan needs them.${ag.held.length ? ` ${ag.held.length} held for later, with the reason.` : ""}` : "Nothing on the agenda yet. Ask a question any time.";
 }
 function figs(bud, id) {
   $(id).innerHTML = bud ? `<span>Onboarding</span><b>${money(bud.onboarding_fee)}</b><span>Approved change orders</span><b>${money(bud.approved)}</b><span>Completed</span><b>${money(bud.completed)}</b><span>Estimates, not yet approved</span><b>${money(bud.allowances)}</b>` : '<span class="meta">Not available.</span>';
 }
 
 // ---- Thursday ----
+const longDay = iso => new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
 async function loadThursday() {
-  const { questions } = await api("/api/frontdoor");
-  const list = questions.filter(q => q.agenda_position != null).sort((a, b) => a.agenda_position - b.agenda_position);
-  $("agendaList").innerHTML = list.map((q, i) => `<li><span><b style="font-family:var(--display);color:var(--pine);margin-right:8px">${i + 1}</b>${q.withheld ? "<em>Sent to Josh directly</em>" : esc(q.body)}</span><span class="meta">${q.confirmed_scope ? "Answered" : "On the agenda"}</span></li>`).join("") || '<li class="meta">Nothing on the agenda yet.</li>';
+  const a = await api("/api/agenda");
+  const used = a.plan.reduce((n, i) => n + i.minutes, 0);
+  $("thuEyebrow").textContent = `${longDay(a.callDate)} · 30 minutes with Josh`;
+  $("thuBar").innerHTML = `<div class="p">Your plan · ${a.planMinutes} min</div><div class="e">Everyday questions · ${a.inHouseMinutes} min</div>`;
+  $("thuUrgent").hidden = !a.urgent.length;
+  $("thuUrgent").innerHTML = `<b>Not waiting for Thursday</b> ${a.urgent.map(u => esc(u.title)).join("; ")}. Josh is contacting you directly.`;
+  $("thuPlanH").textContent = `Your plan · ${a.planMinutes} minutes`;
+  $("thuPlan").innerHTML = a.plan.map((i, n) => `<article class="ag"><span class="num">${n + 1}</span><div><h3>${esc(i.title)}</h3><span class="why ${i.tier}">${esc(i.reason)}</span></div></article>`).join("") || '<p class="meta">Nothing on the plan agenda yet.</p>';
+  $("thuInH").textContent = `Everyday business questions · ${a.inHouseMinutes} minutes`;
+  $("thuIn").innerHTML = a.inHouse.map(i => `<li><span>${esc(i.title)}</span><span class="meta">asked ${esc(new Date(i.at).toLocaleDateString("en-US", { month: "short", day: "numeric" }))}</span></li>`).join("") || '<li class="meta">None this week.</li>';
+  $("thuHeld").innerHTML = a.held.map(i => `<li><span>${esc(i.title)}</span><span class="why held">${esc(i.reason)}${i.until && !/^Next in line/.test(i.reason) ? " · back on " + esc(longDay(i.until)) : ""}</span></li>`).join("") || '<li class="meta">Nothing held.</li>';
+  return a;
 }
 
 // ---- Questions ----
