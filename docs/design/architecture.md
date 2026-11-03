@@ -26,6 +26,7 @@ Decided 2026-11-02 (proposal; Josh to confirm hosting). Preserves the data model
 ## Decisions 2026-11-03
 - **Stages:** short-term disability → long-term disability → retirement → exit, named per Bridges; boundary from the disability policy (docs/design/contingency-sequence-nodes.md, Stage mapping).
 - **R2 (role after stepping back) is personal-engagement work**, dual representation under Rules 4-1.7 and 4-1.13(e) with the carve-outs in owner letter § 2(C).
+- **The family office runs through the whole plan, from onboarding** (decided 2026-11-03). Client home is titled "Building your family office"; the owner lane is named "Your family office" from Stage 1; each stage states what comes "Off your plate" (tasks and decisions that move to named people, documents and advisors; never hours or time estimates). Framing line: "Stage by stage, the business and your family's affairs get written rules, named people, and advisors with clear roles, so less has to pass through you."
 - **Destination is the family office** (the advisor team the Firm coordinates; an entity when the size justifies it). S4 "Your family office is in place"; Phase 3 manages it under a separate letter, cadence and client case by case.
 - **R2 fairness record (§ 605.04092(3)):** the attorney prepares it from market data at authorization, unless a valuator is already retained, in which case that valuation is used. Part of the R2 change order; no outside consultant by default.
 
