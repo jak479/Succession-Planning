@@ -2,120 +2,196 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Client Workspace</title>
+<title>Your Family Office</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400..700&family=Public+Sans:wght@400;500;600&display=swap">
 <style>
-:root{--bg:#f7f6f2;--card:#fff;--ink:#1d2321;--muted:#5d6763;--line:#d9d6cc;--accent:#2d5b8a;--good:#2f7d4f;--warn:#b7791f;--crit:#b23a3a;--plan:#9aa5a0;--auto:#eef3f8}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#141716;--card:#1e2220;--ink:#e8ebe9;--muted:#9aa5a0;--line:#343a37;--accent:#7fb0e0;--good:#5cbf84;--warn:#e0a84a;--crit:#e57373;--plan:#5d6763;--auto:#1b2733}}
-:root[data-theme="dark"]{--bg:#141716;--card:#1e2220;--ink:#e8ebe9;--muted:#9aa5a0;--line:#343a37;--accent:#7fb0e0;--good:#5cbf84;--warn:#e0a84a;--crit:#e57373;--plan:#5d6763;--auto:#1b2733}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
-header{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline}
-h1{font-size:18px;margin:0}.muted,.small{color:var(--muted)}.small{font-size:13px}
-nav{display:flex;gap:4px;padding:8px 16px;border-bottom:1px solid var(--line);overflow-x:auto}
-nav button{background:transparent;color:var(--ink);border:1px solid transparent;border-radius:6px;padding:6px 12px;font:inherit;cursor:pointer;white-space:nowrap}
-nav button[aria-selected="true"]{border-color:var(--line);background:var(--card);font-weight:600}
-main{max-width:980px;margin:0 auto;padding:16px}
-section[hidden]{display:none}
-.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px}
-h2{font-size:16px;margin:0 0 8px}
-label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
-textarea,input,select{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
-textarea{min-height:80px}
-button.primary{font:inherit;padding:8px 14px;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;margin-top:10px}
-button.ghost{font:inherit;padding:6px 12px;border-radius:6px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;margin-top:10px}
-button:disabled{opacity:.5;cursor:default}
-.auto{background:var(--auto);border-left:3px solid var(--accent);border-radius:6px;padding:10px 12px;margin:8px 0}
-.auto .tag{font-size:12px;color:var(--muted);margin-bottom:4px}
-.mine{background:transparent;border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin:8px 0 8px 15%}
+/* Look B (family office), decided 2026-11-03: a private-client report. Home: stages as a ladder (business, where they meet, your family office); other tabs: one reading column of panels. */
+:root{--ground:#f2f4f3;--page:#fff;--ink:#22282b;--muted:#5f686c;--rule:#dfe3e1;--soft:#fafbfa;--pine:#1f4d3d;--pine-soft:#e5efeb;--on-pine:#fff;--brass:#8c6d2c;--gap:#a8321f;--gap-soft:#f8ebe8;--wait:#8a5a00;
+  --display:"Source Serif 4",Georgia,serif;--body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ground:#121615;--page:#1b2120;--ink:#e6ebe9;--muted:#9fa9a6;--rule:#313937;--soft:#171c1b;--pine:#7cc2a6;--pine-soft:#1f3229;--on-pine:#0f1a15;--brass:#d0b172;--gap:#ef8b78;--gap-soft:#3a201b;--wait:#e0b45c;color-scheme:dark}}
+:root[data-theme="dark"]{--ground:#121615;--page:#1b2120;--ink:#e6ebe9;--muted:#9fa9a6;--rule:#313937;--soft:#171c1b;--pine:#7cc2a6;--pine-soft:#1f3229;--on-pine:#0f1a15;--brass:#d0b172;--gap:#ef8b78;--gap-soft:#3a201b;--wait:#e0b45c;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font:15px/1.55 var(--body)}
+a{color:var(--pine)} a:focus-visible,button:focus-visible{outline:2px solid var(--pine);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{background:var(--page);border-bottom:1px solid var(--rule)}
+header.top .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 24px;padding-block:14px}
+.firm{font-family:var(--display);font-size:20px;font-weight:600}
+.firm small{display:block;font-family:var(--body);font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+nav{display:flex;gap:2px;flex:1 1 auto;flex-wrap:wrap}
+nav button{background:transparent;border:0;color:var(--ink);font:inherit;font-size:14px;padding:8px 12px;border-radius:999px;cursor:pointer}
+nav button[aria-selected="true"]{background:var(--pine-soft);color:var(--pine);font-weight:600}
+.btn{display:inline-block;padding:10px 18px;background:var(--pine);color:var(--on-pine);border:1px solid var(--pine);font:inherit;font-weight:600;border-radius:999px;cursor:pointer;text-decoration:none}
+.btn.ghost{background:transparent;color:var(--pine)}
+.btn:disabled{opacity:.5;cursor:default}
+main.wrap{padding-block:28px}
+section.tab[hidden]{display:none}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:32px;align-items:start}
+.col{display:flex;flex-direction:column;gap:18px;min-width:0;max-width:880px}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--brass)}
+h1{font-family:var(--display);font-weight:500;font-size:clamp(30px,4.2vw,42px);line-height:1.1;margin:6px 0 12px;letter-spacing:-.015em;text-wrap:balance}
+h2{font-family:var(--display);font-size:20px;font-weight:600;margin:0 0 8px;line-height:1.2}
+h3{font-family:var(--display);font-size:17px;font-weight:600;margin:14px 0 6px}
+.lede{font-family:var(--display);font-size:19px;line-height:1.5;max-width:60ch;margin:0}
+.lede em{font-style:normal;border-bottom:2px solid var(--gap)}
+.panel{background:var(--page);border:1px solid var(--rule);border-radius:12px;padding:20px}
+.panel p{margin:0;font-size:14px;color:var(--muted)}
+.meta,.note{font-size:13px;color:var(--muted)}
+.note{margin:10px 0 0}
+.err{color:var(--gap);min-height:1.3em;font-size:14px}
+/* ladder */
+.ladder{margin-top:24px;background:var(--page);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
+.lhead,.step{display:grid;grid-template-columns:200px minmax(0,1fr) 150px minmax(0,1fr)}
+.lhead{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--rule)}
+.lhead>div,.step>div{padding:14px 16px;min-width:0}
+.step{border-bottom:1px solid var(--rule)} .step:last-child{border-bottom:0}
+.step.today{background:var(--soft)}
+.step.next{background:linear-gradient(90deg,var(--pine-soft),transparent 60%)}
+.sname .n{font-size:12px;color:var(--muted);font-weight:600}
+.step.next .sname .n{color:var(--pine)}
+.sname b{display:block;font-family:var(--display);font-size:18px;font-weight:600;line-height:1.2;margin-top:2px}
+.plate{display:block;margin-top:8px;font-size:13px;line-height:1.45}
+.plate span{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--brass);margin-bottom:2px}
+.items{display:flex;flex-direction:column;gap:6px}
+.meet{border-left:1px solid var(--rule);border-right:1px solid var(--rule);background:var(--soft)}
+.it{display:flex;gap:8px;align-items:baseline;font-size:14px;color:var(--muted);background:none;border:0;padding:0;font-family:inherit;text-align:left;cursor:pointer}
+.it::before{content:"";flex:none;width:9px;height:9px;border-radius:50%;border:1.5px solid var(--rule);transform:translateY(-1px)}
+.it.green,.it.amber{color:var(--ink)} .it.green::before{background:var(--pine);border-color:var(--pine)}
+.it.amber::before{border:1.5px dashed var(--wait)}
+.it.red{color:var(--ink);font-weight:600} .it.red::before{background:var(--gap);border-color:var(--gap)}
+.it .tag{font-size:12px;font-weight:500;margin-left:4px}
+.it.red .tag{color:var(--gap)} .it.amber .tag{color:var(--wait)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px} .legend .it{font-size:12px;cursor:default}
+#nodeInfo{margin-top:12px}
+/* lists, tables, pills */
+.list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column}
+.list li{padding:12px 0;border-top:1px solid var(--rule);display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline;justify-content:space-between;font-size:14px}
+.list li:first-child{border-top:0}
+.open li{flex-direction:column;align-items:flex-start;gap:2px}
+.t{width:100%;border-collapse:collapse;font-size:14px}
+.t th{text-align:left;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--rule)}
+.t td{padding:10px;border-bottom:1px solid var(--rule);vertical-align:top}
+.t tr:last-child td{border-bottom:0}
+.st{font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap;border:1px solid var(--rule)}
+.st.green{background:var(--pine-soft);border-color:var(--pine-soft);color:var(--pine)}
+.st.red{background:var(--gap-soft);border-color:var(--gap);color:var(--gap)}
+.st.amber{border:1px dashed var(--wait);color:var(--wait)}
+.fig{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:14px;margin-top:8px}
+.fig b{font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+/* conversation */
+.auto{background:var(--soft);border:1px solid var(--rule);border-radius:10px;padding:12px 14px;margin:10px 0;font-size:14px}
+.auto .tag{display:inline-block;font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--rule);border-radius:999px;padding:1px 9px;margin-bottom:6px}
+.mine{border-left:3px solid var(--pine);padding:4px 0 4px 12px;margin:10px 0;font-size:15px}
 .thread{max-height:520px;overflow-y:auto}
-table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;vertical-align:top;padding:7px 6px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:600;font-size:13px}
-.err{color:var(--crit);min-height:1.3em}
-.steps{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px}.step{padding:4px 10px;border-radius:999px;border:1px solid var(--line);font-size:13px}.step.on{background:var(--accent);color:#fff;border-color:var(--accent)}.step.done{border-color:var(--good);color:var(--good)}
-.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
-svg text{font:12px system-ui,sans-serif;fill:var(--ink)}
-.pill{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:999px;padding:1px 8px}
+label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+textarea,input,select{width:100%;font:inherit;padding:10px;border:1px solid var(--rule);border-radius:10px;background:var(--page);color:var(--ink)}
+textarea{min-height:80px}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.lhead{display:none}.step{grid-template-columns:minmax(0,1fr)}.meet{border:0;border-top:1px solid var(--rule)}.step>div:empty{display:none}.items[data-lane]:not(:empty)::before{content:attr(data-lane);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}}
 </style>
 </head>
 <body>
-<header><h1 id="title">Workspace</h1><span id="who" class="muted"></span><span id="stageLine" class="muted"></span></header>
-<nav role="tablist">
-  <button role="tab" data-tab="ask" aria-selected="true">Ask</button>
-  <button role="tab" data-tab="intake">Intake</button>
-  <button role="tab" data-tab="plan">Plan</button>
-  <button role="tab" data-tab="profile">Profile</button>
-  <button role="tab" data-tab="board">Board &amp; budget</button>
-</nav>
-<main>
+<header class="top"><div class="wrap">
+  <div class="firm"><span id="title">Your workspace</span><small id="who">Your family office</small></div>
+  <nav role="tablist" aria-label="Workspace">
+    <button role="tab" data-tab="home" aria-selected="true">Your plan</button>
+    <button role="tab" data-tab="thursday">Thursday</button>
+    <button role="tab" data-tab="ask">Questions</button>
+    <button role="tab" data-tab="docs">Documents</button>
+    <button role="tab" data-tab="budget">Scope &amp; budget</button>
+  </nav>
+  <button class="btn" type="button" id="askTop">Ask a question</button>
+</div></header>
+<main class="wrap">
   <div class="err" id="err" role="alert"></div>
 
-  <section id="tab-ask">
-    <div class="card">
-      <h2>Ask a question</h2>
-      <p class="small">The assistant answers with what your own documents say, the facts Josh will need, and where your question sits on Thursday's agenda. It does not give legal advice. Josh answers on the call.</p>
-      <label for="q">Your question</label><textarea id="q" placeholder="e.g. The landlord sent renewal terms. What does my lease say?"></textarea>
-      <label for="outside">Check this (optional): paste an answer you got from another AI tool</label><textarea id="outside" style="min-height:60px"></textarea>
-      <button class="primary" id="askBtn" type="button">Send to the assistant</button>
-    </div>
-    <div id="answers"></div>
-  </section>
-
-  <section id="tab-intake" hidden>
-    <div class="card">
-      <h2>Intake</h2>
-      <p class="small">The assistant collects facts and documents for your plan. It asks only for what your documents and public records don't already show.</p>
-      <div class="thread" id="thread"></div>
-      <label for="msg">Your answer</label><textarea id="msg" style="min-height:60px"></textarea>
-      <button class="primary" id="sendBtn" type="button">Send</button>
-      <button class="ghost" id="startBtn" type="button">Start or resume intake</button>
-      <button class="ghost" id="sumBtn" type="button">Where are we?</button>
-    </div>
-    <div class="card">
-      <h2>Send a document</h2>
-      <label for="docItem">Which document is this?</label>
-      <select id="docItem">
-        <option value="B1">Operating agreement or bylaws, with amendments</option>
-        <option value="B5">Bank signatory card or signer confirmation</option>
-        <option value="B8">Insurance schedule or declarations pages</option>
-        <option value="B10">Top customers and referral sources; contracts with renewal dates</option>
-        <option value="B11">Lease and amendments; other personal guaranties</option>
-        <option value="B12">Loan documents: note, loan agreement, guaranty</option>
-        <option value="B13">License certificates</option>
-      </select>
-      <label for="file">File (PDF, Word, text, or a photo)</label><input type="file" id="file" accept=".pdf,.docx,.txt,image/*">
-      <button class="primary" id="upBtn" type="button">Send document</button>
-      <div id="upOut"></div>
+  <section class="tab" id="tab-home">
+    <div class="grid">
+      <div style="min-width:0">
+        <div class="eyebrow" id="homeEyebrow">Your family office</div>
+        <h1>From being in business to live, to being in the business of living</h1>
+        <p class="lede">Your family office is how you get there. Stage by stage, the business and your family's affairs get written rules, named people, and advisors with clear roles, so less has to pass through you. <span id="homeLine"></span></p>
+        <div class="ladder" id="ladder" role="table" aria-label="Your plan by stage"></div>
+        <div class="legend"><span class="it green">In place</span><span class="it amber">In place, review due</span><span class="it red">A gap</span><span class="it">Not yet reached</span></div>
+        <div id="nodeInfo" class="meta">Select a step to see what puts it in place.</div>
+        <p class="note">Your personal documents and your advisor's work show as status only. Your plan covers being out, not the reason; please don't share health details here.</p>
+      </div>
+      <aside class="col">
+        <section class="panel"><div class="eyebrow">Next call</div><h2>This week's call</h2><p id="thuSum">Your questions, in the order your plan needs them.</p><div class="row"><button class="btn" type="button" data-go="thursday">See the agenda</button></div></section>
+        <section class="panel"><h2>Open now</h2><ul class="list open" id="openNow"></ul></section>
+        <section class="panel"><h2>Scope &amp; budget</h2><div class="fig" id="figs"></div></section>
+      </aside>
     </div>
   </section>
 
-  <section id="tab-plan" hidden>
-    <div class="card">
-      <h2>Your plan</h2>
-      <div class="steps" id="steps"></div>
-      <div class="legend"><span><i class="dot" style="background:var(--good)"></i>in place</span><span><i class="dot" style="background:var(--warn)"></i>in place, review due</span><span><i class="dot" style="background:var(--crit)"></i>gap</span><span><i class="dot" style="background:var(--plan)"></i>not yet assessed</span></div>
-      <svg id="path" viewBox="0 0 960 400" role="img" aria-label="Plan path: what must be in place if you are out"></svg>
-      <div id="nodeInfo" class="small">Select a step to see what it needs.</div>
-    </div>
-    <div class="card">
-      <h2>Coordination with your personal plan</h2>
-      <p class="small">Whether each point is in place and consistent. Your personal documents themselves are not shown here.</p>
-      <table><thead><tr><th>Point</th><th>Status</th></tr></thead><tbody id="rungs"></tbody></table>
+  <section class="tab" id="tab-thursday" hidden>
+    <div class="col">
+      <div><div class="eyebrow">Thursday · 30 minutes with Josh</div><h1>This week's call</h1>
+      <p class="lede">Your plan sets the order. Each item shows where it sits; Josh's answers appear on the question after the call.</p></div>
+      <section class="panel"><h2>Your questions on the agenda</h2><ul class="list" id="agendaList"></ul></section>
     </div>
   </section>
 
-  <section id="tab-profile" hidden>
-    <div class="card">
-      <h2>What your file shows</h2>
-      <p class="small">Each entry names the source it came from. "Described" means it rests on your own description, not a document or record.</p>
-      <table><thead><tr><th>Item</th><th>What the source shows</th><th>Source</th></tr></thead><tbody id="prof"></tbody></table>
-    </div>
-    <div class="card">
-      <h2>Sources that disagree</h2>
-      <p class="small">Listed for Josh to review on the call. Nothing here has been decided.</p>
-      <table><thead><tr><th>Item</th><th>One source says</th><th>Another says</th></tr></thead><tbody id="conf"></tbody></table>
+  <section class="tab" id="tab-ask" hidden>
+    <div class="col">
+      <div><div class="eyebrow">Questions</div><h1>Ask a question</h1>
+      <p class="lede">The assistant answers with what your own documents say, the facts Josh will need, and where your question sits on Thursday's agenda. It does not give legal advice. Josh answers on the call.</p></div>
+      <section class="panel">
+        <label for="q" style="margin-top:0">Your question</label><textarea id="q" placeholder="e.g. The landlord sent renewal terms. What does my lease say?"></textarea>
+        <label for="outside">Check this (optional): paste an answer you got from another AI tool</label><textarea id="outside" style="min-height:60px"></textarea>
+        <div class="row"><button class="btn" id="askBtn" type="button">Send to the assistant</button></div>
+      </section>
+      <div id="answers" class="col"></div>
     </div>
   </section>
 
-  <section id="tab-board" hidden>
-    <div class="card"><h2>Board &amp; budget</h2><p>Open items, change orders to approve, and the budget.</p><a id="boardLink" href="#">Open the board</a></div>
+  <section class="tab" id="tab-docs" hidden>
+    <div class="col">
+      <div><div class="eyebrow">Documents</div><h1>Documents and facts</h1>
+      <p class="lede">We only ask for what public records and your other documents don't already show.</p></div>
+      <section class="panel">
+        <h2>Send a document</h2>
+        <label for="docItem">Which document is this?</label>
+        <select id="docItem">
+          <option value="B1">Operating agreement or bylaws, with amendments</option>
+          <option value="B5">Bank signatory card or signer confirmation</option>
+          <option value="B8">Insurance schedule or declarations pages</option>
+          <option value="B10">Top customers and referral sources; contracts with renewal dates</option>
+          <option value="B11">Lease and amendments; other personal guaranties</option>
+          <option value="B12">Loan documents: note, loan agreement, guaranty</option>
+          <option value="B13">License certificates</option>
+        </select>
+        <label for="file">File (PDF, Word, text, or a photo)</label><input type="file" id="file" accept=".pdf,.docx,.txt,image/*">
+        <div class="row"><button class="btn" id="upBtn" type="button">Send document</button></div>
+        <div id="upOut"></div>
+      </section>
+      <section class="panel">
+        <h2>Questions from the assistant</h2>
+        <p>It asks only for what your documents and public records don't already show.</p>
+        <div class="thread" id="thread"></div>
+        <label for="msg">Your answer</label><textarea id="msg" style="min-height:60px"></textarea>
+        <div class="row"><button class="btn" id="sendBtn" type="button">Send</button><button class="btn ghost" id="startBtn" type="button">Start or resume</button><button class="btn ghost" id="sumBtn" type="button">Where are we?</button></div>
+      </section>
+      <section class="panel">
+        <h2>What your file shows</h2>
+        <p>Each entry names its source. "Described by you" means it rests on your own description, not a document or record.</p>
+        <div style="overflow-x:auto;margin-top:8px"><table class="t"><thead><tr><th>Item</th><th>What the source shows</th><th>Source</th></tr></thead><tbody id="prof"></tbody></table></div>
+      </section>
+      <section class="panel">
+        <h2>Sources that disagree</h2>
+        <p>Listed for Josh to review on the call. Nothing here has been decided.</p>
+        <div style="overflow-x:auto;margin-top:8px"><table class="t"><thead><tr><th>Item</th><th>One source says</th><th>Another says</th></tr></thead><tbody id="conf"></tbody></table></div>
+      </section>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-budget" hidden>
+    <div class="col">
+      <div><div class="eyebrow">Scope &amp; budget</div><h1>Scope and budget</h1>
+      <p class="lede">What your subscription includes, change orders you approve before work starts, and what has been completed.</p></div>
+      <section class="panel"><div class="fig" id="figs2"></div><div class="row"><a class="btn" id="boardLink" href="#">Open the board</a></div></section>
+    </div>
   </section>
 </main>
 <script>
@@ -123,6 +199,7 @@ const qs = new URLSearchParams(location.search), AS = qs.get("as"), WS = qs.get(
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const TAG = '<div class="tag">Automated assistant · not a lawyer · Josh reviews on Thursday</div>';
+const money = n => "$" + Number(n || 0).toLocaleString("en-US");
 async function api(path, opts = {}) {
   const r = await fetch(path + (path.includes("?") ? "&" : "?") + "ws=" + encodeURIComponent(WS), { method: opts.body ? "POST" : (opts.method || "GET"),
     headers: { authorization: "Dev " + AS, "content-type": opts.type || "application/json" }, body: opts.body });
@@ -131,21 +208,83 @@ async function api(path, opts = {}) {
 const run = fn => async () => { $("err").textContent = ""; try { await fn(); } catch (e) { $("err").textContent = e.message; } };
 function autoBlock(reply) {
   let h = TAG + (reply.lines || []).map(l => `<div>${esc(l)}</div>`).join("");
-  if (reply.check_this?.length) h += `<table style="margin-top:8px"><thead><tr><th>The outside answer says</th><th>Your documents say</th><th></th></tr></thead><tbody>${reply.check_this.map(r => `<tr><td>${esc(r.outside_says)}</td><td>${esc(r.your_documents_say)}</td><td>${esc(r.difference)}</td></tr>`).join("")}</tbody></table>`;
+  if (reply.check_this?.length) h += `<div style="overflow-x:auto"><table class="t" style="margin-top:8px"><thead><tr><th>The outside answer says</th><th>Your documents say</th><th></th></tr></thead><tbody>${reply.check_this.map(r => `<tr><td>${esc(r.outside_says)}</td><td>${esc(r.your_documents_say)}</td><td>${esc(r.difference)}</td></tr>`).join("")}</tbody></table></div>`;
   return `<div class="auto">${h}</div>`;
 }
 
 // ---- tabs ----
-document.querySelectorAll("nav [data-tab]").forEach(b => b.onclick = () => {
-  document.querySelectorAll("nav [data-tab]").forEach(x => x.setAttribute("aria-selected", x === b));
-  document.querySelectorAll("main > section").forEach(s => s.hidden = s.id !== "tab-" + b.dataset.tab);
-  ({ ask: loadAsk, intake: loadThread, plan: loadPlan, profile: loadProfile })[b.dataset.tab]?.();
-});
+const LOAD = { home: () => loadHome(), thursday: () => loadThursday(), ask: () => loadAsk(), docs: () => Promise.all([loadThread(), loadProfile()]), budget: () => loadBudget() };
+function go(tab) {
+  document.querySelectorAll("nav [data-tab]").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === tab));
+  document.querySelectorAll("main > section.tab").forEach(s => s.hidden = s.id !== "tab-" + tab);
+  run(LOAD[tab])();
+}
+document.querySelectorAll("nav [data-tab]").forEach(b => b.onclick = () => go(b.dataset.tab));
+document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
+$("askTop").onclick = () => { go("ask"); $("q").focus(); };
 
-// ---- Ask ----
+// ---- Your plan (home) ----
+// Client wording (docs/design/architecture.md, glossary). Lanes and stages per docs/design/contingency-sequence-nodes.md.
+const LABEL = { N0:"When the plan starts", N1:"Who is told, in what order", N2:"Who is in charge", N3:"Alternate manager", N4:"Bank access", N5:"Cash reserve", N6:"Payroll", N7:"Disability insurance", N8:"Passwords and access", N9:"Customers and referral sources", N10:"Lease and guaranties", N11:"Licenses", N12:"Key staff", N14:"30-day decision", N15a:"Continue", N15b:"Sell", N15c:"Wind down",
+  R1:"Retirement income · your advisor", R2:"Your role after you step back", F1:"Family governance", F2:"Advisor team", F3:"Holding structure for the proceeds",
+  C1:"Who receives the business", C2:"Who runs it on day one", C3:"Authority documents", C4:"Buy-sell funding", C5:"Guaranties", C6:"Exit proceeds", C7:"Lifetime transfers", C8:"Family contact" };
+const LADDER = [
+  { n: "Stage 1", name: "Short-term disability covered", biz: ["N0","N2","N3","N1","N4","N5","N6","N8"], meet: ["C2","C3"], fam: [],
+    plate: "Running the business for a few weeks goes to the person you name, within the cash rule. Bank and payroll no longer depend on you alone." },
+  { n: "Stage 2", name: "Long-term disability covered", biz: ["N7","N14","N9","N11"], meet: ["C1","C5","C8"], fam: [],
+    plate: "If you can't come back: who decides, who is paid, and who speaks for your family are written down." },
+  { n: "Stage 3", name: "Ready to retire", biz: ["N15a","N15b","N15c","N10","N12"], meet: ["C4"], fam: ["R2","R1"],
+    plate: "Stepping back: your role, your income and the company's path are settled before you leave." },
+  { n: "Stage 4", name: "Your family office", biz: [], exit: "The exit you choose", meet: ["C6","C7"], fam: ["F1","F2","F3"],
+    plate: "Your family's affairs: designed to be run by your office and your advisors, under rules your family sets." },
+];
+const TAGW = { red: "gap", amber: "review due" };
+const WORD = { green: "In place", amber: "In place, review due", red: "Gap", planned: "Planned", unassessed: "Not yet assessed" };
+let PLAN = null;
+function chips(ids, nodes) { return ids.map(id => { const s = nodes[id] || "unassessed"; return `<button type="button" class="it ${s}" data-node="${id}"><span>${esc(LABEL[id])}${TAGW[s] ? `<span class="tag">${TAGW[s]}</span>` : ""}</span></button>`; }).join(""); }
+async function loadHome() {
+  const [p, b] = await Promise.all([api("/api/plan"), api("/api/board").catch(() => null)]); PLAN = p;
+  const at = p.stage.index, next = Math.min(at + 1, 4);
+  const gaps = (LADDER[next - 1]?.biz || []).concat(LADDER[next - 1]?.meet || []).filter(id => p.nodes[id] === "red");
+  $("homeEyebrow").textContent = `Your family office · ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`;
+  $("homeLine").innerHTML = at === 0 ? `Today, if you were out tomorrow, Florida's default rules would decide who runs the business.${gaps.length ? ` ${gaps.length === 1 ? "One gap stands" : gaps.length + " gaps stand"} between you and Stage 1: <em>${gaps.map(g => esc(LABEL[g].toLowerCase())).join(", ")}</em>.` : ""}` : `You are at Stage ${at}: ${esc(p.stage.name.toLowerCase())}.`;
+  let h = `<div class="lhead" role="row"><div role="columnheader">Stage</div><div role="columnheader">The business</div><div role="columnheader">Where they meet</div><div role="columnheader">Your family office</div></div>`;
+  h += `<div class="step today" role="row"><div class="sname"><span class="n">Today</span><b>Where you stand</b><span class="plate"><span>Off your plate</span>${at === 0 ? "Nothing yet. Every decision, signature and family question passes through you." : "Stages up to " + at + " are in place."}</span></div><div></div><div class="meet"></div><div></div></div>`;
+  LADDER.forEach((s, i) => {
+    h += `<div class="step${i + 1 === next && at < 4 ? " next" : ""}" role="row"><div class="sname"><span class="n">${s.n}${i + 1 === next && at < 4 ? " · next" : ""}</span><b>${s.name}</b><span class="plate"><span>Off your plate</span>${s.plate}</span></div>
+      <div class="items" data-lane="The business">${chips(s.biz, p.nodes)}${s.exit ? `<span class="it">${s.exit}</span>` : ""}</div><div class="meet items" data-lane="Where they meet">${chips(s.meet, p.nodes)}</div><div class="items" data-lane="Your family office">${chips(s.fam, p.nodes)}</div></div>`;
+  });
+  $("ladder").innerHTML = h;
+  const defs = Object.fromEntries(p.defs.map(d => [d.id, d]));
+  $("ladder").querySelectorAll("[data-node]").forEach(g => g.onclick = () => {
+    const id = g.dataset.node, d = defs[id];
+    $("nodeInfo").innerHTML = `<strong>${esc(LABEL[id])}</strong>: ${esc(WORD[p.nodes[id]] || "Not yet assessed")}.${d ? ` What puts it in place: ${esc(d.satisfiedBy)}.` : ""}${p.blocked[id] ? ` Waiting on: ${p.blocked[id].map(x => esc(LABEL[x] || x)).join(", ")}.` : ""}`;
+  });
+  const open = Object.keys(LABEL).filter(id => p.nodes[id] === "red").map(id => {
+    const st = LADDER.findIndex(s => s.biz.concat(s.meet, s.fam).includes(id)) + 1;
+    return `<li><b>${esc(LABEL[id])}</b><span class="meta">Stage ${st} ${st === next ? "gap" : "step"}${p.blocked[id] ? " · waiting on " + p.blocked[id].map(x => esc(LABEL[x] || x)).join(", ") : ""}</span></li>`;
+  });
+  $("openNow").innerHTML = open.join("") || '<li class="meta">Nothing open right now.</li>';
+  figs(b?.budget, "figs");
+  const { questions } = await api("/api/frontdoor");
+  const onAgenda = questions.filter(q => q.agenda_position != null && !q.confirmed_scope).length;
+  $("thuSum").textContent = onAgenda ? `${onAgenda} of your question${onAgenda === 1 ? "" : "s"} on the agenda, in the order your plan needs them.` : "No questions on the agenda yet. Ask one any time.";
+}
+function figs(bud, id) {
+  $(id).innerHTML = bud ? `<span>Onboarding</span><b>${money(bud.onboarding_fee)}</b><span>Approved change orders</span><b>${money(bud.approved)}</b><span>Completed</span><b>${money(bud.completed)}</b><span>Estimates, not yet approved</span><b>${money(bud.allowances)}</b>` : '<span class="meta">Not available.</span>';
+}
+
+// ---- Thursday ----
+async function loadThursday() {
+  const { questions } = await api("/api/frontdoor");
+  const list = questions.filter(q => q.agenda_position != null).sort((a, b) => a.agenda_position - b.agenda_position);
+  $("agendaList").innerHTML = list.map((q, i) => `<li><span><b style="font-family:var(--display);color:var(--pine);margin-right:8px">${i + 1}</b>${q.withheld ? "<em>Sent to Josh directly</em>" : esc(q.body)}</span><span class="meta">${q.confirmed_scope ? "Answered" : "On the agenda"}</span></li>`).join("") || '<li class="meta">Nothing on the agenda yet.</li>';
+}
+
+// ---- Questions ----
 async function loadAsk() {
   const { questions } = await api("/api/frontdoor");
-  $("answers").innerHTML = questions.map(q => `<div class="card"><div class="mine">${q.withheld ? "<em>Your message was sent to Josh directly and is not stored here.</em>" : esc(q.body)}${q.outside_text ? `<div class="small">Pasted for checking: ${esc(q.outside_text)}</div>` : ""}</div>${q.reply ? autoBlock(q.reply) : ""}${q.confirmed_scope ? `<div class="small">Josh confirmed: ${q.confirmed_scope === "included" ? "included in your subscription" : q.confirmed_scope === "quoted" ? "a change order (quoted before work starts)" : "partly included, partly a change order"}</div>` : ""}</div>`).join("");
+  $("answers").innerHTML = questions.map(q => `<section class="panel"><div class="eyebrow">You asked, ${esc(new Date(q.asked_at).toLocaleDateString("en-US", { month: "long", day: "numeric" }))}</div><div class="mine">${q.withheld ? "<em>Your message was sent to Josh directly and is not stored here.</em>" : esc(q.body)}${q.outside_text ? `<div class="meta">Pasted for checking: ${esc(q.outside_text)}</div>` : ""}</div>${q.reply ? autoBlock(q.reply) : ""}${q.confirmed_scope ? `<div class="meta">Josh confirmed: ${q.confirmed_scope === "included" ? "included in your subscription" : q.confirmed_scope === "quoted" ? "a change order (quoted before work starts)" : "partly included, partly a change order"}</div>` : ""}</section>`).join("");
 }
 $("askBtn").onclick = run(async () => {
   if (!$("q").value.trim()) return; $("askBtn").disabled = true;
@@ -153,11 +292,11 @@ $("askBtn").onclick = run(async () => {
   finally { $("askBtn").disabled = false; }
 });
 
-// ---- Intake ----
+// ---- Documents: intake conversation, uploads, profile ----
 async function loadThread() {
   const { turns } = await api("/api/intake/turns");
   $("thread").innerHTML = turns.map(t => t.speaker === "agent" ? autoBlock({ lines: (t.body || "").split("\n") }) :
-    `<div class="mine">${t.withheld ? "<em>Sent to Josh directly; not stored here.</em>" : esc(t.body)}</div>`).join("") || '<p class="small">No intake conversation yet. Select "Start or resume intake".</p>';
+    `<div class="mine">${t.withheld ? "<em>Sent to Josh directly; not stored here.</em>" : esc(t.body)}</div>`).join("") || '<p class="meta">No questions yet. Select "Start or resume".</p>';
   $("thread").scrollTop = $("thread").scrollHeight;
 }
 $("startBtn").onclick = run(async () => { await api("/api/intake/start", { body: "{}" }); await loadThread(); });
@@ -173,45 +312,22 @@ $("upBtn").onclick = run(async () => {
     $("upOut").innerHTML = autoBlock(r); $("file").value = "";
   } finally { $("upBtn").disabled = false; }
 });
-
-// ---- Plan ----
-const POS = { N0:[0,2], N2:[1,2], N5:[1,0], N7:[1,4], N3:[2,3], N4:[2,2], N8:[2,1], N1:[2,0], N10:[2,4], N12:[3,4], N6:[3,2], N9:[3,1], N11:[3,0], N14:[4,2], N15a:[5,1], N15b:[5,2], N15c:[5,3] };
-const LABEL = { N0:"Trigger", N1:"Notice tree", N2:"Authority", N3:"Alternate manager", N4:"Bank access", N5:"Cash reserve", N6:"Payroll", N7:"Insurance", N8:"Credentials", N9:"Customers", N10:"Lease & guaranties", N11:"Licenses", N12:"Key staff", N14:"Day-30 decision", N15a:"Continue", N15b:"Sell", N15c:"Wind down" };
-const EDGES = [["N0","N2"],["N0","N1"],["N2","N3"],["N2","N4"],["N2","N8"],["N2","N10"],["N2","N12"],["N2","N11"],["N4","N6"],["N5","N6"],["N8","N6"],["N8","N9"],["N2","N9"],["N2","N14"],["N4","N14"],["N6","N14"],["N14","N15a"],["N14","N15b"],["N14","N15c"],["N9","N15b"],["N12","N15b"],["N5","N15c"],["N10","N15c"],["N7","N15b"]];
-const COLOR = { green: "var(--good)", amber: "var(--warn)", red: "var(--crit)" };
-const WORD = { green: "In place", amber: "In place, review due", red: "Gap", planned: "Planned", unassessed: "Not yet assessed" };
-async function loadPlan() {
-  const p = await api("/api/plan");
-  $("steps").innerHTML = p.stages.map((n, i) => `<span class="step ${i === p.stage.index ? "on" : i < p.stage.index ? "done" : ""}">${i}. ${esc(n)}</span>`).join("");
-  const xy = id => [75 + POS[id][0] * 162, 40 + POS[id][1] * 80];
-  let svg = EDGES.map(([a, b]) => { const [x1, y1] = xy(a), [x2, y2] = xy(b); return `<line x1="${x1 + 60}" y1="${y1}" x2="${x2 - 60}" y2="${y2}" stroke="var(--line)" stroke-width="1.5"/>`; }).join("");
-  svg += Object.keys(POS).map(id => { const [x, y] = xy(id), st = p.nodes[id], fill = COLOR[st] || "var(--plan)";
-    return `<g data-node="${id}" style="cursor:pointer" tabindex="0"><rect x="${x - 60}" y="${y - 16}" width="120" height="32" rx="6" fill="var(--card)" stroke="${fill}" stroke-width="2.5"/><circle cx="${x - 48}" cy="${y}" r="5" fill="${fill}"/><text x="${x - 38}" y="${y + 4}">${LABEL[id]}</text></g>`; }).join("");
-  $("path").innerHTML = svg;
-  const defs = Object.fromEntries(p.defs.map(d => [d.id, d]));
-  $("path").querySelectorAll("[data-node]").forEach(g => g.onclick = g.onkeydown = () => {
-    const id = g.dataset.node, d = defs[id];
-    $("nodeInfo").innerHTML = `<strong>${esc(LABEL[id])}</strong>: ${esc(WORD[p.nodes[id]] || "Not yet assessed")}. Needs: ${esc(d.satisfiedBy)}.${p.blocked[id] ? ` Waiting on: ${p.blocked[id].map(x => esc(LABEL[x] || x)).join(", ")}.` : ""}`;
-  });
-  const RUNG = { C1:"Who receives the business interest", C2:"Who runs it on day one", C3:"Authority documents", C4:"Buy-sell funding", C5:"Guaranties", C6:"Exit proceeds", C7:"Lifetime transfers", C8:"Family liaison" };
-  $("rungs").innerHTML = Object.keys(RUNG).map(k => `<tr><td>${RUNG[k]}</td><td><span class="pill" style="border-color:${COLOR[p.nodes[k]] || "var(--line)"}">${esc(WORD[p.nodes[k]] || "Not yet assessed")}</span></td></tr>`).join("");
-}
-
-// ---- Profile ----
 async function loadProfile() {
   const p = await api("/api/profile");
   const basis = b => b === "described" ? "described by you" : b;
-  $("prof").innerHTML = p.profile.map(r => `<tr><td>${esc(r.field)}</td><td>${esc(r.value)}</td><td class="small">${esc(r.source)} · ${esc(basis(r.basis))}</td></tr>`).join("") || '<tr><td colspan="3" class="small">Nothing yet.</td></tr>';
-  $("conf").innerHTML = p.conflicts.map(c => `<tr><td>${esc(c.field)}</td><td>${esc(c.value_a)} <span class="small">(${esc(c.source_a)})</span></td><td>${esc(c.value_b)} <span class="small">(${esc(c.source_b)})</span></td></tr>`).join("") || '<tr><td colspan="3" class="small">None.</td></tr>';
+  $("prof").innerHTML = p.profile.map(r => `<tr><td>${esc(r.field)}</td><td>${esc(r.value)}</td><td class="meta">${esc(r.source)} · ${esc(basis(r.basis))}</td></tr>`).join("") || '<tr><td colspan="3" class="meta">Nothing yet.</td></tr>';
+  $("conf").innerHTML = p.conflicts.map(c => `<tr><td>${esc(c.field)}</td><td>${esc(c.value_a)} <span class="meta">(${esc(c.source_a)})</span></td><td>${esc(c.value_b)} <span class="meta">(${esc(c.source_b)})</span></td></tr>`).join("") || '<tr><td colspan="3" class="meta">None.</td></tr>';
 }
+
+// ---- Scope & budget ----
+async function loadBudget() { const b = await api("/api/board"); figs(b.budget, "figs2"); }
 
 (async () => {
   if (!AS || !WS) { $("err").textContent = "Development sign-in: add ?as=<person-id>&ws=<workspace-id> to the address."; return; }
   $("boardLink").href = `/board?as=${encodeURIComponent(AS)}&ws=${encodeURIComponent(WS)}`;
   try {
-    const me = await api("/api/me"); $("title").textContent = me.client; $("who").textContent = me.name;
-    const p = await api("/api/plan"); $("stageLine").textContent = `Stage ${p.stage.index}: ${p.stage.name}`;
-    await loadAsk();
+    const me = await api("/api/me"); $("title").textContent = me.client; $("who").textContent = `Your family office · ${me.name}`;
+    await loadHome();
   } catch (e) { $("err").textContent = e.message; }
 })();
 </script>
