@@ -19,7 +19,9 @@ export function renderReply(b: Brief, titles: Map<string, string>, position: num
   if (b.urgent) return urgentReply();
   const lines: string[] = [];
   for (const d of b.documents_say.slice(0, MAX_QUOTES)) lines.push(`Here's what your ${titles.get(d.doc) ?? d.doc} says about this: ${d.says} (${d.doc}, ${d.section})`);
-  if (b.facts_needed.length) lines.push(`To prepare this for Thursday, I need: ${b.facts_needed.join("; ")}`);
+  // Numbered, each keeping its own punctuation: "(1) Did …? (2) Please upload …."
+  const item = (f: string) => { const t = f.trim(); return /[.?!]$/.test(t) ? t : t + "."; };
+  if (b.facts_needed.length) lines.push(`To prepare this for Thursday, I need: ${b.facts_needed.map((f, i) => `(${i + 1}) ${item(f)}`).join(" ")}`);
   lines.push(`This is on Thursday's agenda, position ${position}.`);
   const reply: Reply = { lines };
   if (b.check_this.length) {
