@@ -15,7 +15,7 @@ env:
   GCP_RUN_SA: oew-run@owner-exit-demo.iam.gserviceaccount.com
   CLOUD_SQL_INSTANCE: owner-exit-demo:us-east1:oew-demo
   ANTHROPIC_ORGANIZATION_ID: cd7121a4-669b-4dda-a1de-ad2f59a785bb
-  ANTHROPIC_SERVICE_ACCOUNT_ID: ""   # svac_… for oew-demo-run; optional for the exchange
+  ANTHROPIC_SERVICE_ACCOUNT_ID: svac_015dozexKM6KYtj48wyFjioN   # oew-demo-run
   ANTHROPIC_FEDERATION_RULE_ID: fdrl_01H4KwQqCr95wS4QMmmvvFpY   # gcp-oew-demo
 jobs:
   test:
