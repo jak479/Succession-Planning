@@ -25,7 +25,7 @@ The Firm represents the Company under a separate letter dated [ ]. In that engag
 
 **(B) Coordination only.** Your personal documents are prepared by [other counsel]. The Firm will not draft them. The Firm's work for you is limited to reviewing your personal documents for consistency with the Company's plan at onboarding and annual review, reporting inconsistencies to you and, with your consent, to your other counsel, and advising you on the items in Section 4. No separate fee; this work is allocated as in Section 6.
 
-**(C) Your role after you step back** (by change order under this letter, approved in writing before work starts). The Firm will prepare and negotiate, for you, the terms of your role after you step back: [consulting or employment agreement; redemption or buy-sell terms for your interest; non-compete; the step-down of your authority]. Fee: $[ ], stated in the change order.
+**(C) Your role after you step back** (by change order under this letter, approved in writing before work starts). The Firm will prepare, for you, the terms of your role after you step back: [consulting or employment agreement; redemption or buy-sell terms for your interest; non-compete; the step-down of your authority]. Where the Company is the other party to those terms, the Firm will act for both you and the Company only if the Firm reasonably believes it can represent each of you competently and diligently, and you and the Company each give informed consent, confirmed in writing in that change order, after the Firm explains the implications, advantages and risks of acting for both (Rule 4-1.7(b) and (c)). The Firm will not act for both, and one of you will need other counsel for those terms, if: the Company has another owner; the person acting for the Company on those terms is the buyer or will control the Company after you step back; [the terms would leave the Company unable to pay its debts as they come due]; or you and the Company disagree on the terms. Fee: $[ ], stated in the change order.
 
 Anything else — Medicaid or long-term-care planning, asset-protection planning, estate or gift tax planning, guardianship, or representation in any dispute — is outside this engagement and will be proposed by change order under this letter if you want it.
 
@@ -83,3 +83,11 @@ Date: __________
 6. Exit proceeds (Medicaid, asset protection, basis and estate tax ↔ sale structure and timing)
 7. Lifetime transfer to an insider (gift/estate tax and equalization ↔ transfer mechanics and control)
 8. Family liaison (who speaks for the family ↔ who the manager takes direction from)
+
+
+---
+
+## Drafter's notes
+
+- § 2(C) and entity letter § 7 checked against Rule 4-1.7 text and comment (pasted by Josh, 2026-11-03; amended through June 1, 2014). Basis: the comment permits common representation in a negotiation "where the clients are generally aligned in interest even though there is some difference of interest among them," and bars it where interests are "fundamentally antagonistic"; the four carve-outs are the antagonistic cases. Each change order also needs the disinterested-lawyer check (comment, "Consultation and consent").
+- Walk to before first execution: Rule 4-1.13 (who may consent for the Company when [Owner] is the only member and the person to be represented); ch. 605 limits on distributions, for the bracketed solvency carve-out.

@@ -87,6 +87,8 @@ The Firm provides a secure online workspace for the Company's engagement. It hol
 
 [If multi-member:] The Firm represents the Company, not its members. The Firm has disclosed that it is not representing [other members], and that the interests of members may diverge from the Company's, including on succession, buyout, and valuation. Each member has been advised that they may retain separate counsel.
 
+**[Owner]'s role after stepping back.** If [Owner] asks the Firm to prepare the terms of [Owner]'s role after stepping back (consulting or employment, redemption of the interest, non-compete) and the Company is the other party, the Firm will act for both only on the conditions in Section 2(C) of [Owner]'s personal engagement letter, and only with the Company's informed consent, confirmed in writing in that change order and given by [an authorized person other than [Owner] / the members] (Rule 4-1.13). If those conditions are not met, the Firm will act for [the Company / [Owner]] and the other will need separate counsel for those terms.
+
 ## 8. Capacity of the signer
 
 The Firm's engagement assumes the Company's authorized signer has capacity. If a question of capacity arises, the Firm will address it on the call; matters involving a signer's capacity are handled outside the workspace under separate terms.

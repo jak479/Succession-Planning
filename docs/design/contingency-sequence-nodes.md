@@ -34,7 +34,7 @@ Status values: GREEN (satisfied, in date) · AMBER (satisfied, review due) · RE
 
 ## Stage mapping (decided 2026-11-03)
 S0 where you stand today · S1 short-term disability covered (N0, N2, N4, N5, N6) · S2 long-term disability covered (N7, N14, C1, C2, C3, C8) · S3 ready to retire (N15a–c, R1, R2) · S4 your next chapter (exit event). The S1/S2 boundary is the day the owner's disability benefit starts, read from the policy (N7); 90 days if there is no policy. N5's reserve is sized to that boundary. Client surfaces say "disability"; no medical information is stored, and each stage page carries the line "Your plan covers being out, not the reason."
-Open: R2 is priced as a change order under the owner letter; no price set yet (pro-forma prices are locked). N10 and N12 show as Stage 1 gaps on the home page but are not in the S1 gate; decide whether they join it.
+R2 change orders need two written consents (owner, and the Company by someone other than the owner or by the members) and the attorney's 4-1.7 check before work starts; the board's signature step must collect both. Open: no R2 price set yet (pro-forma prices are locked). N10 and N12 show as Stage 1 gaps on the home page but are not in the S1 gate; decide whether they join it.
 
 ## Coordination nodes (estate plan ↔ exit plan)
 
