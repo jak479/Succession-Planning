@@ -148,5 +148,20 @@ Not yet in item 3: automated record pulls; Google Drive import; Plaid and payrol
 - **One-time setup:** `deploy/gcp-setup.sh` in Cloud Shell, then an Anthropic Console rule for the runtime service account (claims `sub` and `email`; audience `https://api.anthropic.com`).
 - **Before any real client:** real sign-in in place of the demo; zero data retention confirmed; Google's terms checked under Op. 12-3; repository private; a separate production project and database.
 
+## Client experience: structure and flow (decided 2026-11-03)
+Wireframes: Design canvas artifact "Owner Exit Workspace: Structure & Flow" (private; Josh's claude.ai account).
+- **Home is the plan.** The client lands on a two-track journey (business above, owner and family below, rungs where they must agree), Stage 0 to exit, gaps marked; under it, what closes each gap (from you / from Josh / on Thursday).
+- **Answers are released after the call.** The front door returns only the five permitted forms; the attorney's answer reaches the client's question page when the call summary is released (engagement letter § 5: the record unless the client objects within 5 business days).
+- **Thursday's agenda is set by the plan.** Each item carries a client-visible reason. Order:
+  1. Urgent (stop-rule) matters go outside the agenda: "Not waiting for Thursday."
+  2. Deadlines within 90 days, earliest first: "Taken up first: <what> <date>, <n> days away."
+  3. Path to the next stage, upstream node first: "On the path to Stage <n>: <step>."
+  4. Other plan gaps, by stage.
+  5. Reserved in-house slot (Schedule A), 10 of 30 minutes, oldest first.
+  6. Overflow goes to the next call: "Next in line for <date>: this call is full." Items that depend on a later stage are held: "Taken up at Stage <n>: it depends on <step>."
+  7. The attorney may move any item; moving requires a reason, and the client sees it.
+- Not built: the ordering engine (node dependencies, deadline extraction, per-item time estimates).
+- The client sees ordering reasons only; scope classification stays attorney-only until confirmed on the call (rule 2).
+
 ## Not yet built in item 1
 Scan findings, front-door briefs, and scope classification (attorney-only until confirmed) are item 2–4 tables.
