@@ -2,37 +2,60 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Attorney Console</title>
+<title>Practice Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400..700&family=Public+Sans:wght@400;500;600&display=swap">
 <style>
-:root{--bg:#f7f6f2;--card:#fff;--ink:#1d2321;--muted:#5d6763;--line:#d9d6cc;--accent:#2d5b8a;--good:#2f7d4f;--warn:#b7791f;--crit:#b23a3a;--note:#fbf3e4}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#141716;--card:#1e2220;--ink:#e8ebe9;--muted:#9aa5a0;--line:#343a37;--accent:#7fb0e0;--good:#5cbf84;--warn:#e0a84a;--crit:#e57373;--note:#2b2618}}
-:root[data-theme="dark"]{--bg:#141716;--card:#1e2220;--ink:#e8ebe9;--muted:#9aa5a0;--line:#343a37;--accent:#7fb0e0;--good:#5cbf84;--warn:#e0a84a;--crit:#e57373;--note:#2b2618}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
-header{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline}
-h1{font-size:18px;margin:0}.muted,.small{color:var(--muted)}.small{font-size:13px}
-nav{display:flex;gap:4px;padding:8px 16px;border-bottom:1px solid var(--line);overflow-x:auto}
-nav button{background:transparent;color:var(--ink);border:1px solid transparent;border-radius:6px;padding:6px 12px;font:inherit;cursor:pointer;white-space:nowrap}
-nav button[aria-selected="true"]{border-color:var(--line);background:var(--card);font-weight:600}
-nav .count{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:999px;background:var(--warn);color:#fff;font-size:12px;text-align:center}
-main{max-width:1100px;margin:0 auto;padding:16px}
-section[hidden],[hidden]{display:none !important}
-.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px}
-h2{font-size:16px;margin:0 0 8px}h3{font-size:14px;margin:12px 0 4px}
+/* Attorney console, look B quieter (decided 2026-11-03): dark header marks attorney-only; same type and colors as the client workspace, denser. */
+:root{--ground:#f2f4f3;--page:#fff;--ink:#22282b;--muted:#5f686c;--rule:#dfe3e1;--soft:#fafbfa;--pine:#1f4d3d;--pine-soft:#e5efeb;--on-pine:#fff;--brass:#8c6d2c;--gap:#a8321f;--gap-soft:#f8ebe8;--wait:#8a5a00;--wait-soft:#f7efdf;--bar:#22282b;--bar-ink:#e4e9e7;--bar-on:#3a4448;
+  --display:"Source Serif 4",Georgia,serif;--body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ground:#121615;--page:#1b2120;--ink:#e6ebe9;--muted:#9fa9a6;--rule:#313937;--soft:#171c1b;--pine:#7cc2a6;--pine-soft:#1f3229;--on-pine:#0f1a15;--brass:#d0b172;--gap:#ef8b78;--gap-soft:#3a201b;--wait:#e0b45c;--wait-soft:#302714;--bar:#0b0e0d;--bar-ink:#d7dedb;--bar-on:#26302d;color-scheme:dark}}
+:root[data-theme="dark"]{--ground:#121615;--page:#1b2120;--ink:#e6ebe9;--muted:#9fa9a6;--rule:#313937;--soft:#171c1b;--pine:#7cc2a6;--pine-soft:#1f3229;--on-pine:#0f1a15;--brass:#d0b172;--gap:#ef8b78;--gap-soft:#3a201b;--wait:#e0b45c;--wait-soft:#302714;--bar:#0b0e0d;--bar-ink:#d7dedb;--bar-on:#26302d;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font:15px/1.55 var(--body)}
+a{color:var(--pine)} a:focus-visible,button:focus-visible{outline:2px solid var(--pine);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{background:var(--page);border-bottom:1px solid var(--rule)}
+header.top .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 24px;padding-block:14px}
+header.top.atty{background:var(--bar);border-bottom:0}
+.firm{font-family:var(--display);font-size:20px;font-weight:600}
+.firm small{display:block;font-family:var(--body);font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.atty .firm{color:#fff} .atty .firm small,.atty .who,.atty a.who{color:var(--bar-ink)}
+.who{font-size:13px;color:var(--muted)}
+h1{font-family:var(--display);font-weight:500;font-size:28px;line-height:1.15;margin:0 0 6px;text-wrap:balance}
+h2{font-family:var(--display);font-size:19px;font-weight:600;margin:0 0 8px;line-height:1.25}
+h3{font-family:var(--display);font-size:16px;font-weight:600;margin:14px 0 6px}
+.muted,.small{color:var(--muted)} .small{font-size:13px}
+.err{color:var(--gap);min-height:1.3em;font-size:14px}
 label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
-textarea,input,select{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
-button{font:inherit;padding:6px 12px;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;margin:8px 6px 0 0}
-button.ghost{background:transparent;color:var(--accent)}button.warn{border-color:var(--crit);background:transparent;color:var(--crit)}
-table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;vertical-align:top;padding:7px 6px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:600;font-size:13px}
-.note{background:var(--note);border-radius:6px;padding:8px 10px;margin:6px 0;font-size:14px}
-.client{border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:6px 0}
-.pill{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:999px;padding:1px 8px;margin-right:4px}
-.pill.good{border-color:var(--good);color:var(--good)}.pill.warn{border-color:var(--warn);color:var(--warn)}.pill.crit{border-color:var(--crit);color:var(--crit)}
-.err{color:var(--crit);min-height:1.3em}
+textarea,input,select{width:100%;font:inherit;padding:9px 10px;border:1px solid var(--rule);border-radius:10px;background:var(--page);color:var(--ink)}
+button{font:inherit;font-weight:600;font-size:14px;padding:8px 16px;border-radius:999px;border:1px solid var(--pine);background:var(--pine);color:var(--on-pine);cursor:pointer;margin:8px 6px 0 0}
+button.ghost{background:transparent;color:var(--pine)}
+button.warn{border-color:var(--gap);background:transparent;color:var(--gap)}
+button:disabled{opacity:.5;cursor:default}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--rule)}
+td{padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+tr:last-child td{border-bottom:0}
+.pill{display:inline-block;font-size:12px;font-weight:600;border:1px solid var(--rule);border-radius:999px;padding:1px 9px;margin:2px 4px 2px 0}
+.pill.good{background:var(--pine-soft);border-color:var(--pine-soft);color:var(--pine)}
+.pill.warn{border:1px dashed var(--wait);color:var(--wait)}
+.pill.crit{background:var(--gap-soft);border-color:var(--gap);color:var(--gap)}
+nav.tabs{background:var(--page);border-bottom:1px solid var(--rule)}
+nav.tabs .wrap{display:flex;gap:4px;overflow-x:auto;padding-block:8px}
+nav.tabs button{background:transparent;color:var(--ink);border:0;margin:0;font-weight:500;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{background:var(--pine-soft);color:var(--pine);font-weight:600}
+nav .count{display:inline-block;min-width:18px;padding:0 6px;margin-left:6px;border-radius:999px;background:var(--gap);color:#fff;font-size:11px;text-align:center}
+main.wrap{padding-block:24px}
+section[hidden],[hidden]{display:none !important}
+.card{background:var(--page);border:1px solid var(--rule);border-radius:12px;padding:18px;margin-bottom:16px}
+.note{background:var(--wait-soft);border-radius:8px;padding:9px 12px;margin:6px 0;font-size:14px}
+.client{border-left:3px solid var(--pine);padding:4px 0 4px 12px;margin:8px 0}
 </style>
 </head>
 <body>
-<header><h1 id="title">Attorney console</h1><span id="who" class="muted"></span><span class="small">Nothing on this page is shown to the client.</span></header>
-<nav role="tablist">
+<header class="top atty"><div class="wrap"><div class="firm"><span id="title">Practice console</span><small>Attorney only · nothing here is shown to the client</small></div><span id="who" class="who"></span></div></header>
+<nav class="tabs" role="tablist" aria-label="Console"><div class="wrap">
   <button role="tab" data-tab="conflicts" aria-selected="true">Conflicts<span class="count" id="nConf" hidden></span></button>
   <button role="tab" data-tab="briefs">Front-door briefs<span class="count" id="nBriefs" hidden></span></button>
   <button role="tab" data-tab="agenda">Intake agenda<span class="count" id="nAgenda" hidden></span></button>
@@ -40,8 +63,8 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;v
   <button role="tab" data-tab="profile">Profile</button>
   <button role="tab" data-tab="intake">Intake transcript</button>
   <button role="tab" data-tab="board">Board</button>
-</nav>
-<main>
+</div></nav>
+<main class="wrap">
   <div class="err" id="err" role="alert"></div>
 
   <section id="tab-conflicts">
@@ -150,7 +173,7 @@ $("build").onclick = run(async () => { $("buildOut").textContent = " Building…
   try {
     const me = await api("/api/me");
     if (me.role !== "attorney") { $("err").textContent = "This page is for the attorney."; document.querySelector("main").querySelectorAll("section").forEach(s => s.hidden = true); return; }
-    $("title").textContent = me.client + " · attorney console"; $("who").textContent = `${me.name} · ${me.tier} tier`;
+    $("title").textContent = me.client; $("who").textContent = `${me.name} · ${me.tier} tier`;
     await loadConflicts();
     await Promise.all([loadBriefs(), loadAgenda(), loadQueue()].map(p => p.catch(() => {})));
   } catch (e) { $("err").textContent = e.message; }

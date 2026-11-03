@@ -2,45 +2,78 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Plan Board</title>
+<title>Scope and Budget</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400..700&family=Public+Sans:wght@400;500;600&display=swap">
 <style>
-:root{--bg:#f7f6f2;--card:#fff;--ink:#1d2321;--muted:#5d6763;--line:#d9d6cc;--accent:#2d5b8a;--good:#2f7d4f;--warn:#b7791f;--crit:#b23a3a}
-@media (prefers-color-scheme: dark){:root{--bg:#141716;--card:#1e2220;--ink:#e8ebe9;--muted:#9aa5a0;--line:#343a37;--accent:#7fb0e0;--good:#5cbf84;--warn:#e0a84a;--crit:#e57373}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
-header{padding:16px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px 20px;align-items:baseline}
-h1{font-size:18px;margin:0}.muted,.small{color:var(--muted)}.small{font-size:13px}
-main{padding:16px;max-width:1200px;margin:0 auto}
-.kanban{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+/* Board, look B (decided 2026-11-03). Client and attorney share it; the attorney view gets the dark console header. */
+:root{--ground:#f2f4f3;--page:#fff;--ink:#22282b;--muted:#5f686c;--rule:#dfe3e1;--soft:#fafbfa;--pine:#1f4d3d;--pine-soft:#e5efeb;--on-pine:#fff;--brass:#8c6d2c;--gap:#a8321f;--gap-soft:#f8ebe8;--wait:#8a5a00;--wait-soft:#f7efdf;--bar:#22282b;--bar-ink:#e4e9e7;--bar-on:#3a4448;
+  --display:"Source Serif 4",Georgia,serif;--body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ground:#121615;--page:#1b2120;--ink:#e6ebe9;--muted:#9fa9a6;--rule:#313937;--soft:#171c1b;--pine:#7cc2a6;--pine-soft:#1f3229;--on-pine:#0f1a15;--brass:#d0b172;--gap:#ef8b78;--gap-soft:#3a201b;--wait:#e0b45c;--wait-soft:#302714;--bar:#0b0e0d;--bar-ink:#d7dedb;--bar-on:#26302d;color-scheme:dark}}
+:root[data-theme="dark"]{--ground:#121615;--page:#1b2120;--ink:#e6ebe9;--muted:#9fa9a6;--rule:#313937;--soft:#171c1b;--pine:#7cc2a6;--pine-soft:#1f3229;--on-pine:#0f1a15;--brass:#d0b172;--gap:#ef8b78;--gap-soft:#3a201b;--wait:#e0b45c;--wait-soft:#302714;--bar:#0b0e0d;--bar-ink:#d7dedb;--bar-on:#26302d;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font:15px/1.55 var(--body)}
+a{color:var(--pine)} a:focus-visible,button:focus-visible{outline:2px solid var(--pine);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{background:var(--page);border-bottom:1px solid var(--rule)}
+header.top .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 24px;padding-block:14px}
+header.top.atty{background:var(--bar);border-bottom:0}
+.firm{font-family:var(--display);font-size:20px;font-weight:600}
+.firm small{display:block;font-family:var(--body);font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.atty .firm{color:#fff} .atty .firm small,.atty .who,.atty a.who{color:var(--bar-ink)}
+.who{font-size:13px;color:var(--muted)}
+h1{font-family:var(--display);font-weight:500;font-size:28px;line-height:1.15;margin:0 0 6px;text-wrap:balance}
+h2{font-family:var(--display);font-size:19px;font-weight:600;margin:0 0 8px;line-height:1.25}
+h3{font-family:var(--display);font-size:16px;font-weight:600;margin:14px 0 6px}
+.muted,.small{color:var(--muted)} .small{font-size:13px}
+.err{color:var(--gap);min-height:1.3em;font-size:14px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+textarea,input,select{width:100%;font:inherit;padding:9px 10px;border:1px solid var(--rule);border-radius:10px;background:var(--page);color:var(--ink)}
+button{font:inherit;font-weight:600;font-size:14px;padding:8px 16px;border-radius:999px;border:1px solid var(--pine);background:var(--pine);color:var(--on-pine);cursor:pointer;margin:8px 6px 0 0}
+button.ghost{background:transparent;color:var(--pine)}
+button.warn{border-color:var(--gap);background:transparent;color:var(--gap)}
+button:disabled{opacity:.5;cursor:default}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--rule)}
+td{padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+tr:last-child td{border-bottom:0}
+.pill{display:inline-block;font-size:12px;font-weight:600;border:1px solid var(--rule);border-radius:999px;padding:1px 9px;margin:2px 4px 2px 0}
+.pill.good{background:var(--pine-soft);border-color:var(--pine-soft);color:var(--pine)}
+.pill.warn{border:1px dashed var(--wait);color:var(--wait)}
+.pill.crit{background:var(--gap-soft);border-color:var(--gap);color:var(--gap)}
+main.wrap{padding-block:24px}
+.kanban{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
 @media (max-width:820px){.kanban{grid-template-columns:1fr}}
-.col{background:transparent;border:1px solid var(--line);border-radius:8px;padding:8px;min-height:80px}
-.col h2{font-size:14px;margin:4px 4px 8px;display:flex;justify-content:space-between}
-.kcard{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:6px;padding:10px;margin-bottom:8px}
-.kcard.Done{border-left-color:var(--good)}.kcard.Scoped,.kcard.In{border-left-color:var(--accent)}.kcard.pending{border-left-color:var(--warn)}
-.t{font-weight:600}.note{background:color-mix(in srgb,var(--warn) 12%,transparent);border-radius:4px;padding:6px;margin-top:6px;font-size:13px}
-label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
-input,textarea,select{width:100%;font:inherit;padding:6px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}
-textarea{min-height:60px}button{font:inherit;padding:6px 10px;border-radius:4px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;margin-top:8px}
-button.ghost{background:transparent;color:var(--accent)}.acts{display:flex;flex-wrap:wrap;gap:6px}
-.budget{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:16px 0}
-.budget div{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px}.budget b{display:block;font-size:20px}
-.err{color:var(--crit);min-height:1.4em;margin:8px 0}.check{display:flex;gap:8px;align-items:flex-start}.check input{width:auto;margin-top:4px}
-section.add{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:16px}
+.col{background:var(--soft);border:1px solid var(--rule);border-radius:12px;padding:10px;min-height:90px}
+.col h2{font-family:var(--body);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:4px 6px 10px;display:flex;justify-content:space-between}
+.kcard{background:var(--page);border:1px solid var(--rule);border-top:3px solid var(--rule);border-radius:10px;padding:12px;margin-bottom:10px}
+.kcard.Done{border-top-color:var(--pine)}.kcard.Scoped,.kcard.In{border-top-color:var(--pine-soft)}.kcard.pending{border-top-color:var(--wait)}
+.t{font-family:var(--display);font-weight:600;font-size:16px;line-height:1.25}
+.note{background:var(--wait-soft);border-radius:8px;padding:8px 10px;margin-top:8px;font-size:13px}
+.acts{display:flex;flex-wrap:wrap;gap:6px}
+.budget{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.budget div{background:var(--page);border:1px solid var(--rule);border-radius:12px;padding:14px}
+.budget b{display:block;font-family:var(--display);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}
+.check{display:flex;gap:8px;align-items:flex-start}.check input{width:auto;margin-top:4px}
+section.add{background:var(--page);border:1px solid var(--rule);border-radius:12px;padding:16px;margin-bottom:18px}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--brass)}
 </style>
 </head>
 <body>
-<header><h1 id="title">Plan board</h1><span id="who" class="muted"></span><span id="stage" class="muted"></span></header>
-<main>
+<header class="top" id="hdr"><div class="wrap"><div class="firm"><span id="title">Scope and budget</span><small id="who"></small></div><span id="stage" class="who"></span><a id="back" class="who" style="margin-left:auto" href="#">Back</a></div></header>
+<main class="wrap">
+  <div style="margin-bottom:16px"><div class="eyebrow">Scope &amp; budget</div><h1>Change orders and budget</h1><p class="small" style="max-width:70ch;margin:0">Work in your subscription is included. Anything else is a change order, approved in writing before work starts.</p></div>
   <section class="add" id="add" hidden>
-    <strong>Add an item</strong>
+    <h2>Add an item</h2>
     <label for="co">Change-order catalog</label><select id="co"></select>
     <label for="finding">Finding (attorney only)</label><textarea id="finding"></textarea>
     <button id="addBtn" type="button">Add to Identified</button>
   </section>
   <div class="err" id="err" role="alert"></div>
   <div class="kanban" id="kanban"></div>
-  <h2 style="font-size:16px;margin-top:24px">Budget</h2>
+  <h2 style="margin-top:28px">Budget</h2>
   <div class="budget" id="budget"></div>
-  <p class="small">Allowances are planning estimates only. Nothing is payable on an allowance until it becomes an approved change order and the work is done.</p>
+  <p class="small">Estimates are for planning only. Nothing is payable on an estimate until it becomes an approved change order and the work is done.</p>
 </main>
 <script>
 const qs = new URLSearchParams(location.search), AS = qs.get("as"), WS = qs.get("ws");
@@ -49,6 +82,10 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
 const money = n => n == null ? "—" : "$" + Number(n).toLocaleString("en-US");
 const COLS = ["Identified", "Scoped", "In progress", "Done"];
 let data = null;
+// Client wording for plan steps (same as web/workspace.html); the attorney sees the ids.
+const LABEL = { N0:"When the plan starts", N1:"Who is told, in what order", N2:"Who is in charge", N3:"Alternate manager", N4:"Bank access", N5:"Cash reserve", N6:"Payroll", N7:"Disability insurance", N8:"Passwords and access", N9:"Customers and referral sources", N10:"Lease and guaranties", N11:"Licenses", N12:"Key staff", N14:"30-day decision", N15a:"Continue", N15b:"Sell", N15c:"Wind down",
+  R1:"Retirement income", R2:"Your role after you step back", F1:"Family governance", F2:"Advisor team", F3:"Holding structure for the proceeds",
+  C1:"Who receives the business", C2:"Who runs it on day one", C3:"Authority documents", C4:"Buy-sell funding", C5:"Guaranties", C6:"Exit proceeds", C7:"Lifetime transfers", C8:"Family contact" };
 
 async function api(path, body){
   const r = await fetch(path + (path.includes("?") ? "&" : "?") + "ws=" + encodeURIComponent(WS), {
@@ -59,10 +96,10 @@ async function act(path, body){ $("err").textContent = ""; try { await api(path,
 
 function card(it){
   const att = data.me.role === "attorney", pending = it.col === "Identified" && it.proposed_at;
-  let h = `<div class="t">${esc(it.title)}</div><div class="small">${esc((it.clears||[]).join(", "))}${it.schedule ? " · Schedule " + esc(it.schedule) : ""}</div>`;
+  let h = `<div class="t">${esc(it.title)}</div><div class="small">${att ? esc((it.clears||[]).join(", ")) + (it.schedule ? " · Schedule " + esc(it.schedule) : "") : "Moves forward: " + esc((it.clears||[]).map(c => LABEL[c] || c).join(", ")) + (it.schedule === "A" ? " · included in your subscription" : it.schedule === "B" ? " · change order" : "")}</div>`;
   if (att && (it.finding || it.attorney_note)) h += `<div class="note">${esc(it.finding)}${it.attorney_note ? "<br>" + esc(it.attorney_note) : ""}</div>`;
   if (it.col === "Identified") {
-    h += `<div class="small">Allowance (estimate): ${money(it.allowance)}</div>`;
+    h += `<div class="small">Estimate: ${money(it.allowance)}</div>`;
     if (pending) h += `<div class="small" style="margin-top:6px"><strong>Change order proposed: ${money(it.proposed_price)}</strong><br>${esc(it.scope_text)}</div>`;
     if (att) {
       if (it.schedule === "A") h += `<div class="acts"><button data-a="included" data-id="${it.id}">Scope as included (Schedule A)</button></div>`;
@@ -85,15 +122,15 @@ function card(it){
 
 function render(){
   const m = data.me;
-  $("title").textContent = m.client + " · plan board"; document.title = "Plan Board";
-  $("who").textContent = m.name + (m.role === "attorney" ? " (attorney)" : m.signer ? " (authorized signer)" : "");
+  $("title").textContent = m.client; $("back").href = `/${m.role === "attorney" ? "attorney" : "workspace"}?as=${encodeURIComponent(AS)}&ws=${encodeURIComponent(WS)}`; $("back").textContent = m.role === "attorney" ? "Back to the console" : "Back to your plan"; $("hdr").classList.toggle("atty", m.role === "attorney");
+  $("who").textContent = (m.role === "attorney" ? "Practice console · " : "Your family office · ") + m.name + (m.role === "attorney" ? "" : m.signer ? " · authorized signer" : "");
   $("stage").textContent = "Stage " + data.stage.index + ": " + data.stage.name;
   $("add").hidden = m.role !== "attorney";
   if (m.role === "attorney") $("co").innerHTML = data.catalog.map(c => `<option value="${esc(c.id)}">${esc(c.name)} (Sched. ${c.schedule}; clears ${esc(c.clears.join(", "))})</option>`).join("");
   $("kanban").innerHTML = COLS.map(col => { const cs = data.items.filter(i => i.col === col);
     return `<div class="col"><h2>${col}<span class="muted">${cs.length}</span></h2>${cs.map(card).join("") || '<div class="small">—</div>'}</div>`; }).join("");
   const b = data.budget || {};
-  $("budget").innerHTML = [["Onboarding (flat fee)", b.onboarding_fee], ["Approved change orders", b.approved], ["Completed", b.completed], ["Allowances (estimates)", b.allowances]]
+  $("budget").innerHTML = [["Onboarding (flat fee)", b.onboarding_fee], ["Approved change orders", b.approved], ["Completed", b.completed], ["Estimates, not yet approved", b.allowances]]
     .map(([k, v]) => `<div><span class="small">${k}</span><b>${money(v)}</b></div>`).join("");
   $("kanban").querySelectorAll("button[data-a]").forEach(btn => btn.onclick = () => {
     const id = btn.dataset.id, a = btn.dataset.a;
