@@ -52,7 +52,7 @@ import → profile → intake gate → path assigned → scan (findings, attorne
 ## Open decisions
 - Agent never drafts or fills in documents; owner-tier documents: existence, date, drafter only (decided 2026-11-02).
 - Anthropic API on zero data retention (decided 2026-11-02): no Files API, Batches, Managed Agents, Skills, MCP connector or code execution; engine on claude-opus-5-5. See docs/design/architecture.md.
-- Phase 3 (family office management): engagement letter outline in docs/engagement/family-office-engagement-outline.md; SEC family office rule read 2026-11-03 (the office is always the client's, never the Firm's); Rules 4-5.7 and 4-5.4 not yet read (floridabar.org blocks automated access; paste the text). F1–F3 coverage set to personal before the exit; confirm.
+- Phase 3 (family office management): engagement letter outline in docs/engagement/family-office-engagement-outline.md; SEC family office rule read 2026-11-03 (the office is always the client's, never the Firm's); Rule 4-5.4 read and applied 2026-11-03 (no fee sharing or joint practice with advisors; payer may not direct judgment); Rule 4-5.7 and 4-1.8(f) not yet read (floridabar.org blocks automated access; paste the text). F1–F3 coverage set to personal before the exit; confirm.
 - LEAP + WealthCounsel integration: confirm API terms with the vendors (docs/design/integrations.md).
 - Non-client front door: conflict names + one question only. (Current: yes.)
 - First-release API links: Plaid + payroll first; QuickBooks and mailbox search second.
