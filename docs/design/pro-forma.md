@@ -59,7 +59,7 @@
 | Solo 401(k) / SEP contribution at the 2026 limit | Reduces taxable profit by that amount; tax saved ≈ 42% of contribution |
 
 ## Positioning (adopted 2026-11-01)
-"The quarterback for owners whose wealth is the business." Theme: from being in business to live, to being in the business of living. The client is building a family office from the first meeting: formalizing and professionalizing the family's affairs so less passes through the owner (2026-11-03). Family-office coordination function, legal perimeter only: no investment advice, no custody of money, no bill pay. Above the MFO threshold, the practice is the family office's legal-side vendor at the Active tier.
+"The quarterback for owners whose wealth is the business." Theme: from being in business to live, to being in the business of living. The client is building a family office from the first meeting: formalizing and professionalizing the family's affairs so less passes through the owner (2026-11-03). On every surface the family office is the client's ("your family office"), never the Firm's: the Firm is not a family office under 17 C.F.R. § 275.202(a)(11)(G)-1. Family-office coordination function, legal perimeter only: no investment advice, no custody of money, no bill pay. Above the MFO threshold, the practice is the family office's legal-side vendor at the Active tier.
 
 ## Reframe (2026-11-03): exit leads into Phase 3
 The model above treats the exit as the end of the engagement, and the 25% churn includes exits. With Phase 3 (family office management) an exit converts to a Phase 3 engagement instead of churn. Phase 3 price, cadence and capacity are not modeled; set them before revising the year 1–2 figures.
