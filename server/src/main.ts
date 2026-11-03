@@ -27,8 +27,9 @@ const pool = process.env.CLOUD_SQL_INSTANCE
   ? new pg.Pool({ host: `/cloudsql/${process.env.CLOUD_SQL_INSTANCE}`, user: process.env.DB_USER ?? "postgres", password: process.env.DB_PASSWORD, database: process.env.DB_NAME ?? "oew", max: 5 })
   : new pg.Pool({ connectionString: process.env.DATABASE_URL });
 if (DEMO_MODE) {
-  const has = (await pool.query("select to_regclass('ws.person') t")).rows[0].t;
-  if (!has) { const c = await pool.connect(); try { await seedDemo(c); } finally { c.release(); } console.log("demo data seeded"); }
+  // Demo data only: (re)seed when the schema is missing or older than the newest migration (008 adds board_item.offer_good_through).
+  const current = (await pool.query("select exists (select 1 from information_schema.columns where table_schema = 'ws' and table_name = 'board_item' and column_name = 'offer_good_through') ok")).rows[0].ok;
+  if (!current) { const c = await pool.connect(); try { await seedDemo(c); } finally { c.release(); } console.log("demo data seeded"); }
 }
 const hasDemoCookie = (req: http.IncomingMessage) => {
   const m = /(?:^|;\s*)oew_demo=([0-9a-f]{64})/.exec(req.headers.cookie ?? "");
@@ -66,7 +67,7 @@ const routes: [string, RegExp, (x: Ctx, m: RegExpExecArray) => Promise<unknown>]
   ["GET", /^\/api\/board$/, async ({ c, role }) => {
     const me = (await c.query("select p.name, p.role, w.tier, cl.name client, coalesce(m.signer,false) signer from ws.person p, ws.workspace w join ws.client cl on cl.id=w.client_id left join ws.membership m on m.workspace_id=w.id and m.person_id=ws.me() where p.id=ws.me() and w.id=ws.cur_ws()")).rows[0];
     if (!me) throw new Error("not in scope");
-    const items = (await c.query(`select b.id, b.co_id, b.title, b.clears, b.col, b.allowance, b.price, b.proposed_price, b.scope_text, b.proposed_at, b.approved_at,
+    const items = (await c.query(`select b.id, b.co_id, b.title, b.clears, b.col, b.allowance, b.estimate_good_through, b.price, b.proposed_price, b.other_costs, b.offer_good_through, b.scope_text, b.proposed_at, b.approved_at,
         d.schedule, a.typed_name signed_by, a.signed_at, n.finding, n.attorney_note
       from ws.board_item b left join ws.change_order_def d on d.id=b.co_id
       left join ws.change_order_approval a on a.id::text=b.approval_ref
@@ -147,7 +148,7 @@ const routes: [string, RegExp, (x: Ctx, m: RegExpExecArray) => Promise<unknown>]
     if (body.finding || body.attorney_note) await c.query("insert into ws.board_note values ($1, ws.cur_ws(), $2, $3)", [r.id, body.finding ?? null, body.attorney_note ?? null]);
     return r;
   }],
-  ["POST", /^\/api\/board\/([0-9a-f-]{36})\/propose$/, ({ c, body }, m) => c.query("select ws.propose_change_order($1,$2,$3)", [m[1], Number(body.price), String(body.scope ?? "")])],
+  ["POST", /^\/api\/board\/([0-9a-f-]{36})\/propose$/, ({ c, body }, m) => c.query("select ws.propose_change_order($1,$2,$3,$4,$5)", [m[1], Number(body.price), String(body.scope ?? ""), String(body.other_costs ?? ""), body.good_through ? String(body.good_through) : null])],
   ["POST", /^\/api\/board\/([0-9a-f-]{36})\/approve$/, ({ c, body }, m) => c.query("select ws.approve_change_order($1,$2) id", [m[1], String(body.typed_name ?? "")]).then(r => r.rows[0])],
   ["POST", /^\/api\/board\/([0-9a-f-]{36})\/included$/, ({ c }, m) => c.query("select ws.scope_included($1)", [m[1]])],
   ["POST", /^\/api\/board\/([0-9a-f-]{36})\/move$/, ({ c, body }, m) => c.query("update ws.board_item set col=$2 where id=$1", [m[1], String(body.col)])

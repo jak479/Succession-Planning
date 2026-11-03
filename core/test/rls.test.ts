@@ -14,7 +14,7 @@ before(async () => {
   const admin = new pg.Client({ connectionString: base + "/postgres" }); await admin.connect();
   await admin.query(`create database ${db}`); await admin.end();
   pool = new pg.Pool({ connectionString: `${base}/${db}` });
-  for (const f of ["001_init.sql", "002_catalog.sql", "003_board_profile.sql"]) await pool.query(sql(f));
+  for (const f of ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "008_estimate_terms.sql"]) await pool.query(sql(f));
   const one = async (q: string, p: unknown[] = []) => (await pool.query(q + " returning id", p)).rows[0].id;
   id.atty = await one("insert into ws.person(name, role) values ('Josh','attorney')");
   id.owner = await one("insert into ws.person(name, role) values ('Dana','client')");
@@ -95,7 +95,7 @@ test("board: Scoped only by signed approval or Schedule A; Done ⇒ nodes green;
   await assert.rejects(as("atty", "ent", c => c.query("select ws.scope_included($1)", [ret])), /Schedule A/);
   await assert.rejects(as("atty", "ent", c => c.query("update ws.board_item set col='Scoped', price=1200, approval_ref='signed on call', approved_at=now() where id=$1", [ret])), /signed approval/);
   await assert.rejects(as("owner", "ent", c => c.query("select ws.approve_change_order($1,'Dana Ortiz')", [ret])), /no proposed change order/);
-  await as("atty", "ent", c => c.query("select ws.propose_change_order($1, 1200, 'Retention agreement for Luis Herrera, 12-month stay bonus terms')", [ret]));
+  await as("atty", "ent", c => c.query("select ws.propose_change_order($1, 1200, 'Retention agreement for Luis Herrera, 12-month stay bonus terms', 'None')", [ret]));
   await assert.rejects(as("mgr", "ent", c => c.query("select ws.approve_change_order($1,'Luis Herrera')", [ret])), /authorized signer/);
   await assert.rejects(as("owner", "own", c => c.query("select ws.approve_change_order($1,'Dana Ortiz')", [ret])), /card not found/);
   await as("owner", "ent", c => c.query("select ws.approve_change_order($1,'Dana Ortiz')", [ret]));
@@ -109,6 +109,21 @@ test("board: Scoped only by signed approval or Schedule A; Done ⇒ nodes green;
   await assert.rejects(as("atty", "ent", c => c.query("update ws.board_item set col='Scoped' where id=$1", [ret])), /Done → Scoped is not allowed/);
   const bud = await as("owner", "ent", c => c.query("select * from ws.budget").then(r => r.rows[0])) as any;
   assert.deepEqual([bud.onboarding_fee, Number(bud.approved), Number(bud.completed)], [3500, 1200, 1200]);
+});
+test("estimates and offers: good through at least 90 days; lowered, never raised, before then; expired offers cannot be approved", async () => {
+  const id = await as("atty", "ent", c => c.query("insert into ws.board_item(workspace_id,co_id,title,clears,allowance) values (ws.cur_ws(),'CO-RET','Retention, second person','{N12}',1200) returning id, estimate_good_through, current_date + 90 as min").then(r => r.rows[0])) as any;
+  assert.equal(String(id.estimate_good_through), String(id.min));
+  await assert.rejects(as("atty", "ent", c => c.query("update ws.board_item set allowance = 1500 where id = $1", [id.id])), /lowered, not raised/);
+  await as("atty", "ent", c => c.query("update ws.board_item set allowance = 1000 where id = $1", [id.id]));
+  await assert.rejects(as("atty", "ent", c => c.query("select ws.propose_change_order($1, 1200, 'Retention agreement, second key person', '')", [id.id])), /third-party costs/);
+  await as("atty", "ent", c => c.query("select ws.propose_change_order($1, 1200, 'Retention agreement, second key person', 'None', current_date + 10)", [id.id]));
+  const o = await as("atty", "ent", c => c.query("select offer_good_through, current_date + 90 as min from ws.board_item where id = $1", [id.id]).then(r => r.rows[0])) as any;
+  assert.equal(String(o.offer_good_through), String(o.min), "a shorter date is raised to 90 days");
+  await assert.rejects(as("atty", "ent", c => c.query("select ws.propose_change_order($1, 1400, 'Retention agreement, second key person', 'None')", [id.id])), /lowered, not raised/);
+  await as("atty", "ent", c => c.query("select ws.propose_change_order($1, 1100, 'Retention agreement, second key person', 'None')", [id.id]));
+  // An expired offer cannot be approved: simulate expiry with superuser access to the column.
+  await pool.query("update ws.board_item set offer_good_through = current_date - 1 where id = $1", [id.id]);
+  await assert.rejects(as("owner", "ent", c => c.query("select ws.approve_change_order($1,'Dana Ortiz')", [id.id])), /offered again/);
 });
 test("attorney notes on cards are invisible to clients", async () => {
   const bid = await as("atty", "ent", async c => { const b = (await c.query("insert into ws.board_item(workspace_id,co_id,title,clears) values (ws.cur_ws(),'CO-GUAR','Guaranty schedule','{N10,C5}') returning id")).rows[0].id;
