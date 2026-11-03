@@ -4,7 +4,7 @@
 
 export type NodeStatus = "green" | "amber" | "red" | "planned" | "unassessed";
 export type Tier = "entity" | "owner";
-export type Coverage = "phase1" | "sub" | "co" | "personal" | "none";
+export type Coverage = "phase1" | "sub" | "co" | "personal" | "advisor" | "none";
 
 export interface NodeDef { id: string; name: string; satisfiedBy: string; dependsOn: string[]; redRule: string; }
 
@@ -14,9 +14,9 @@ export const NODES: NodeDef[] = [
   { id: "N2", name: "Authority activates", satisfiedBy: "OA amendment or resolution naming manager and powers; DPOA with business powers (ch. 709)", dependsOn: ["N0", "C2", "C3"], redRule: "Manager resigned, left, or declined; document unsigned; manager consent not on file" },
   { id: "N3", name: "Successor manager", satisfiedBy: "Same instrument, alternate named", dependsOn: ["N2"], redRule: "No alternate; alternate left" },
   { id: "N4", name: "Bank access", satisfiedBy: "Signatory card; bank's POA acceptance letter", dependsOn: ["N2"], redRule: "Manager not on card; bank has not accepted POA; new account opened since last review" },
-  { id: "N5", name: "Cash reserve", satisfiedBy: "Reserve account; cash rule in plan", dependsOn: [], redRule: "Balance below 90-day figure; rule unsigned" },
+  { id: "N5", name: "Cash reserve", satisfiedBy: "Reserve account; cash rule in plan", dependsOn: [], redRule: "Balance below the short-term figure (days to the disability benefit start, or 90 if no policy); rule unsigned" },
   { id: "N6", name: "Payroll runs", satisfiedBy: "Provider admin assignment", dependsOn: ["N4", "N5", "N8"], redRule: "Owner is sole admin; provider changed" },
-  { id: "N7", name: "Insurance in force", satisfiedBy: "Policy schedule; beneficiary designations", dependsOn: [], redRule: "Any policy lapsed; beneficiary is the owner personally where entity should be" },
+  { id: "N7", name: "Insurance in force", satisfiedBy: "Policy schedule incl. disability (benefit start day sets the S1/S2 boundary) and disability buy-out; beneficiary designations", dependsOn: [], redRule: "Any policy lapsed; beneficiary is the owner personally where entity should be" },
   { id: "N8", name: "Credentials and access", satisfiedBy: "Password manager with manager as emergency contact; access list", dependsOn: ["N2"], redRule: "List older than 12 months; MFA device is owner's phone only" },
   { id: "N9", name: "Customer and referral-source notice", satisfiedBy: "Customer list; stakeholder continuity statement", dependsOn: ["N2", "N8"], redRule: "List older than 12 months; statement expired" },
   { id: "N10", name: "Vendor, lease, and guaranty list", satisfiedBy: "Guaranty schedule; lease abstract; negotiator named", dependsOn: ["N2"], redRule: "Lease renewed or new guaranty signed since last review" },
@@ -26,6 +26,9 @@ export const NODES: NodeDef[] = [
   { id: "N15a", name: "Continue branch", satisfiedBy: "Continue instruction", dependsOn: ["N14"], redRule: "Default branch is 'continue' and no instruction exists" },
   { id: "N15b", name: "Sell branch", satisfiedBy: "Sale authority clause; valuation method; buyer list", dependsOn: ["N14", "N9", "N12"], redRule: "Default branch is 'sell' and valuation method or buyer list missing" },
   { id: "N15c", name: "Wind-down branch", satisfiedBy: "Wind-down instruction (§ 605.0701 et seq.)", dependsOn: ["N14", "N5", "N10"], redRule: "Default branch is 'wind down' and sequence or funding undefined" },
+  // Retirement (S3). R1 is advisor-owned: the entity tier stores its status only, never amounts or contents.
+  { id: "R1", name: "Retirement income confirmed", satisfiedBy: "Owner's financial advisor confirms the retirement plan does not depend on business income past the exit date (status only)", dependsOn: [], redRule: "No advisor named; advisor has not confirmed; exit date moved since confirmation" },
+  { id: "R2", name: "Your role after you step back", satisfiedBy: "Consulting or employment agreement; redemption or buy-sell terms; non-compete; step-down of authority", dependsOn: ["N2", "C4"], redRule: "No written role or redemption terms; terms conflict with the chosen branch" },
   // Coordination rungs. Entity tier stores status only; contents live in the owner tier.
   { id: "C1", name: "Who receives the interest", satisfiedBy: "OA transfer restrictions vs. will/trust", dependsOn: [], redRule: "Different takers; OA bars the transfer; trust not admitted" },
   { id: "C2", name: "Who runs it on day one", satisfiedBy: "Interim manager vs. POA agent / PR / trustee", dependsOn: [], redRule: "Different persons, no coordination clause; conflicting duties" },
@@ -41,11 +44,13 @@ export const isCoordination = (id: string) => /^C\d$/.test(id);
 
 // Stage gates (CLAUDE.md). Stages are cumulative: S2 requires S1's gate too.
 export const STAGES = [
-  { key: "S0", name: "Statutory default", gate: [] as string[] },
-  { key: "S1", name: "Emergency egress", gate: ["N0", "N2", "N4", "N5", "N6"] },
-  { key: "S2", name: "Coordinated", gate: ["C1", "C2", "C3", "C8"] },
-  { key: "S3", name: "Branches drafted", gate: ["N15a", "N15b", "N15c"] },
-  { key: "S4", name: "Chosen exit", gate: null }, // destination: set by the exit event, never by gates
+  // Names follow Bridges' transition model (decided 2026-11-03). S1/S2 boundary: the day the owner's
+  // disability benefit starts (N7), 90 days if there is no policy.
+  { key: "S0", name: "Where you stand today", gate: [] as string[] },
+  { key: "S1", name: "Short-term disability covered", gate: ["N0", "N2", "N4", "N5", "N6"] },
+  { key: "S2", name: "Long-term disability covered", gate: ["N7", "N14", "C1", "C2", "C3", "C8"] },
+  { key: "S3", name: "Ready to retire", gate: ["N15a", "N15b", "N15c", "R1", "R2"] },
+  { key: "S4", name: "Your next chapter", gate: null }, // destination: set by the exit event, never by gates
 ];
 
 // Intake. askedBy: "agent" = agent may ask (entity tier); "attorney" = asked only on the call (rule 4).
@@ -91,6 +96,7 @@ export const COVERAGE: Record<string, Coverage> = {
   N4: "sub", N6: "sub", N7: "sub", N8: "sub", N11: "sub",
   N12: "co", N15a: "co", N15b: "co", N15c: "co",
   C1: "co", C2: "sub", C3: "sub", C4: "co", C5: "sub", C6: "personal", C7: "co", C8: "sub",
+  R1: "advisor", R2: "co",
 };
 
 // Profile fields (27). section = where it displays; tier = where it is stored.

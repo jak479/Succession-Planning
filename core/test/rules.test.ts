@@ -6,8 +6,8 @@ const S1 = { N0: "green", N2: "green", N4: "amber", N5: "green", N6: "green" } a
 test("stage gates are cumulative", () => {
   assert.equal(stageOf({}), 0);
   assert.equal(stageOf({ ...S1 }), 1);
-  assert.equal(stageOf({ C1: "green", C2: "green", C3: "green", C8: "green" }), 0, "S2 gate without S1 does not count");
-  assert.equal(stageOf({ ...S1, C1: "green", C2: "green", C3: "green", C8: "green", N15a: "green", N15b: "green", N15c: "green" }), 3, "S4 never by gates");
+  assert.equal(stageOf({ N7: "green", N14: "green", C1: "green", C2: "green", C3: "green", C8: "green" }), 0, "S2 gate without S1 does not count");
+  assert.equal(stageOf({ ...S1, N7: "green", N14: "green", C1: "green", C2: "green", C3: "green", C8: "green", N15a: "green", N15b: "green", N15c: "green", R1: "green", R2: "green" }), 3, "S4 never by gates");
 });
 test("red propagates downstream, including C2/C3 into N2", () => {
   const b = blockedBy({ C3: "red" });

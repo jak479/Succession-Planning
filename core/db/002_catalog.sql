@@ -17,6 +17,8 @@ insert into ws.node_def (id, kind) values
   ('N15a', 'contingency'),
   ('N15b', 'contingency'),
   ('N15c', 'contingency'),
+  ('R1', 'contingency'),
+  ('R2', 'contingency'),
   ('C1', 'coordination'),
   ('C2', 'coordination'),
   ('C3', 'coordination'),

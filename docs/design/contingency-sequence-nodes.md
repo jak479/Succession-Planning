@@ -25,6 +25,17 @@ Status values: GREEN (satisfied, in date) · AMBER (satisfied, review due) · RE
 | N15b | **Sell branch** — authority to sell, valuation reference, buyer list | Sale authority clause; valuation method; buyer list | N14, N9, N12 | Default branch is "sell" and valuation method or buyer list missing |
 | N15c | **Wind-down branch** — authority to close, sequence, funding | Wind-down instruction (§ 605.0701 et seq.) | N14, N5, N10 | Default branch is "wind down" and sequence or funding undefined |
 
+## Retirement nodes (S3, added 2026-11-03)
+
+| # | Node | Satisfying document | Depends on | Red rule |
+|---|---|---|---|---|
+| R1 | **Retirement income confirmed** — advisor-owned; the entity tier stores status only, never amounts or contents | Owner's financial advisor confirms the retirement plan does not depend on business income past the exit date | — | No advisor named; advisor has not confirmed; exit date moved since confirmation |
+| R2 | **Your role after you step back** | Consulting or employment agreement; redemption or buy-sell terms; non-compete; step-down of authority | N2, C4 | No written role or redemption terms; terms conflict with the chosen branch |
+
+## Stage mapping (decided 2026-11-03)
+S0 where you stand today · S1 short-term disability covered (N0, N2, N4, N5, N6) · S2 long-term disability covered (N7, N14, C1, C2, C3, C8) · S3 ready to retire (N15a–c, R1, R2) · S4 your next chapter (exit event). The S1/S2 boundary is the day the owner's disability benefit starts, read from the policy (N7); 90 days if there is no policy. N5's reserve is sized to that boundary. Client surfaces say "disability"; no medical information is stored, and each stage page carries the line "Your plan covers being out, not the reason."
+Open: R2 has no change-order price (pro-forma prices are locked; set one before R2 is offered). N10 and N12 show as Stage 1 gaps on the home page but are not in the S1 gate; decide whether they join it.
+
 ## Coordination nodes (estate plan ↔ exit plan)
 
 Status is computed from *consistency between the two documents*, not from either alone. Each depends on one entity node and one personal-tier node. The entity tier displays status only ("personal document in place and consistent: yes/no"); content is visible in the owner tier.

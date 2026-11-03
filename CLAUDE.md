@@ -16,11 +16,11 @@ Entity-paid monthly subscription (Phase 2) with an onboarding flat fee (Phase 1)
 8. Documents remain the client's and valid if the subscription ends.
 
 ## Core data model
-- **Nodes** N0–N15c (contingency path) and C1–C8 (coordination rungs): docs/design/contingency-sequence-nodes.md. Each has a satisfying document, dependencies, a red rule. Status: green / amber / red / planned / unassessed.
-- **Stages** S0–S4: statutory default → emergency egress → coordinated → branches drafted → chosen exit. Each stage is a two-lane diagram (business above, owner below) with rungs. Gates: S1 when N0,N2,N4,N5,N6 ∈ {green,amber}; S2 when C1,C2,C3,C8; S3 when N15a–c; S4 is the destination.
+- **Nodes** N0–N15c (contingency path), R1–R2 (retirement) and C1–C8 (coordination rungs): docs/design/contingency-sequence-nodes.md. Each has a satisfying document, dependencies, a red rule. Status: green / amber / red / planned / unassessed.
+- **Stages** S0–S4 (decided 2026-11-03; names follow Bridges' transition model): where you stand today → short-term disability covered → long-term disability covered → ready to retire → your next chapter (exit). The S1/S2 boundary is the day the owner's disability benefit starts (N7), 90 days if no policy. Each stage is a two-lane diagram (business above, owner below) with rungs. Gates: S1 when N0,N2,N4,N5,N6 ∈ {green,amber}; S2 when N7,N14,C1,C2,C3,C8; S3 when N15a–c,R1,R2; S4 is the destination. R1 (retirement income) is advisor-owned, status only.
 - **Intake items** A1–A6, B1–B15, C-1–C-8: docs/design/intake-assessment.md. Each feeds nodes; 12 are *core* and gate path assignment.
 - **Change-order catalog**: id, name, price range, Schedule, nodes it clears. Done ⇒ cleared nodes green.
-- **Contract coverage** per node: phase1 / sub / co / personal / none.
+- **Contract coverage** per node: phase1 / sub / co / personal / advisor / none.
 - **Profile**: 27 fields in two sections, each {value, source}; conflicts listed, not resolved.
 - **State file**: node statuses, items (board cards), intake statuses, profile, conflicts. Prototype keeps it in localStorage; production needs it shared, attorney-written, per client.
 
