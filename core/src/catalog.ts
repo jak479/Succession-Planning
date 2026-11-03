@@ -29,6 +29,10 @@ export const NODES: NodeDef[] = [
   // Retirement (S3). R1 is advisor-owned; R2 is personal-engagement work. The entity tier stores their status only, never amounts or contents.
   { id: "R1", name: "Retirement income confirmed", satisfiedBy: "Owner's financial advisor confirms the retirement plan does not depend on business income past the exit date (status only)", dependsOn: [], redRule: "No advisor named; advisor has not confirmed; exit date moved since confirmation" },
   { id: "R2", name: "Your role after you step back", satisfiedBy: "Consulting or employment agreement; redemption or buy-sell terms; non-compete; step-down of authority; fairness record at authorization (§ 605.04092): attorney from market data, or the existing valuator's report", dependsOn: ["N2", "C4"], redRule: "No written role or redemption terms; terms conflict with the chosen branch; a payment fails § 605.0405(1), or consulting pay exceeds reasonable compensation (§ 605.0102(17))" },
+  // Family office (S4 content, decided 2026-11-03). Drafted before the exit under the personal engagement; managed in Phase 3.
+  { id: "F1", name: "Family governance", satisfiedBy: "Family governance document: who decides, how the family meets, how advisors report", dependsOn: ["C8"], redRule: "No governance document at the exit; decision-maker unnamed" },
+  { id: "F2", name: "Advisor team", satisfiedBy: "Advisor roster with roles and the coordination consent (legal, tax, investment, insurance)", dependsOn: [], redRule: "A role unfilled; an advisor changed without notice; coordination consent withdrawn" },
+  { id: "F3", name: "Holding structure for the proceeds", satisfiedBy: "Family entity or trust to receive the proceeds, or the attorney's written finding that none is needed at this size", dependsOn: ["C6", "C7"], redRule: "Proceeds have no designated recipient structure; finding older than the exit terms" },
   // Coordination rungs. Entity tier stores status only; contents live in the owner tier.
   { id: "C1", name: "Who receives the interest", satisfiedBy: "OA transfer restrictions vs. will/trust", dependsOn: [], redRule: "Different takers; OA bars the transfer; trust not admitted" },
   { id: "C2", name: "Who runs it on day one", satisfiedBy: "Interim manager vs. POA agent / PR / trustee", dependsOn: [], redRule: "Different persons, no coordination clause; conflicting duties" },
@@ -50,7 +54,7 @@ export const STAGES = [
   { key: "S1", name: "Short-term disability covered", gate: ["N0", "N2", "N4", "N5", "N6"] },
   { key: "S2", name: "Long-term disability covered", gate: ["N7", "N14", "C1", "C2", "C3", "C8"] },
   { key: "S3", name: "Ready to retire", gate: ["N15a", "N15b", "N15c", "R1", "R2"] },
-  { key: "S4", name: "Your next chapter", gate: null }, // destination: set by the exit event, never by gates
+  { key: "S4", name: "Your family office is in place", gate: null }, // reached at the exit event, never by gates; content F1–F3, C6, C7. Phase 3 follows.
 ];
 
 // Intake. askedBy: "agent" = agent may ask (entity tier); "attorney" = asked only on the call (rule 4).
@@ -96,7 +100,7 @@ export const COVERAGE: Record<string, Coverage> = {
   N4: "sub", N6: "sub", N7: "sub", N8: "sub", N11: "sub",
   N12: "co", N15a: "co", N15b: "co", N15c: "co",
   C1: "co", C2: "sub", C3: "sub", C4: "co", C5: "sub", C6: "personal", C7: "co", C8: "sub",
-  R1: "advisor", R2: "personal",
+  R1: "advisor", R2: "personal", F1: "personal", F2: "personal", F3: "personal",
 };
 
 // Profile fields (27). section = where it displays; tier = where it is stored.

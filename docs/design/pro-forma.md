@@ -61,6 +61,9 @@
 ## Positioning (adopted 2026-11-01)
 "The quarterback for owners whose wealth is the business." Family-office coordination function, legal perimeter only: no investment advice, no custody of money, no bill pay. Above the MFO threshold, the practice is the family office's legal-side vendor at the Active tier.
 
+## Reframe (2026-11-03): exit leads into Phase 3
+The model above treats the exit as the end of the engagement, and the 25% churn includes exits. With Phase 3 (family office management) an exit converts to a Phase 3 engagement instead of churn. Phase 3 price, cadence and capacity are not modeled; set them before revising the year 1–2 figures.
+
 ## Open inputs
 - Filing status; Noble salary relative to $184,500 (tax line)
 - LPL quotes (overhead line; cyber sublimit)
