@@ -8,15 +8,15 @@ permissions:
   contents: read
   id-token: write
 env:
-  GCP_PROJECT: REPLACE
+  GCP_PROJECT: owner-exit-demo
   GCP_REGION: us-east1
-  GCP_WIF_PROVIDER: REPLACE
-  GCP_DEPLOY_SA: REPLACE
-  GCP_RUN_SA: REPLACE
-  CLOUD_SQL_INSTANCE: REPLACE
+  GCP_WIF_PROVIDER: projects/223962925545/locations/global/workloadIdentityPools/github/providers/succession-planning
+  GCP_DEPLOY_SA: oew-deploy@owner-exit-demo.iam.gserviceaccount.com
+  GCP_RUN_SA: oew-run@owner-exit-demo.iam.gserviceaccount.com
+  CLOUD_SQL_INSTANCE: owner-exit-demo:us-east1:oew-demo
   ANTHROPIC_ORGANIZATION_ID: cd7121a4-669b-4dda-a1de-ad2f59a785bb
-  ANTHROPIC_SERVICE_ACCOUNT_ID: REPLACE
-  ANTHROPIC_FEDERATION_RULE_ID: REPLACE
+  ANTHROPIC_SERVICE_ACCOUNT_ID: ""   # svac_… for oew-demo-run; optional for the exchange
+  ANTHROPIC_FEDERATION_RULE_ID: fdrl_01H4KwQqCr95wS4QMmmvvFpY   # gcp-oew-demo
 jobs:
   test:
     runs-on: ubuntu-latest

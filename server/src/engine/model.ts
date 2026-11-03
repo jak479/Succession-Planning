@@ -29,7 +29,7 @@ function newClient(): Anthropic {
     return new Anthropic({ credentials: oidcFederationProvider({
       identityTokenProvider: async () => (await fetch(GCP_IDENTITY, { headers: { "Metadata-Flavor": "Google" } })).text(),
       federationRuleId: process.env.ANTHROPIC_FEDERATION_RULE_ID, organizationId: process.env.ANTHROPIC_ORGANIZATION_ID,
-      serviceAccountId: process.env.ANTHROPIC_SERVICE_ACCOUNT_ID, workspaceId: process.env.ANTHROPIC_WORKSPACE_ID,
+      serviceAccountId: process.env.ANTHROPIC_SERVICE_ACCOUNT_ID || undefined, workspaceId: process.env.ANTHROPIC_WORKSPACE_ID || undefined,
       baseURL: "https://api.anthropic.com", fetch,
     }) } as ConstructorParameters<typeof Anthropic>[0]);
   }
