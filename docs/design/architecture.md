@@ -23,6 +23,11 @@ Decided 2026-11-02 (proposal; Josh to confirm hosting). Preserves the data model
 - **Client surfaces label every assistant message as automated, not from a lawyer** (Fla. Ethics Op. 24-1 on chatbots identifying themselves; docs/sources/fl-bar-ethics-op-24-1.pdf). Required before any client uses the front door.
 - **Integrate with LEAP and WealthCounsel**: docs/design/integrations.md (design only; vendor terms not yet confirmed).
 
+## Decisions 2026-11-03
+- **Stages:** short-term disability → long-term disability → retirement → exit, named per Bridges; boundary from the disability policy (docs/design/contingency-sequence-nodes.md, Stage mapping).
+- **R2 (role after stepping back) is personal-engagement work**, dual representation under Rules 4-1.7 and 4-1.13(e) with the carve-outs in owner letter § 2(C).
+- **R2 fairness record (§ 605.04092(3)):** the attorney prepares it from market data at authorization, unless a valuator is already retained, in which case that valuation is used. Part of the R2 change order; no outside consultant by default.
+
 ## Repo layout
 ```
 core/        catalog, pure rules, migrations, store, tests   (items 1, 5 schema)
