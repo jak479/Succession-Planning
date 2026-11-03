@@ -34,7 +34,9 @@ Effective [date], the Operating Agreement of [Company], LLC (the "Company") date
 
 (b) During the Continuity Period the Interim Manager has full authority to operate the Company in the ordinary course, including to: sign checks and electronic payments and act as signatory on all Company accounts; run payroll and hire, direct, and dismiss employees; collect receivables; pay creditors; perform, renew, and terminate contracts and leases in the ordinary course; deal with the Company's landlord, lenders, insurers, licensing agencies, and regulators; maintain and renew licenses and insurance; access all Company systems, credentials, and records; engage counsel, accountants, and other advisors; and take any other action a manager may take under ch. 605, subject only to the Cash Rule and [ ].3.
 
-(c) The Interim Manager may not, without a Branch Decision under [ ].5: sell or encumber substantially all of the Company's assets; admit a member or issue interests; merge, convert, or dissolve the Company; make distributions other than tax distributions; incur debt or personal guaranties outside the Cash Rule; or change the Company's line of business.
+(c) The Interim Manager may not, without a Branch Decision under [ ].5: sell or encumber substantially all of the Company's assets; admit a member or issue interests; merge, convert, or dissolve the Company; make distributions other than tax distributions under Schedule 1; incur debt or personal guaranties outside the Cash Rule; or change the Company's line of business.
+
+(c-1) Before any distribution, including a tax distribution, the Interim Manager shall determine in writing, on financial statements or a valuation method that is reasonable under the circumstances, that the distribution is not prohibited by § 605.0405(1), and shall deliver the determination to the [Family Liaison] and counsel. [Drafter: § 605.0406(1) makes a consenting manager who fails § 605.04091 personally liable for the excess; this clause documents compliance.]
 
 (d) The Interim Manager owes the duties of a manager under § 605.04091 and is indemnified to the fullest extent § 605.0408 permits. The Interim Manager is entitled to compensation of [$ ] per [month] during the Continuity Period, payable from Company funds.
 
@@ -77,6 +79,8 @@ ______________________ [Name] Date: ______
 - Reserve account: [bank], target balance equal to [90] days of payroll and fixed costs ($[ ]).
 - Authorized without consent: payroll and benefits; rent; insurance; taxes; utilities; vendors in the ordinary course up to $[ ] per vendor per month; professional fees up to $[ ].
 - Requires Family Liaison consent: any single expenditure over $[ ]; any new debt; any capital purchase.
+- Tax distributions: [formula], each subject to the written determination in [ ].2(c-1).
+- Payments to the Principal during an Unavailability Event: only [under the Company's bona fide disability or benefits program / as reasonable compensation for past service], or as a distribution meeting [ ].2(c-1). [Drafter: § 605.0102(17)(b) excludes these two categories from "distribution"; anything else paid to the owner is a distribution tested under § 605.0405.]
 - Reporting: monthly statement to the Family Liaison and counsel.
 
 ## Schedule 2 — Additional authority on a sell or wind-down Branch Decision
