@@ -50,7 +50,7 @@ Every save is an immutable version (author, time, mode, digest). Redline = any t
 `ws.doc_template` (id, version, tier, schema), `ws.doc_draft` (workspace, template, mode, status draft / review / approved / sent / executed), `ws.doc_version` (immutable, digest), `ws.doc_suggestion` (AI or counterparty, accepted / rejected, by whom), `ws.doc_execution` (mode, provider name, executed-copy `DOC` source). The executed copy enters the right tier as a `DOC` source and turns the node green through the existing rules. RLS: attorney-only for every table; the client sees only an approved, sent document.
 
 ## 6. Build sequence
-1. Template schema + assembler for the two templates (deterministic; tests against the demo profile).
+1. Template schema + assembler for the two templates (deterministic; tests against the demo profile). **Built 2026-11-08:** `core/src/drafting.ts` (assembler, tier check, execution-mode gate), `core/src/templates.ts` (one binding per bracket, in order), `core/test/drafting.test.ts`. The wording stays in `docs/templates/`; if a template is edited, the tests fail until its bindings match. Classifications to confirm: OA `[If the Principal dies: …]` is treated as a drafter note (never exported); OA `[if single-member]` is removed and listed as a check, because the clause it governs has no closing bracket. In the rider, ", and (ii)" was moved inside the buy-sell bracket so that dropping the clause leaves no orphan "(ii)"; the text is unchanged when the clause is kept.
 2. Console editor with versions; .docx export, clean and redline.
 3. AI review mode, then AI-assisted drafting mode (server-side prompts; eval set like the classifier's).
 4. E-signature with UETA audit trail, or a vendor (open question 1).

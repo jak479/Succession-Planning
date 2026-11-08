@@ -42,7 +42,7 @@ ____ (3) **Make gifts of the Principal's interest in the Company** to [named des
 ____ (4) **Disclaim** any interest in the Company or any right under the Operating Agreement or buy-sell agreement. (§ 709.2202(1)(g))
 
 ### Part D — Agent who is not a family member
-[Include only if the Business Agent is not an ancestor, spouse, or descendant of the Principal.] Notwithstanding § 709.2202(3), the Business Agent may, in exercising Parts B and C, (i) serve as Interim Manager and receive the compensation the Operating Agreement provides, and (ii) [participate as buyer under the Company's buy-sell agreement dated [ ] on its stated terms,] but may not otherwise create an interest in the Principal's property in the Business Agent's own favor.
+[Include only if the Business Agent is not an ancestor, spouse, or descendant of the Principal.] Notwithstanding § 709.2202(3), the Business Agent may, in exercising Parts B and C, (i) serve as Interim Manager and receive the compensation the Operating Agreement provides[, and (ii) participate as buyer under the Company's buy-sell agreement dated [ ] on its stated terms,] but may not otherwise create an interest in the Principal's property in the Business Agent's own favor.
 
 ### Part E — Coordination
 (1) If this Rider and Article [ ] (Continuity) of the Operating Agreement conflict as to management of the Company, [the Operating Agreement] controls; as to the Principal's ownership of the interest, [the Principal's estate-planning documents] control.
