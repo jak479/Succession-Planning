@@ -4,13 +4,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import pg from "pg";
 import { inSession } from "../src/store.ts";
-import { addFile, createDraft, exportPackage, fileExecuted, listDocuments, saveAssembled, saveVersion, sendVersion, supersede } from "../src/documents.ts";
+import { addFile, closeFile, createDraft, exportPackage, fileExecuted, listDocuments, markClosure, purgeFile, saveAssembled, saveVersion, sendVersion, supersede } from "../src/documents.ts";
 import { OA_CONTINUITY as OA, DPOA_RIDER as RIDER, TEMPLATES } from "../src/templates.ts";
 
 const base = process.env.PGURL ?? "postgresql://postgres@%2Fvar%2Ftmp:5433";
 const db = "oew_docs_" + process.pid;
 const MIGRATIONS = ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql", "005_intake.sql", "006_profile.sql", "007_threads.sql",
-  "008_estimate_terms.sql", "009_estimate_costs.sql", "010_agenda.sql", "011_documents.sql"];
+  "008_estimate_terms.sql", "009_estimate_costs.sql", "010_agenda.sql", "011_documents.sql", "012_auto_green_retention.sql"];
 let pool: pg.Pool; const id: Record<string, string> = {};
 const tpl = (t: typeof OA) => readFileSync(new URL("../../" + t.file, import.meta.url), "utf8");
 const PDF = { filename: "signed.pdf", mime: "application/pdf", bytes: new TextEncoder().encode("%PDF-1.4 signed") };
@@ -131,4 +131,54 @@ test("export package (rule 8): executed originals with an index; the client can 
   assert.match(index, /\| esign_only \|/);
   assert.ok(files.slice(1).every(f => f.path.endsWith(".pdf") && f.bytes.length > 0));
   assert.ok(!files.some(f => /Seacoast|lease/.test(f.path)), "only executed originals");
+});
+
+test("auto-green: executing the OA turns green the nodes its signatures satisfy, and no others", async () => {
+  const r = await as("atty", "ent", async c => {
+    const d = await createDraft(c, OA, ["N0", "N2", "N3", "N5"]);
+    const { versionId } = await saveVersion(c, d, "final", {}, [], "manual"); await sendVersion(c, d, versionId);
+    return fileExecuted(c, OA, d, versionId, PDF, { mode: "esign_only", executedOn: "2026-11-21", signatures: ["principal", "members", "interim_manager"] });
+  });
+  assert.deepEqual(r.green, ["N0", "N2"], "N3 waits for the alternate's consent; N5 needs a reserve balance");
+  await as("owner", "ent", async c => {
+    const n = (await c.query("select node_id, status, fact from ws.node_status where node_id in ('N0','N2','N3','N5') order by node_id")).rows;
+    assert.deepEqual(n.map(x => x.node_id), ["N0", "N2"]);
+    assert.match(n[1].fact, /signed by principal, members, interim_manager/);
+  });
+  await as("atty", "own", async c => {
+    const s = await callSource(c, "CALL-OWN-3");
+    const d = await createDraft(c, RIDER, ["N2"]);
+    const { versionId } = await saveVersion(c, d, "rider", { part_c: { value: false, source: s, kind: "CALL" } }, [], "manual"); await sendVersion(c, d, versionId);
+    const x = await fileExecuted(c, RIDER, d, versionId, PDF, { mode: "in_person", executedOn: "2026-11-21", signatures: ["principal", "witnesses", "notary"] });
+    assert.deepEqual(x.green, [], "owner tier never writes node status (rule 3)");
+  });
+  await assert.rejects(as("atty", "ent", async c => {
+    const d = await createDraft(c, OA, ["N0"]); const { versionId } = await saveVersion(c, d, "f", {}, [], "manual"); await sendVersion(c, d, versionId);
+    await fileExecuted(c, OA, d, versionId, PDF, { mode: "esign_only", executedOn: "2026-11-21", signatures: ["landlord" as any] });
+  }), /check/);
+});
+
+test("retention: purge refuses until the period is set from the rule, the export is delivered and notice is sent; then contents go, the index stays", async () => {
+  await assert.rejects(as("atty", "ent", c => purgeFile(c)), /no retention period set/);
+  await pool.query("update ws.retention_policy set period_months = 1, rule_cite = 'test only', read_on = current_date");
+  await assert.rejects(as("atty", "ent", c => purgeFile(c)), /not closed/);
+  await as("atty", "ent", c => closeFile(c, "2020-01-01"));
+  await assert.rejects(as("atty", "ent", c => purgeFile(c)), /export package first/);
+  await as("atty", "ent", c => markClosure(c, "export_delivered"));
+  await assert.rejects(as("atty", "ent", c => purgeFile(c)), /written notice first/);
+  await as("atty", "ent", c => markClosure(c, "notice_sent"));
+  await assert.rejects(as("owner", "ent", c => purgeFile(c)), /attorney only/);
+  await assert.rejects(as("atty", "ent", c => c.query("update ws.file_closure set purged_at = now()")), /purge_documents\(\) only/);
+  const n = await as("atty", "ent", c => purgeFile(c));
+  assert.ok(n > 0);
+  await as("atty", "ent", async c => {
+    assert.equal((await c.query("select count(*)::int n from ws.doc_version where purged_at is null")).rows[0].n, 0);
+    assert.ok((await c.query("select count(*)::int n from ws.doc_version where sha256 is not null")).rows[0].n >= n, "hashes stay");
+    assert.ok((await c.query("select count(*)::int n from ws.doc_execution")).rows[0].n > 0, "execution records stay");
+    assert.equal((await c.query("select count(*)::int n from ws.event_log where tbl = 'purge'")).rows[0].n, 1);
+    assert.equal((await exportPackage(c)).length, 1, "nothing left to export but the index");
+  });
+  await assert.rejects(as("atty", "ent", async c => saveVersion(c, (await listDocuments(c)).find(d => d.kind === "draft" && d.status !== "superseded")!.id, "x", {}, [], "manual")), /purged file is closed/);
+  await as("atty", "own", async c => assert.ok((await c.query("select count(*)::int n from ws.doc_version where purged_at is null")).rows[0].n > 0, "the other tier is untouched"));
+  await pool.query("update ws.retention_policy set period_months = null, rule_cite = null, read_on = null");
 });
