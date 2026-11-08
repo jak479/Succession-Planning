@@ -61,5 +61,10 @@ Every save is an immutable version (author, time, mode, digest). Redline = any t
 2. RON provider: open; the attorney is asking the online notary which one they use. The package format follows that answer.
 3. Wills and trusts: second release. Read ch. 732 (electronic wills) before building any will template.
 
+## Template v2 decisions 2026-11-08
+1. Interim Manager removal for Cause: by the Family Liaison with the consent of the person holding Branch Decision authority (as drafted).
+2. Rider banking authority: no limit to Company-related accounts; the statutory § 709.2208(1) words stand alone, keeping the § 709.2120(1)(a) presumption.
+3. Statement of authority (§ 605.0302): filed after the trigger, within the days set in OA .2(a); no conditional pre-filing.
+
 ## Not yet read at the source
 § 709.2202 (rate-limited today; relying on the 2026-11-01 reading), § 117.295 rules (Fla. Admin. Code ch. 1N-7), § 415.102, ch. 732 electronic-will provisions.

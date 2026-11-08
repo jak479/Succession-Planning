@@ -100,7 +100,7 @@ test("bracket scanner respects nesting", () => {
 });
 
 test("v2 review: statutory words survive assembly verbatim", () => {
-  const r = assemble(RIDER, file(RIDER.file), f({ bank_limit: false })).text;
+  const r = assemble(RIDER, file(RIDER.file), {}).text;
   assert.ok(r.includes("This durable power of attorney is not terminated by subsequent incapacity of the principal except as provided in chapter 709, Florida Statutes."), "§ 709.2104");
   assert.ok(r.includes("authority to conduct banking transactions as provided in section 709.2208(1), Florida Statutes."), "§ 709.2208(1) / § 709.2120(1)(a)");
   assert.ok(!r.includes("and manager]"), "no manager authority through the POA (§ 709.2201(3)(a))");
