@@ -4,8 +4,9 @@
 import { PROFILE_FIELDS } from "./catalog.ts";
 
 export type Tier = "entity" | "owner";
-/** Every value used in a document carries the id of its source (rule 6). */
-export type Fact = { value: string | boolean; source: string };
+/** Every value used in a document carries the id of its source (rule 6), and the source's kind (ws.source.kind). */
+export type SourceKind = "PUB" | "DOC" | "API" | "CALL" | "AGENT" | "CLIENT";
+export type Fact = { value: string | boolean; source: string; kind?: SourceKind };
 export type Facts = Record<string, Fact>;
 
 export type Binding =
@@ -19,7 +20,15 @@ export type Binding =
   | { kind: "note"; text: string }                                        // drafter note; never exported
   | { kind: "sign"; text: string };                                       // completed at signing; kept
 
-export type VarDef = { id: string; label: string; from?: string };      // from: profile field the value is taken from
+/** An operational choice that is the client's to make. `ask` is a neutral question for the attorney's call sheet:
+ *  it states the choice and asks; it never recommends, and it does not show the template's bracketed value. */
+export type ClientChoice = { ask: string; node: string | null };
+export type VarDef = { id: string; label: string; from?: string; client?: ClientChoice }; // from: profile field the value is taken from
+
+/** Which source kinds count as the client's decision. Entity tier: recorded by the attorney on the call, or a document the
+ *  client signed. Owner tier: the call only (rule 4). A value from any other source is shown but stays unconfirmed. */
+export const DECIDED_BY: Record<Tier, SourceKind[]> = { entity: ["CALL", "DOC"], owner: ["CALL"] };
+export type ChoiceStatus = "open" | "unconfirmed" | "decided";
 export type SectionGate = { heading: string; id: string };              // drop heading through the next same-level heading
 
 export type Template = {
@@ -33,7 +42,11 @@ export type Assembly = {
   used: { id: string; value: string; source: string }[];
   open: { id: string; label: string }[];                                // still bracketed: no value, or not decided
   checks: string[];
+  /** Every client choice the instrument still contains, in document order, with its status. The template's bracketed
+   *  value is shown to the attorney as `template` only; it is never a default. */
+  choices: { id: string; label: string; ask: string; node: string | null; status: ChoiceStatus; value?: string; source?: string; template: string }[];
 };
+export type AssembleOptions = { highlight?: boolean };                  // wrap client-choice spots: ⟦choice:id⟧…⟦/choice⟧
 
 type Br = { start: number; end: number; text: string };
 /** Top-level brackets, nesting respected. */
@@ -67,7 +80,7 @@ export function instrument(t: Template, file: string): string {
   return file.slice(a, b).replace(/\n+-{3,}\s*$/, "").trimEnd() + "\n";
 }
 
-export function assemble(t: Template, file: string, facts: Facts): Assembly {
+export function assemble(t: Template, file: string, facts: Facts, opts: AssembleOptions = {}): Assembly {
   for (const [id, f] of Object.entries(facts)) if (!f.source?.trim()) throw new Error(`fact ${id} has no source id`);
   let src = instrument(t, file);
   const errs = checkBindings(src, t.bindings);
@@ -86,6 +99,10 @@ export function assemble(t: Template, file: string, facts: Facts): Assembly {
     const br = brackets(s); let out = "", at = 0;
     br.forEach((b, i) => {
       const bd = bs[i]; out += s.slice(at, b.start); at = b.end;
+      const id = "id" in bd ? bd.id : "";
+      if (id && isChoice(id) && !seen.has(id)) seen.set(id, b.text);
+      const mark = opts.highlight && id && isChoice(id) && bd.kind !== "lineIf";
+      const before = out.length; if (mark) out += `⟦choice:${id}⟧`;
       switch (bd.kind) {
         case "var": { const f = take(bd.id); if (!f) { miss(bd.id); out += b.text; } else out += bd.upper ? String(f.value).toUpperCase() : String(f.value); break; }
         case "choice": {
@@ -102,11 +119,15 @@ export function assemble(t: Template, file: string, facts: Facts): Assembly {
         case "note": break;
         case "sign": out += b.text; break;
       }
+      if (mark) { if (out.length === before + `⟦choice:${id}⟧`.length) out = out.slice(0, before); else out += "⟦/choice⟧"; }
     });
     return out + s.slice(at);
   };
 
-  for (const g of t.sections ?? []) {                                   // section gates first: brackets inside a dropped section go too
+  const isChoice = (id: string) => !!t.vars.find(v => v.id === id)?.client;
+  const seen = new Map<string, string>();                                // client-choice id → first bracket text
+  for (const g of t.sections ?? []) {
+    if (isChoice(g.id) && !seen.has(g.id)) seen.set(g.id, g.heading);                                   // section gates first: brackets inside a dropped section go too
     const v = flag(g.id); if (v !== false) continue;
     const a = src.indexOf(g.heading); if (a < 0) throw new Error(`${t.id}: section ${g.heading} not found`);
     const level = g.heading.match(/^#+/)![0];
@@ -120,7 +141,13 @@ export function assemble(t: Template, file: string, facts: Facts): Assembly {
   let text = fill(src, t.bindings);
   text = text.split("\n").filter(l => !l.includes(DROP_LINE)).join("\n")
     .replace(/(\S)[ \t]+([.,;:)])/g, "$1$2").replace(/(\S)[ \t]{2,}/g, "$1 ").replace(/[ \t]+$/gm, "").replace(/^[ \t]+/gm, "").replace(/\n{3,}/g, "\n\n");
-  return { text, used: [...used.values()], open: [...open.values()], checks };
+  const ok = DECIDED_BY[t.tier];
+  const choices = [...seen.entries()].map(([id, template]) => {
+    const v = t.vars.find(x => x.id === id)!, f = facts[id];
+    const status: ChoiceStatus = !f ? "open" : f.kind && ok.includes(f.kind) ? "decided" : "unconfirmed";
+    return { id, label: v.label, ask: v.client!.ask, node: v.client!.node, status, template, ...(f ? { value: String(f.value), source: f.source } : {}) };
+  });
+  return { text, used: [...used.values()], open: [...open.values()], checks, choices };
 }
 
 /** Rule 3: a template may draw only on profile fields of its own tier. Returns the violations. */
@@ -157,4 +184,20 @@ export function executionModes(templateId: string, facts: Facts): ExecRule[] {
     ];
   }
   throw new Error(`no execution rules for ${templateId}`);
+}
+
+/** What stops a draft from going to the client for signature: undecided client choices, then unfilled blanks. */
+export function blockers(a: Assembly): string[] {
+  return [
+    ...a.choices.filter(c => c.status !== "decided").map(c => `${c.status === "open" ? "Put to the client" : "Confirm with the client"}: ${c.label}`),
+    ...a.open.filter(o => !a.choices.some(c => c.id === o.id)).map(o => `Fill: ${o.label}`),
+  ];
+}
+
+/** Undecided client choices as Thursday-agenda questions (core/src/agenda.ts AgendaSource). The server must file them
+ *  in the template's own tier: owner-tier questions never enter the entity agenda (rule 3). */
+export function callQuestions(t: Template, a: Assembly, at: string) {
+  return a.choices.filter(c => c.status !== "decided").map(c => ({
+    key: `draft:${t.id}:${c.id}`, kind: "question" as const, title: c.ask, node: c.node, at, tier: t.tier,
+  }));
 }

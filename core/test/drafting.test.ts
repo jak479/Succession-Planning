@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { assemble, brackets, checkBindings, executionModes, instrument, tierViolations, type Facts } from "../src/drafting.ts";
+import { assemble, blockers, brackets, callQuestions, checkBindings, executionModes, instrument, tierViolations, type Facts, type SourceKind } from "../src/drafting.ts";
 import { TEMPLATES, OA_CONTINUITY as OA, DPOA_RIDER as RIDER } from "../src/templates.ts";
 
 const file = (p: string) => readFileSync(new URL("../../" + p, import.meta.url), "utf8");
@@ -107,4 +107,50 @@ test("v2 review: statutory words survive assembly verbatim", () => {
   const o = assemble(OA, file(OA.file), {}).text;
   assert.ok(o.includes("becomes the sole manager of the Company for the Continuity Period") && o.includes("§ 605.04072(4) does not apply"));
   assert.ok(o.includes("varies a member's right to approve a merger, interest exchange, or conversion (§ 605.0105(3)(m))"));
+});
+
+const k = (value: string | boolean, kind: SourceKind) => ({ value, source: "src:" + kind, kind });
+test("client choices: listed before any value is chosen; the template's bracketed value is never a default", () => {
+  const a = assemble(OA, file(OA.file), {});
+  const c = Object.fromEntries(a.choices.map(x => [x.id, x]));
+  assert.equal(c.unavailability_days.status, "open");
+  assert.equal(c.unavailability_days.template, "[14]", "shown to the attorney as the template's text");
+  assert.ok(a.text.includes("for [14] consecutive days"), "and left bracketed, not filled");
+  for (const x of a.choices) {
+    assert.doesNotMatch(x.ask, /\b(recommend|suggest|should consider|best|typical|usually|we advise)\b/i, x.id);
+    const v = x.template.slice(1, -1);                                 // a value the template proposes: a number or a phrase
+    if (/\d/.test(v) || (v.length > 8 && !v.includes("/"))) assert.ok(!x.ask.toLowerCase().includes(v.toLowerCase()), `${x.id}: ask repeats the template value`);
+  }
+  assert.ok(!a.choices.some(x => x.id === "company" || x.id === "article"), "facts and drafting choices are not client choices");
+});
+test("client choices: only a call record (or, entity tier, a signed document) decides one", () => {
+  const st = (t: typeof OA, facts: Facts, id: string) => assemble(t, file(t.file), facts).choices.find(x => x.id === id)!.status;
+  assert.equal(st(OA, { interim_manager: k("Luis Herrera", "CALL") }, "interim_manager"), "decided");
+  assert.equal(st(OA, { interim_manager: k("Luis Herrera", "DOC") }, "interim_manager"), "decided");
+  assert.equal(st(OA, { interim_manager: k("Luis Herrera", "CLIENT") }, "interim_manager"), "unconfirmed", "described in the workspace is not decided");
+  assert.equal(st(OA, { interim_manager: { value: "Luis Herrera", source: "s" } }, "interim_manager"), "unconfirmed");
+  assert.equal(st(RIDER, { business_agent: k("Luis Herrera", "DOC") }, "business_agent"), "unconfirmed", "owner tier: the call only (rule 4)");
+  assert.equal(st(RIDER, { business_agent: k("Luis Herrera", "CALL") }, "business_agent"), "decided");
+});
+test("client choices: section gates count, and choices inside a dropped section drop out", () => {
+  const on = assemble(RIDER, file(RIDER.file), {}).choices.map(x => x.id);
+  assert.ok(on.includes("part_c") && on.includes("gift_donees"));
+  const off = assemble(RIDER, file(RIDER.file), { part_c: k(false, "CALL") }).choices.map(x => x.id);
+  assert.ok(off.includes("part_c") && !off.includes("gift_donees"));
+});
+test("highlight marks client-choice spots; a dropped clause leaves no empty mark", () => {
+  const a = assemble(OA, file(OA.file), { interim_manager: k("Luis Herrera", "CALL"), attending_physician: k(false, "CALL") }, { highlight: true });
+  assert.ok(a.text.includes("means ⟦choice:interim_manager⟧Luis Herrera⟦/choice⟧, or if"));
+  assert.ok(a.text.includes("⟦choice:unavailability_days⟧[14]⟦/choice⟧"), "open choices are marked too");
+  assert.ok(!a.text.includes("⟦choice:attending_physician⟧⟦/choice⟧"));
+  assert.ok(!assemble(OA, file(OA.file), {}).text.includes("⟦"), "no marks unless asked");
+});
+test("blockers and call questions", () => {
+  const a = assemble(RIDER, file(RIDER.file), { business_agent: k("Luis Herrera", "CALL"), alternate_agent: k("Maria Chen", "CLIENT") });
+  const b = blockers(a);
+  assert.ok(b.includes("Confirm with the client: Alternate Business Agent"));
+  assert.ok(!b.includes("Put to the client: Business Agent") && !b.includes("Confirm with the client: Business Agent"));
+  const q = callQuestions(RIDER, a, "2026-11-12");
+  assert.ok(q.every(x => x.tier === "owner" && x.kind === "question" && x.key.startsWith("draft:dpoa-rider:")));
+  assert.ok(!q.some(x => x.key.endsWith(":business_agent")));
 });

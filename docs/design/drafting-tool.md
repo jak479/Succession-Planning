@@ -20,6 +20,15 @@ A template is the current Markdown file plus a front-matter schema:
 - **Drafter notes** (`[Drafter: …]`, "Drafting notes for the Firm") are kept in the working copy and stripped from every export.
 - **Tier.** OA amendment: entity tier. DPOA rider: owner-personal tier (rule 3). The rider is drafted only inside the owner-personal workspace, and the entity tier sees only its C-node status.
 
+## 2a. Client choices (decided 2026-11-08)
+Operational choices are the client's, and the tool puts them to the client before any value is chosen. Each such field in `core/src/templates.ts` carries `client: { ask, node }`.
+- **No silent defaults.** A bracketed value in a template (`[14]`, `[12]`, `[quarterly]`) is never filled in on its own. It stays bracketed and is shown to the attorney only as the template's text.
+- **Decided means recorded.** A client choice counts as decided only when its value cites a call record (`CALL`) or, in the entity tier, a document the client signed (`DOC`). In the owner tier only `CALL` counts (rule 4). A value from any other source (the client's own description, an agent pull, a profile value) is shown but stays *unconfirmed*.
+- **Highlighted.** `assemble(..., { highlight: true })` marks every client-choice spot, open or filled, for the editor. Exports never carry the marks.
+- **Agenda.** `callQuestions` turns open and unconfirmed choices into Thursday-agenda questions (`draft:<template>:<field>`), filed in the template's own tier. Owner-tier questions never enter the entity agenda (rule 3). Each question is neutral: it states the choice, does not recommend, and does not repeat the template's value.
+- **Gate.** `blockers` lists every undecided choice and unfilled blank. A draft cannot be sent for signature until the list is empty.
+- **Scope of "client choice".** OA: trigger terms, Interim Manager and alternate, pay, removal and resignation, reports, Branch Decision holder and default branch, Family Liaison, cash rule and Schedule 2 terms. Rider: Business Agent and alternate, Part C powers, gifts, buyer participation, accounting. Facts (names, dates, entity form) and drafting choices (which document controls, counsel named, signature capacity) are not client choices.
+
 ## 3. Versions and redlines
 Every save is an immutable version (author, time, mode, digest). Redline = any two versions compared:
 - **.docx with native tracked changes** (`w:ins` / `w:del`, author = the version's author), so opposing counsel or a bank can accept or reject in Word.
