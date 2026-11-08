@@ -40,7 +40,7 @@ import → profile → intake gate → path assigned → scan (findings, attorne
 - `docs/design/drafting-tool.md` — attorney drafting tool: modes, templates, redlines, e-signature and online-notarization gates (ch. 117 pt. II, § 668.50)
 - `docs/design/pro-forma.md` — locked prices, capacity, year 1–2 model, positioning
 - `docs/engagement/` — entity subscription letter (v3) and owner personal letter (v1), both with Schedules
-- `docs/templates/` — OA continuity amendment (ch. 605, § 605.0602 confirmed 2026-11-01) and DPOA business-powers rider (ch. 709, § 709.2202 confirmed 2026-11-01). Other cited sections are listed in each file as "walk to before first execution."
+- `docs/templates/` — OA continuity amendment (ch. 605, § 605.0602 confirmed 2026-11-01) and DPOA business-powers rider (ch. 709, § 709.2202 confirmed 2026-11-01). Both v2 after a statute-by-statute review 2026-11-08. Other cited sections are listed in each file as "walk to before first execution."
 
 ## Build order (from the decisions)
 1. Shared state file + per-client workspace with two tiers and attorney/client roles
@@ -62,6 +62,6 @@ import → profile → intake gate → path assigned → scan (findings, attorne
 - C-node checks are subscription; C-node drafting is change order; C6 is personal-engagement only. Confirm.
 
 ## Conventions
-- Florida statutes cited by section; confirm against the current Online Sunshine text before relying. Statutes already confirmed: § 605.0602, § 709.2202 (2026-11-01), § 605.0405, § 605.0102(17), § 605.0406, § 605.04091, § 605.04092 (2026-11-03); § 709.2105, § 709.2208, § 117.209, § 117.265, § 117.285, § 668.50(3), (7), (11) (2026-11-08).
+- Florida statutes cited by section; confirm against the current Online Sunshine text before relying. Statutes already confirmed: § 605.0602, § 709.2202 (2026-11-01), § 605.0405, § 605.0102(17), § 605.0406, § 605.04091, § 605.04092 (2026-11-03); § 709.2105, § 709.2208, § 117.209, § 117.265, § 117.285, § 668.50(3), (7), (11) (2026-11-08); template v2 review 2026-11-08: §§ 605.0105–605.0107, 605.0302, 605.0401, 605.0407, 605.04071–605.04074, 605.0408, 605.0504, 605.0602, 605.0603, 605.0701, 605.0702, 709.2102, 709.2104, 709.2109, 709.2111–709.2114, 709.2119, 709.2120, 709.2201, 709.2202.
 - Vocabulary on client surfaces: scope, budget, change order, inspection, as-built, maintenance. Avoid: retainer, hours, matter, billing.
 - Never put hours anywhere a client can see them.

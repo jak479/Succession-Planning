@@ -51,9 +51,11 @@ test("Gulfside OA: values filled with sources; choices and variants applied", ()
   assert.match(a.text, /certification by two licensed physicians, one of whom is the Principal's attending physician, if any, that/);
   assert.match(a.text, /means Luis Herrera, or if Luis Herrera is unable or unwilling to serve, Maria Chen, or if neither, the person designated under 12\.6\./);
   assert.match(a.text, /### 12\.2 Authority/);
-  assert.match(a.text, /filing\. The Company is hereby converted to a manager-managed/);
+  assert.match(a.text, /decided by the Interim Manager alone \(varying § 605\.04073\(2\)\(b\)\)\. Effective on an Unavailability Event, the Company is a manager-managed/);
+  assert.ok(!a.text.includes("[Drafter:") && !a.text.includes("[Multi-member"));
   assert.ok(!a.text.includes("Multi-member") && !a.text.includes("remaining members' rights"));
-  assert.match(a.text, /and \(c\) the Company consents to admit as a member, effective on the Principal's death, the Principal's personal representative or the trustee of \[trust\], so that/);
+  assert.match(a.text, /and \(c\) the Company consents to admit as a member \(§ 605\.0401\(3\)\(a\)\), effective on the Principal's death or, if later, on the person's signed acceptance of this Agreement, the trustee of \[trust\] if/);
+  assert.match(a.text, /______________________ Dana Ortiz, individually\n/);
   const mm = assemble(OA, file(OA.file), { ...GULFSIDE, ...f({ multi_member: true }) }).text;
   assert.match(mm, /continues under this Article; and \(c\) the remaining members' rights under the Agreement and any buy-sell agreement are unaffected\./);
   assert.ok(!mm.includes("the Company consents to admit"));
@@ -95,4 +97,14 @@ test("execution modes follow § 709.2105, § 117.285 and § 668.50", () => {
 });
 test("bracket scanner respects nesting", () => {
   assert.deepEqual(brackets("a [b [c] d] e [f]").map(b => b.text), ["[b [c] d]", "[f]"]);
+});
+
+test("v2 review: statutory words survive assembly verbatim", () => {
+  const r = assemble(RIDER, file(RIDER.file), f({ bank_limit: false })).text;
+  assert.ok(r.includes("This durable power of attorney is not terminated by subsequent incapacity of the principal except as provided in chapter 709, Florida Statutes."), "§ 709.2104");
+  assert.ok(r.includes("authority to conduct banking transactions as provided in section 709.2208(1), Florida Statutes."), "§ 709.2208(1) / § 709.2120(1)(a)");
+  assert.ok(!r.includes("and manager]"), "no manager authority through the POA (§ 709.2201(3)(a))");
+  const o = assemble(OA, file(OA.file), {}).text;
+  assert.ok(o.includes("becomes the sole manager of the Company for the Continuity Period") && o.includes("§ 605.04072(4) does not apply"));
+  assert.ok(o.includes("varies a member's right to approve a merger, interest exchange, or conversion (§ 605.0105(3)(m))"));
 });
