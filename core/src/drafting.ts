@@ -23,7 +23,7 @@ export type Binding =
 /** An operational choice that is the client's to make. `ask` is a neutral question for the attorney's call sheet:
  *  it states the choice and asks; it never recommends, and it does not show the template's bracketed value. */
 export type ClientChoice = { ask: string; node: string | null };
-export type VarDef = { id: string; label: string; from?: string; client?: ClientChoice }; // from: profile field the value is taken from
+export type VarDef = { id: string; label: string; from?: string; client?: ClientChoice; advisor?: string }; // from: profile field; advisor: who supplies the value
 
 /** Which source kinds count as the client's decision. Entity tier: recorded by the attorney on the call, or a document the
  *  client signed. Owner tier: the call only (rule 4). A value from any other source is shown but stays unconfirmed. */
@@ -40,7 +40,7 @@ export type Template = {
 export type Assembly = {
   text: string;
   used: { id: string; value: string; source: string }[];
-  open: { id: string; label: string }[];                                // still bracketed: no value, or not decided
+  open: { id: string; label: string; advisor?: string }[];             // still bracketed: no value, or not decided
   checks: string[];
   /** Every client choice the instrument still contains, in document order, with its status. The template's bracketed
    *  value is shown to the attorney as `template` only; it is never a default. */
@@ -92,7 +92,7 @@ export function assemble(t: Template, file: string, facts: Facts, opts: Assemble
   const checks: string[] = [];
   const DROP_LINE = "\u0000DROP\u0000";
   const take = (id: string) => { const f = facts[id]; if (f) used.set(id, { id, value: String(f.value), source: f.source }); return f; };
-  const miss = (id: string) => { open.set(id, { id, label: label(id) }); };
+  const miss = (id: string) => { const adv = t.vars.find(v => v.id === id)?.advisor; open.set(id, { id, label: label(id), ...(adv ? { advisor: adv } : {}) }); };
   const flag = (id: string) => { const f = take(id); if (!f) { miss(id); return undefined; } if (typeof f.value !== "boolean") throw new Error(`${id} must be true or false`); return f.value; };
 
   const fill = (s: string, bs: Binding[]): string => {
@@ -190,7 +190,7 @@ export function executionModes(templateId: string, facts: Facts): ExecRule[] {
 export function blockers(a: Assembly): string[] {
   return [
     ...a.choices.filter(c => c.status !== "decided").map(c => `${c.status === "open" ? "Put to the client" : "Confirm with the client"}: ${c.label}`),
-    ...a.open.filter(o => !a.choices.some(c => c.id === o.id)).map(o => `Fill: ${o.label}`),
+    ...a.open.filter(o => !a.choices.some(c => c.id === o.id)).map(o => o.advisor ? `Get from the ${o.advisor}: ${o.label}` : `Fill: ${o.label}`),
   ];
 }
 

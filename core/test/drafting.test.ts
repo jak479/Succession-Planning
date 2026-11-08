@@ -154,3 +154,10 @@ test("blockers and call questions", () => {
   assert.ok(q.every(x => x.tier === "owner" && x.kind === "question" && x.key.startsWith("draft:dpoa-rider:")));
   assert.ok(!q.some(x => x.key.endsWith(":business_agent")));
 });
+
+test("advisor inputs: the tax formula comes from the accountant, not the client", () => {
+  const a = assemble(OA, file(OA.file), {});
+  assert.ok(!a.choices.some(c => c.id === "tax_formula"));
+  assert.ok(blockers(a).includes("Get from the accountant: Tax distribution formula"));
+  assert.ok(!callQuestions(OA, a, "2026-11-12").some(q => q.key.endsWith(":tax_formula")));
+});

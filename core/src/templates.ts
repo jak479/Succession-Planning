@@ -60,7 +60,7 @@ export const OA_CONTINUITY: Template = {
     { id: "vendor_cap", label: "Per-vendor monthly cap", client: { ask: "Up to what amount per vendor per month may the Interim Manager pay without consent?", node: "N5" } },
     { id: "prof_fee_cap", label: "Professional-fee cap", client: { ask: "Up to what amount may the Interim Manager spend on professional fees without consent?", node: "N5" } },
     { id: "single_spend_cap", label: "Single expenditure needing consent", client: { ask: "Above what amount does a single expenditure need consent?", node: "N5" } },
-    { id: "tax_formula", label: "Tax distribution formula", client: { ask: "How should tax distributions be calculated? (Your accountant may supply this.)", node: "N5" } },
+    { id: "tax_formula", label: "Tax distribution formula", advisor: "accountant" },
     { id: "owner_payments", label: "Basis for payments to the Principal", client: { ask: "During an event, should payments to you be made under the company's disability or benefits program, or as compensation for past service?", node: "N5" } },
     { id: "sale_needs_approval", label: "Sale agreement needs Branch Decision holder's approval", client: { ask: "Should a sale agreement need the approval of the person who decides the company's future?", node: "N15b" } },
     { id: "valuation_method", label: "Valuation reference", client: { ask: "What valuation method should a sale refer to?", node: "N15b" } },
