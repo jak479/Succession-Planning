@@ -69,5 +69,6 @@ ______________________ Notary Public
 ## Drafting notes for the Firm
 - Where the client's DPOA is drafted by other counsel, this Rider is executed as a standalone supplement with its own witnesses and notary and references the existing Power by date; Part A(2) then becomes necessary.
 - Part C(1): whether a transfer to an *existing* revocable trust needs § 709.2202 initials turns on whether the agent is creating or amending the trust; a transfer alone is Part B authority. Put the initial line in anyway — it costs nothing and removes the argument.
-- Online notarization: a POA that is *remotely witnessed* cannot grant Part C powers (§ 709.2202(6)). Sign Part C in physical presence of both witnesses.
-- Statutes cited but not re-read this session: §§ 709.2104, 709.2105, 709.2108, 709.2119, 709.2120, 709.2208. Walk to each before the first execution.
+- Online notarization: a POA that is *remotely witnessed* cannot grant Part C powers (§ 709.2202(6); § 117.285(7) cross-refers). Sign Part C in physical presence of both witnesses.
+- Remote witnessing of the rider at all: Part B(c) grants § 709.2208(1) banking authority, so with fewer than two witnesses physically present § 117.285(5) applies — provider screening questions, written vulnerable-adult notice, the notary's five spoken questions, and a perceptible indication of remote witnesses in the record. A "yes" to any screening question requires physically present witnesses (§ 117.285(5)(b)). Read 2026-11-08.
+- §§ 709.2105, 709.2208 read 2026-11-08. Statutes cited but not yet re-read: §§ 709.2104, 709.2108, 709.2119, 709.2120. Walk to each before the first execution.

@@ -36,6 +36,7 @@ import → profile → intake gate → path assigned → scan (findings, attorne
 - `docs/design/collection-map.md` — every profile field → sources, access route, consent, pull order
 - `docs/design/contingency-sequence-nodes.md` — nodes, rungs, critical path, review cadence, calculator hooks
 - `docs/design/intake-assessment.md` — the 29 questions and what each feeds
+- `docs/design/drafting-tool.md` — attorney drafting tool: modes, templates, redlines, e-signature and online-notarization gates (ch. 117 pt. II, § 668.50)
 - `docs/design/pro-forma.md` — locked prices, capacity, year 1–2 model, positioning
 - `docs/engagement/` — entity subscription letter (v3) and owner personal letter (v1), both with Schedules
 - `docs/templates/` — OA continuity amendment (ch. 605, § 605.0602 confirmed 2026-11-01) and DPOA business-powers rider (ch. 709, § 709.2202 confirmed 2026-11-01). Other cited sections are listed in each file as "walk to before first execution."
@@ -51,6 +52,7 @@ import → profile → intake gate → path assigned → scan (findings, attorne
 
 ## Open decisions
 - Agent never drafts or fills in documents; owner-tier documents: existence, date, drafter only (decided 2026-11-02).
+- Own drafting tool replaces WealthCounsel entirely (decided 2026-11-08): attorney-only, manual / AI-assisted drafting / AI review per document, redline .docx export, e-signature, RON-ready package. First release: OA amendment and DPOA rider. Design and open questions: docs/design/drafting-tool.md.
 - Anthropic API on zero data retention (decided 2026-11-02): no Files API, Batches, Managed Agents, Skills, MCP connector or code execution; engine on claude-opus-5-5. See docs/design/architecture.md.
 - Phase 3 (family office management): engagement letter outline in docs/engagement/family-office-engagement-outline.md; SEC family office rule read 2026-11-03 (the office is always the client's, never the Firm's); Rule 4-5.4 read and applied 2026-11-03 (no fee sharing or joint practice with advisors; payer may not direct judgment); Rule 4-5.7 read 2026-11-03 (all Firm work is legal services; non-client workspace users and meeting attendees get a written notice first). Rule 4-1.8 read 2026-11-03 (third-party payment consent; no fiduciary role by default). Rule 4-4.3 read 2026-11-03 (notice to non-clients names the client, warns of differing interests, suggests own counsel; applied to the interim manager consent). Rule 4-7.13 read 2026-11-03: copy rules in docs/design/marketing-copy.md. Rule 4-7.14 read 2026-11-03 (family-office clarifier with the term; no specialist claims; full fee disclosure and 90-day honor in ads). Rule 4-7.11 read 2026-11-03 (front door, referral-source materials and change-order offers count as advertising). Rule 4-7.20 read 2026-11-03 (exempts from filing only, not from content rules). Rule 4-7.19 read 2026-11-03 (file non-exempt ads 20 days ahead; seek advisory opinions on four exempt items before launch; keep copies 3 years). Rule 4-7.16 read 2026-11-03 (safe-harbor ad format; the theme and family-office copy fall outside it). Chapter 4-7 reading complete for current needs (floridabar.org blocks automated access; paste the text). F1–F3 coverage set to personal before the exit; confirm.
 - LEAP + WealthCounsel integration: confirm API terms with the vendors (docs/design/integrations.md).
@@ -59,6 +61,6 @@ import → profile → intake gate → path assigned → scan (findings, attorne
 - C-node checks are subscription; C-node drafting is change order; C6 is personal-engagement only. Confirm.
 
 ## Conventions
-- Florida statutes cited by section; confirm against the current Online Sunshine text before relying. Statutes already confirmed: § 605.0602, § 709.2202 (2026-11-01), § 605.0405, § 605.0102(17), § 605.0406, § 605.04091, § 605.04092 (2026-11-03).
+- Florida statutes cited by section; confirm against the current Online Sunshine text before relying. Statutes already confirmed: § 605.0602, § 709.2202 (2026-11-01), § 605.0405, § 605.0102(17), § 605.0406, § 605.04091, § 605.04092 (2026-11-03); § 709.2105, § 709.2208, § 117.209, § 117.265, § 117.285, § 668.50(3), (7), (11) (2026-11-08).
 - Vocabulary on client surfaces: scope, budget, change order, inspection, as-built, maintenance. Avoid: retainer, hours, matter, billing.
 - Never put hours anywhere a client can see them.
