@@ -56,10 +56,10 @@ Every save is an immutable version (author, time, mode, digest). Redline = any t
 4. E-signature with UETA audit trail, or a vendor (open question 1).
 5. RON package export and execution-mode gate (§ 4 table).
 
-## 7. Open questions
-1. E-signature: build it in-house (signer authentication, audit trail, tamper-evident PDF) or use a vendor (DocuSign etc.)?
-2. RON: which provider does your online notary use? The package format follows it.
-3. Owner estate documents (wills, trusts) now also have no drafting home. Wills are outside § 668.50 (§ 668.50(3)(b)1), so electronic wills need ch. 732 read before any template is built. Should they be in the second release?
+## 7. Decisions 2026-11-08
+1. E-signature: in-house (signer authentication, audit trail, tamper-evident PDF).
+2. RON provider: open; the attorney is asking the online notary which one they use. The package format follows that answer.
+3. Wills and trusts: second release. Read ch. 732 (electronic wills) before building any will template.
 
 ## Not yet read at the source
 § 709.2202 (rate-limited today; relying on the 2026-11-01 reading), § 117.295 rules (Fla. Admin. Code ch. 1N-7), § 415.102, ch. 732 electronic-will provisions.
