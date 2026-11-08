@@ -1,0 +1,89 @@
+// Document management wired to the assembler (db/011_documents.sql; docs/design/drafting-tool.md § 8).
+// Every call runs inside an inSession() transaction, so RLS and the triggers decide who may do what.
+import { createHash } from "node:crypto";
+import type pg from "pg";
+import { assemble, blockers, executionModes, type AssembleOptions, type ExecMode, type Facts, type Template } from "./drafting.ts";
+
+export type DraftMode = "manual" | "ai_draft" | "ai_review" | "import";
+const sha = (b: string | Uint8Array) => createHash("sha256").update(b).digest("hex");
+const one = async (c: pg.PoolClient, q: string, p: unknown[]) => (await c.query(q, p)).rows[0];
+
+/** Open a draft document for a template in the session's workspace (the DB refuses a template from the other tier). */
+export async function createDraft(c: pg.PoolClient, t: Template, nodes: string[], title = t.title): Promise<string> {
+  return (await one(c, "insert into ws.document (workspace_id, kind, title, template_id, nodes) values (ws.cur_ws(), 'draft', $1, $2, $3) returning id", [title, t.id, nodes])).id;
+}
+
+/** Assemble from facts and save the result as the draft's next version, with the facts, their sources and the blockers. */
+export async function saveAssembled(c: pg.PoolClient, documentId: string, t: Template, templateFile: string, facts: Facts, mode: DraftMode = "manual", note?: string) {
+  const a = assemble(t, templateFile, facts);
+  return { ...(await saveVersion(c, documentId, a.text, facts, blockers(a), mode, note)), assembly: a };
+}
+
+/** Save edited text as the next version. `blockers` comes from the assembler run the text started from. */
+export async function saveVersion(c: pg.PoolClient, documentId: string, text: string, facts: Facts, open: string[], mode: DraftMode, note?: string) {
+  const n = (await one(c, "select coalesce(max(n), 0) + 1 as n from ws.doc_version where document_id = $1", [documentId])).n;
+  const r = await one(c, `insert into ws.doc_version (workspace_id, document_id, n, content_md, sha256, mode, facts, blockers, note)
+    values (ws.cur_ws(), $1, $2, $3, $4, $5, $6, $7, $8) returning id, n`, [documentId, n, text, sha(text), mode, JSON.stringify(facts), JSON.stringify(open), note ?? null]);
+  return { versionId: r.id as string, n: r.n as number };
+}
+
+/** Send one version to the client. The DB refuses unless that version has no blockers. */
+export async function sendVersion(c: pg.PoolClient, documentId: string, versionId: string) {
+  await c.query("update ws.doc_version set sent_at = now() where id = $1 and document_id = $2", [versionId, documentId]);
+  await c.query("update ws.document set status = 'sent' where id = $1", [documentId]);
+}
+
+/** Add a file as a new document (counterparty paper) or as a new version of an existing non-draft document. */
+export async function addFile(c: pg.PoolClient, kind: "counterparty" | "executed", title: string, file: { filename: string; mime: string; bytes: Uint8Array }, opts: { parentId?: string; nodes?: string[] } = {}) {
+  const d = (await one(c, "insert into ws.document (workspace_id, kind, title, parent_id, nodes) values (ws.cur_ws(), $1, $2, $3, $4) returning id",
+    [kind, title, opts.parentId ?? null, opts.nodes ?? []])).id as string;
+  const v = (await one(c, `insert into ws.doc_version (workspace_id, document_id, n, bytes, filename, mime, sha256)
+    values (ws.cur_ws(), $1, 1, $2, $3, $4, $5) returning id`, [d, Buffer.from(file.bytes), file.filename, file.mime, sha(file.bytes)])).id as string;
+  return { documentId: d, versionId: v };
+}
+
+/** File an executed original against the sent draft version it signs. The execution mode must be one the template's
+ *  rules allow for the facts that version used (§ 709.2105, § 117.285, § 709.2202(6)); the DB checks the rest. */
+export async function fileExecuted(c: pg.PoolClient, t: Template, draftId: string, signedVersionId: string,
+  file: { filename: string; mime: string; bytes: Uint8Array }, exec: { mode: ExecMode; executedOn: string; ronProvider?: string; journalRef?: string }) {
+  const v = await one(c, "select facts, sent_at from ws.doc_version where id = $1 and document_id = $2", [signedVersionId, draftId]);
+  if (!v) throw new Error("no such version of this draft");
+  const rule = executionModes(t.id, v.facts as Facts).find(r => r.mode === exec.mode)!;
+  if (!rule.allowed) throw new Error(`execution mode ${exec.mode} not allowed: ${rule.why}`);
+  const draft = await one(c, "select title, nodes from ws.document where id = $1", [draftId]);
+  const { documentId } = await addFile(c, "executed", draft.title + " (executed)", file, { parentId: draftId, nodes: draft.nodes });
+  await c.query(`insert into ws.doc_execution (document_id, workspace_id, draft_version, mode, executed_on, ron_provider, journal_ref)
+    values ($1, ws.cur_ws(), $2, $3, $4, $5, $6)`, [documentId, signedVersionId, exec.mode, exec.executedOn, exec.ronProvider ?? null, exec.journalRef ?? null]);
+  return { documentId, requires: rule.requires ?? [] };
+}
+
+/** Retire a document; it stays in the index and the audit log. */
+export async function supersede(c: pg.PoolClient, documentId: string) {
+  await c.query("update ws.document set status = 'superseded' where id = $1", [documentId]);
+}
+
+/** The document index the session may see, newest first. */
+export async function listDocuments(c: pg.PoolClient) {
+  return (await c.query(`select d.id, d.kind, d.title, d.template_id, d.nodes, d.status, d.parent_id, d.created_at,
+      (select max(n) from ws.doc_version v where v.document_id = d.id) as versions
+    from ws.document d order by d.created_at desc`)).rows;
+}
+
+/** Re-open a saved draft version in the assembler, e.g. after a client choice is recorded on the call. */
+export async function reassemble(c: pg.PoolClient, versionId: string, t: Template, templateFile: string, more: Facts = {}, opts: AssembleOptions = {}) {
+  const v = await one(c, "select facts from ws.doc_version where id = $1", [versionId]);
+  return assemble(t, templateFile, { ...(v.facts as Facts), ...more }, opts);
+}
+
+/** Rule 8 export package: every executed original with its execution record, as files plus an index. */
+export async function exportPackage(c: pg.PoolClient): Promise<{ path: string; bytes: Uint8Array }[]> {
+  const rows = (await c.query(`select i.*, coalesce(v.bytes, b.bytes) as bytes from ws.export_index i
+      join ws.doc_version v on v.id = i.version_id left join ws.file_blob b on b.source_id = v.blob_source
+      order by i.executed_on, i.title`)).rows;
+  const safe = (s: string) => s.replace(/[^\w.\- ]+/g, "_");
+  const files = rows.map((r, i) => ({ path: `${String(i + 1).padStart(2, "0")} ${safe(r.title)}${r.filename?.match(/\.\w+$/)?.[0] ?? ""}`, bytes: new Uint8Array(r.bytes), r }));
+  const index = ["# Executed documents", "", "| File | Executed | How signed | Notary record | SHA-256 |", "|---|---|---|---|---|",
+    ...files.map(f => `| ${f.path} | ${new Date(f.r.executed_on).toISOString().slice(0, 10)} | ${f.r.mode} | ${f.r.ron_provider ? `${f.r.ron_provider}: ${f.r.journal_ref}` : "—"} | ${f.r.sha256} |`),
+    "", "This package holds the executed originals in your file and the record of how each was signed."].join("\n");
+  return [{ path: "INDEX.md", bytes: new TextEncoder().encode(index) }, ...files.map(f => ({ path: f.path, bytes: f.bytes }))];
+}

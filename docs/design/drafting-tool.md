@@ -71,6 +71,16 @@ Every save is an immutable version (author, time, mode, digest). Redline = any t
 2. RON provider: open; the attorney is asking the online notary which one they use. The package format follows that answer.
 3. Wills and trusts: second release. Read ch. 732 (electronic wills) before building any will template.
 
+## 8. Document management (decided 2026-11-08; built)
+In-house, inside the workspace, one index per workspace, so the two tiers stay separate (rule 3). LEAP gets copies of executed documents later, once its API terms are confirmed. Schema `core/db/011_documents.sql`; functions `core/src/documents.ts`; tests `core/test/documents.test.ts`.
+- **Four kinds in one index:** drafts from the assembler; executed originals; client uploads (the existing file drop joins the index automatically, with no second copy); counterparty papers.
+- **Versions are immutable.** A draft version records its text, how it was made (manual / AI-assisted drafting / AI review / import), the facts with their sources, and the assembler's blockers. Fact sources must exist in the same workspace, so an owner-tier source can never be cited in an entity draft. Nothing is deleted; documents are superseded. Every write goes to the audit log.
+- **Send gate.** A version can be marked sent only if its blockers are empty: every client choice decided, every blank filled. Once sent, the client sees that version and no later unsent ones.
+- **Execution.** An executed original is filed against a sent version of its draft. The execution mode must be one `executionModes` allows for that version's facts, so a rider with Part C cannot be filed as remotely witnessed. A RON execution must name the provider and where the notary's journal can be produced (§ 709.2120(4)(d)). Filing marks the draft executed and creates a `DOC` source the profile and nodes can cite. Node status stays the attorney's.
+- **Who sees what.** Attorney: everything in the workspace. Agent: executed originals and uploads. It reads them and never drafts. Client: executed originals, uploads, and sent drafts. Counterparty papers and unsent drafts are the attorney's alone.
+- **Export package (rule 8).** `exportPackage` returns every executed original plus an `INDEX.md` (file, date executed, how signed, notary record, SHA-256). The client can run it; the server zips it.
+- **Not built yet:** HTTP routes and the editor UI (step 2); Word export; LEAP copy.
+
 ## Template v2 decisions 2026-11-08
 1. Interim Manager removal for Cause: by the Family Liaison with the consent of the person holding Branch Decision authority (as drafted).
 2. Rider banking authority: no limit to Company-related accounts; the statutory § 709.2208(1) words stand alone, keeping the § 709.2120(1)(a) presumption.
