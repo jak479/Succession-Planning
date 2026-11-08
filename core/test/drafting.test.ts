@@ -35,7 +35,7 @@ test("nothing decided: text unchanged except notes; everything open", () => {
   assert.ok(a.text.includes("[Owner name]") && a.text.includes("[one / two]"));
   assert.equal(a.used.length, 0);
   assert.ok(a.open.some(o => o.id === "interim_manager"));
-  assert.deepEqual(a.checks, ["if single-member"]);
+  assert.deepEqual(a.checks, []);
 });
 
 const GULFSIDE = f({
@@ -48,11 +48,15 @@ test("Gulfside OA: values filled with sources; choices and variants applied", ()
   const a = assemble(OA, file(OA.file), GULFSIDE);
   assert.match(a.text, /^AMENDMENT NO\. 1 TO THE OPERATING AGREEMENT OF GULFSIDE MECHANICAL, LLC/);
   assert.match(a.text, /\*\*"Principal"\*\* means Dana Ortiz, the sole member of the Company/);
-  assert.match(a.text, /certification by two licensed physicians one of whom is the Principal's attending physician, if any that/);
+  assert.match(a.text, /certification by two licensed physicians, one of whom is the Principal's attending physician, if any, that/);
   assert.match(a.text, /means Luis Herrera, or if Luis Herrera is unable or unwilling to serve, Maria Chen, or if neither, the person designated under 12\.6\./);
   assert.match(a.text, /### 12\.2 Authority/);
   assert.match(a.text, /filing\. The Company is hereby converted to a manager-managed/);
   assert.ok(!a.text.includes("Multi-member") && !a.text.includes("remaining members' rights"));
+  assert.match(a.text, /and \(c\) the Company consents to admit as a member, effective on the Principal's death, the Principal's personal representative or the trustee of \[trust\], so that/);
+  const mm = assemble(OA, file(OA.file), { ...GULFSIDE, ...f({ multi_member: true }) }).text;
+  assert.match(mm, /continues under this Article; and \(c\) the remaining members' rights under the Agreement and any buy-sell agreement are unaffected\./);
+  assert.ok(!mm.includes("the Company consents to admit"));
   assert.match(a.text, /default branch is \*\*continue\*\*/);
   assert.ok(a.used.every(u => u.source === S));
   assert.ok(a.open.some(o => o.id === "family_liaison"), "undecided stays open");

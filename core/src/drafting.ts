@@ -12,7 +12,7 @@ export type Binding =
   | { kind: "var"; text: string; id: string; upper?: boolean }          // fill; unfilled stays as the bracket
   | { kind: "choice"; text: string; id: string }                          // one of the " / " options
   | { kind: "optional"; text: string; id: string; inner?: Binding[] }     // include the bracket's words if true
-  | { kind: "variant"; text: string; id: string }                         // "[Label: words]": include words if true
+  | { kind: "variant"; text: string; id: string; negate?: boolean; inner?: Binding[] } // "[Label: words]": include words if true (false if negate)
   | { kind: "ifChoice"; text: string; id: string; equals: string }        // include words if the choice equals
   | { kind: "lineIf"; text: string; id: string }                          // drop the whole line if false
   | { kind: "check"; text: string }                                       // removed; listed for the attorney
@@ -95,7 +95,7 @@ export function assemble(t: Template, file: string, facts: Facts): Assembly {
           out += f.value; break;
         }
         case "optional": { const v = flag(bd.id); out += v === undefined ? b.text : v ? (bd.inner ? fill(body(b.text), bd.inner) : body(b.text)) : ""; break; }
-        case "variant": { const v = flag(bd.id); out += v === undefined ? b.text : v ? variantBody(b.text) : ""; break; }
+        case "variant": { const v = flag(bd.id); out += v === undefined ? b.text : v !== !!bd.negate ? (bd.inner ? fill(variantBody(b.text), bd.inner) : variantBody(b.text)) : ""; break; }
         case "ifChoice": { const f = facts[bd.id]; out += f === undefined ? b.text : String(f.value) === bd.equals ? body(b.text) : ""; break; }
         case "lineIf": { const v = flag(bd.id); out += v === undefined ? b.text : v ? "" : DROP_LINE; break; }
         case "check": checks.push(body(b.text)); break;
