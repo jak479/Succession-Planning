@@ -91,12 +91,24 @@ export async function exportPackage(c: pg.PoolClient): Promise<{ path: string; b
   return [{ path: "INDEX.md", bytes: new TextEncoder().encode(index) }, ...files.map(f => ({ path: f.path, bytes: f.bytes }))];
 }
 
-/** Close the file at the end of the engagement and track the two steps purge needs (db/012). */
+/** Close the file at the end of the engagement (db/012, db/013). Disposal follows the Bar's guidelines (Op. 81-8 via
+ *  the Bar's ethics FAQ): ask the client for directions; if the client cannot be reached, keep marked originals longer. */
 export async function closeFile(c: pg.PoolClient, endedOn: string) {
   await c.query("insert into ws.file_closure (workspace_id, engagement_ended_on) values (ws.cur_ws(), $1)", [endedOn]);
 }
-export async function markClosure(c: pg.PoolClient, step: "export_delivered" | "notice_sent") {
+/** "directions_requested": the written request to the client for directions (stored as notice_sent_at). */
+export async function markClosure(c: pg.PoolClient, step: "export_delivered" | "directions_requested") {
   await c.query(`update ws.file_closure set ${step === "export_delivered" ? "export_delivered_at" : "notice_sent_at"} = now() where workspace_id = ws.cur_ws()`);
+}
+export async function recordDirection(c: pg.PoolClient, direction: "return" | "destroy" | "firm_keep") {
+  await c.query("update ws.file_closure set client_direction = $1, direction_at = now() where workspace_id = ws.cur_ws()", [direction]);
+}
+export async function recordUnreachable(c: pg.PoolClient, contactLog: string) {
+  await c.query("update ws.file_closure set unreachable_at = now(), contact_log = $1 where workspace_id = ws.cur_ws()", [contactLog]);
+}
+/** Mark a document as an original or important paper to keep if the client cannot be reached. */
+export async function markOriginal(c: pg.PoolClient, documentId: string, keep = true) {
+  await c.query("update ws.document set retain_original = $2 where id = $1", [documentId, keep]);
 }
 /** Purge the closed file's contents; the index, hashes, execution records and audit log stay. */
 export async function purgeFile(c: pg.PoolClient): Promise<number> {
