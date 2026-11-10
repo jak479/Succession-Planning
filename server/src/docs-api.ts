@@ -61,6 +61,21 @@ function view(t: Template, facts: Facts) {
   return { highlighted: a.text, choices: a.choices, open: a.open, checks: a.checks, blockers: blockers(a), execution: executionModes(t.id, facts) };
 }
 
+/** Highlights for a version edited by hand: its saved text, with each client choice marked where its text appears
+ *  (the template's bracket while the choice is undecided, the recorded value once decided). */
+export function markEdited(text: string, choices: ReturnType<typeof view>["choices"]): string {
+  const spots: { s: string; id: string }[] = [];
+  for (const c of choices) {
+    if (c.status !== "decided" && /^\[.*\]$/s.test(c.template)) spots.push({ s: c.template, id: c.id });
+    else if (c.status === "decided" && c.value && c.value !== "true" && c.value !== "false" && c.value.length > 1) spots.push({ s: c.value, id: c.id });
+  }
+  const uniq = [...new Map(spots.sort((a, b) => b.s.length - a.s.length).map(x => [x.s, x])).values()];
+  if (!uniq.length) return text;
+  const re = new RegExp(uniq.map(x => x.s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g");
+  const by = new Map(uniq.map(x => [x.s, x.id]));
+  return text.replace(re, m => `⟦choice:${by.get(m)}⟧${m}⟦/choice⟧`);
+}
+
 export type JsonRoute = [string, RegExp, (x: { c: pg.PoolClient; body: any; role: string }, m: RegExpExecArray) => Promise<unknown>];
 export const docRoutes: JsonRoute[] = [
   ["GET", /^\/api\/docs$/, async ({ c, role }) => {
@@ -80,9 +95,11 @@ export const docRoutes: JsonRoute[] = [
       from ws.doc_version where document_id = $1 order by n desc`, [m[1]])).rows;
     if (d.kind !== "draft" || role !== "attorney") return { document: d, versions };
     const t = tpl(d.template_id), v = await latest(c, m[1]);
+    const vw = view(t, v.facts ?? {}), edited = assemble(t, tplFile(t), v.facts ?? {}).text !== v.content_md;
+    // A hand-edited version shows its own saved text, not a fresh assembly from the facts.
     return { document: d, versions, template: { id: t.id, title: t.title, tier: t.tier, inputs: inputsOf(t) },
-      current: { versionId: v.id, n: v.n, text: v.content_md, facts: v.facts, ...view(t, v.facts ?? {}),
-        edited: assemble(t, tplFile(t), v.facts ?? {}).text !== v.content_md } };
+      current: { versionId: v.id, n: v.n, text: v.content_md, facts: v.facts, ...vw, edited,
+        highlighted: edited ? markEdited(v.content_md, vw.choices) : vw.highlighted } };
   }],
   ["GET", /^\/api\/docs\/([0-9a-f-]{36})\/versions\/([0-9a-f-]{36})$/, async ({ c }, m) => {
     const v = await one(c, "select id, n, mode, note, content_md as text, facts, blockers, sent_at, created_at from ws.doc_version where id = $2 and document_id = $1", [m[1], m[2]]);
