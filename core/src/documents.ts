@@ -153,3 +153,11 @@ function opens(kind: string, b: Uint8Array): boolean {
     default: return b.length > 0;                                          // unknown format: present, not parsed
   }
 }
+
+/** Litigation hold (db/015): blocks purge, even on the client's direction to destroy. Attorney-only. */
+export async function placeHold(c: pg.PoolClient, reason: string): Promise<string> {
+  return (await one(c, "insert into ws.legal_hold (workspace_id, reason) values (ws.cur_ws(), $1) returning id", [reason])).id;
+}
+export async function releaseHold(c: pg.PoolClient, holdId: string, reason: string) {
+  await c.query("update ws.legal_hold set released_at = now(), released_by = ws.me(), release_reason = $2 where id = $1", [holdId, reason]);
+}

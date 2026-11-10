@@ -4,13 +4,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import pg from "pg";
 import { inSession } from "../src/store.ts";
-import { addFile, closeFile, createDraft, exportPackage, fileExecuted, listDocuments, markClosure, markOriginal, purgeFile, recordDirection, recordUnreachable, saveAssembled, verifyIntegrity, saveVersion, sendVersion, supersede } from "../src/documents.ts";
+import { addFile, closeFile, createDraft, exportPackage, fileExecuted, listDocuments, markClosure, markOriginal, purgeFile, recordDirection, recordUnreachable, saveAssembled, verifyIntegrity, placeHold, releaseHold, saveVersion, sendVersion, supersede } from "../src/documents.ts";
 import { OA_CONTINUITY as OA, DPOA_RIDER as RIDER, TEMPLATES } from "../src/templates.ts";
 
 const base = process.env.PGURL ?? "postgresql://postgres@%2Fvar%2Ftmp:5433";
 const db = "oew_docs_" + process.pid;
 const MIGRATIONS = ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql", "005_intake.sql", "006_profile.sql", "007_threads.sql",
-  "008_estimate_terms.sql", "009_estimate_costs.sql", "010_agenda.sql", "011_documents.sql", "012_auto_green_retention.sql", "013_retention_directions.sql", "014_keep_unless_destroy.sql"];
+  "008_estimate_terms.sql", "009_estimate_costs.sql", "010_agenda.sql", "011_documents.sql", "012_auto_green_retention.sql", "013_retention_directions.sql", "014_keep_unless_destroy.sql", "015_legal_hold.sql"];
 let pool: pg.Pool; const id: Record<string, string> = {};
 const tpl = (t: typeof OA) => readFileSync(new URL("../../" + t.file, import.meta.url), "utf8");
 const PDF = { filename: "signed.pdf", mime: "application/pdf", bytes: new TextEncoder().encode("%PDF-1.4 signed") };
@@ -175,6 +175,15 @@ test("retention: files are kept unless the client directs destruction; then ever
   await assert.rejects(as("atty", "ent", c => purgeFile(c)), /current: firm_keep/);
   await as("atty", "ent", c => recordDirection(c, "destroy"));
   await assert.rejects(as("owner", "ent", c => purgeFile(c)), /attorney only/);
+  await assert.rejects(as("owner", "ent", c => placeHold(c, "x")), /row-level security/, "holds are the attorney's");
+  const hold = await as("atty", "ent", c => placeHold(c, "demand letter received 2026-11-09"));
+  await as("owner", "ent", async c => assert.equal((await c.query("select * from ws.legal_hold")).rowCount, 0, "clients do not see holds"));
+  await assert.rejects(as("atty", "ent", c => purgeFile(c)), /litigation hold in place/);
+  await as("atty", "ent", async c => assert.ok((await c.query("select count(*)::int n from ws.doc_version where purged_at is null")).rows[0].n > 0, "nothing purged under hold"));
+  await assert.rejects(as("atty", "ent", c => c.query("update ws.legal_hold set reason = 'edited' where id = $1", [hold])), /can only be released/);
+  await assert.rejects(pool.query("delete from ws.legal_hold where id = $1", [hold]), /never deleted/);
+  await as("atty", "ent", c => releaseHold(c, hold, "claim resolved; release signed 2026-11-10"));
+  await assert.rejects(as("atty", "ent", c => releaseHold(c, hold, "again")), /released hold is final/);
   await assert.rejects(as("atty", "ent", c => c.query("update ws.file_closure set purged_at = now()")), /purge_documents\(\) only/);
   const n = await as("atty", "ent", c => purgeFile(c));
   assert.ok(n > 0, "no waiting period");
