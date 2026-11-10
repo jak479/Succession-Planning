@@ -30,8 +30,10 @@ const pool = process.env.CLOUD_SQL_INSTANCE
   ? new pg.Pool({ host: `/cloudsql/${process.env.CLOUD_SQL_INSTANCE}`, user: process.env.DB_USER ?? "postgres", password: process.env.DB_PASSWORD, database: process.env.DB_NAME ?? "oew", max: 5 })
   : new pg.Pool({ connectionString: process.env.DATABASE_URL });
 if (DEMO_MODE) {
-  // Demo data only: (re)seed when the schema is missing or older than the newest migration (010 adds ws.deadline).
-  const current = (await pool.query("select to_regclass('ws.deadline') is not null ok")).rows[0].ok;
+  // Demo data only: (re)seed when the schema is missing or older than the newest migration. NEWEST_TABLE is a table
+  // the newest migration creates (017 adds ws.doc_suggestion); update it with every new migration.
+  const NEWEST_TABLE = "ws.doc_suggestion";
+  const current = (await pool.query("select to_regclass($1) is not null ok", [NEWEST_TABLE])).rows[0].ok;
   if (!current) { const c = await pool.connect(); try { await seedDemo(c); } finally { c.release(); } console.log("demo data seeded"); }
 }
 const hasDemoCookie = (req: http.IncomingMessage) => {
@@ -49,8 +51,9 @@ function demoPage(): string {
 ${link(DEMO.dana, DEMO.entity, "workspace", "Dana Ortiz: client workspace", "Owner and authorized signer. Ask questions, intake, plan, profile.")}
 ${link(DEMO.dana, DEMO.entity, "board", "Dana Ortiz: board and budget", "Approve proposed change orders.")}
 ${link(DEMO.luis, DEMO.entity, "workspace", "Luis Herrera: client workspace", "Operations manager. Same company, cannot see Dana's intake or sign change orders.")}
-${link(DEMO.attorney, DEMO.entity, "attorney", "Josh: attorney console", "Conflicts, briefs and scope, intake agenda, profile.")}
+${link(DEMO.attorney, DEMO.entity, "attorney", "Josh: attorney console", "Conflicts, briefs and scope, intake agenda, profile, Documents (drafting tool).")}
 ${link(DEMO.attorney, DEMO.entity, "board", "Josh: board", "Propose change orders, scope included work, mark done.")}
+${link(DEMO.attorney, DEMO.owner, "attorney", "Josh: attorney console, owner tier", "Dana's personal tier: the DPOA business-powers rider (Documents tab).")}
 </ul><form method="post" action="/demo/reset" onsubmit="return confirm('Reset all demo data to the starting point?')"><button type="submit">Reset demo data</button></form></main></body></html>`;
 }
 const loginPage = (bad: boolean) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Owner Exit Demo</title>
