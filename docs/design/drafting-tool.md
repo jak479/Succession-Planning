@@ -89,6 +89,7 @@ In-house, inside the workspace, one index per workspace, so the two tiers stay s
     - **Firm keeps:** purge refuses.
     - **Unreachable** (the contact attempts must be logged): everything except marked originals is purged. The originals go only after a second, longer period.
   - **Originals.** Executed originals are marked as originals automatically; the attorney marks others on review.
+  - **Exposure (§ 95.11(5)(b), § 95.031(2)(a), read 2026-11-10).** A legal-malpractice action must be brought within 2 years, but the period runs from when the cause of action "is discovered or should have been discovered with the exercise of due diligence." Unlike medical malpractice (§ 95.11(5)(c)), there is no outer limit (statute of repose). For continuity documents, discovery typically comes when the trigger occurs, which can be years after the engagement, so no retention period closes the exposure. The only fixed outer limit in reach is the 12 years from the act that § 95.031(2)(a) sets for fraud actions under § 95.11(3).
   - **Purge.** Removes contents only. The index, hashes, execution records and audit log stay. Purge refuses until `ws.retention_policy` holds both periods, the rule cite and the date read. Backups age out on the host's schedule.
 - **Not built yet:** HTTP routes and the editor UI (step 2); Word export; LEAP copy.
 
