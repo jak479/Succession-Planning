@@ -1,6 +1,6 @@
-# Durable Power of Attorney — Business Powers Rider (Template v1)
+# Durable Power of Attorney — Business Powers Rider (Template v2)
 
-A rider to the Principal's Florida durable power of attorney under part II of ch. 709 (the Florida Power of Attorney Act), for the owner of [Company], LLC. It can be integrated into the Firm's DPOA or attached to a DPOA drafted by other counsel as a separately executed supplement. § 709.2202 text confirmed 2026-11-01.
+A rider to the Principal's Florida durable power of attorney under part II of ch. 709 (the Florida Power of Attorney Act), for the owner of [Company], LLC. It can be integrated into the Firm's DPOA or attached to a DPOA drafted by other counsel as a separately executed supplement. § 709.2202 text confirmed 2026-11-01; v2 review 2026-11-08 (§§ 709.2102, 709.2104, 709.2109, 709.2111–709.2114, 709.2119, 709.2120, 709.2201, 709.2202, 709.2208, 117.285 read that day).
 
 ## Drafting rules this rider is built on
 1. **No springing powers.** A POA executed after Oct. 1, 2011 is effective when executed (§ 709.2108). The agent's authority over the business therefore exists from signing; the *Interim Manager's* authority under the operating-agreement amendment is what activates on the Unavailability Event. The rider's job is to make the agent's personal-side authority consistent with that, not to duplicate it.
@@ -13,17 +13,17 @@ A rider to the Principal's Florida durable power of attorney under part II of ch
 
 ## RIDER [ ] — AUTHORITY CONCERNING [COMPANY], LLC
 
-This Rider is part of the Durable Power of Attorney of [Principal] dated [ ] (the "Power"). Capitalized terms not defined here have the meanings in the Power. The Power is durable and is not terminated by the Principal's subsequent incapacity except as provided in chapter 709, Florida Statutes.
+This Rider is part of the Durable Power of Attorney of [Principal] dated [ ] (the "Power"). Capitalized terms not defined here have the meanings in the Power. This durable power of attorney is not terminated by subsequent incapacity of the principal except as provided in chapter 709, Florida Statutes.
 
 ### Part A — Agent for business matters
 (1) For all matters concerning the Principal's interest in [Company], LLC (the "Company"), the Principal's agent is **[Name]** (the "Business Agent"), [who is also the Interim Manager designated in the Company's Operating Agreement]. If the Business Agent is unable or unwilling to act, **[Alternate]** is the Business Agent.
 (2) [If the Power names a different agent for other matters:] The authority in this Rider is exercised by the Business Agent alone and not by any other agent named in the Power; the other agent has no authority concerning the Company except as this Rider provides. [If the same person serves for all purposes, omit.]
 
-### Part B — Authority (general grant; no initials required)
+### Part B — Specific authority (no initials required)
 The Business Agent may, in the Principal's name and as the Principal's attorney-in-fact:
-(a) exercise all rights of the Principal as a member [and manager] of the Company, including voting, consenting, and signing on the Principal's behalf any resolution, consent, amendment, or other record of the Company that the Principal could sign;
+(a) exercise the Principal's rights as a member of the Company, specifically: to vote and consent as a member, with or without a meeting (§ 605.04073(4)); to approve or sign amendments to the Operating Agreement and articles of organization; to choose or remove managers (§ 605.04072); to admit members; to approve acts outside the ordinary course; and to sign any resolution, consent, or other record of the Company that the Principal could sign as a member; [Drafter: member rights only. Do not add "and manager": the agent may not perform the Principal's personal services (§ 709.2201(3)(a)), and general grants confer nothing (§ 709.2201(1)). Management during a Continuity Period comes from the Operating Agreement, not from this Rider.]
 (b) take every action the Company's Operating Agreement, including Article [ ] (Continuity), permits or requires of the Principal, the Principal's attorney-in-fact, or the person holding Branch Decision authority, including making or consenting to the Branch Decision and extending the Continuity Period;
-(c) deal with the Company's banks and other financial institutions concerning accounts on which the Principal is a signatory, to the full extent of § 709.2208(1), and sign signatory cards and resolutions adding the Interim Manager;
+(c) conduct banking transactions: the Business Agent has authority to conduct banking transactions as provided in section 709.2208(1), Florida Statutes. As to accounts of the Company, the Business Agent may exercise the Principal's member rights under paragraph (a) to adopt resolutions of the Company designating signatories, including the Interim Manager; [Drafter: the first sentence uses the statutory words, which § 709.2120(1)(a) requires for the four-day acceptance presumption. Company accounts belong to the Company, not the Principal; § 709.2208(1) reaches only the Principal's own money (§ 709.2208(1)(c)). Bank access to Company accounts comes from Company resolutions and the Operating Agreement. A limit to Company-related accounts was considered and dropped (2026-11-08) to keep the presumption.]
 (d) deal with the Company's lenders, landlord, insurers, licensing agencies, and regulators concerning any obligation, guaranty, license, or designation held in the Principal's name, including executing renewals, estoppels, and notices and negotiating the release or assumption of personal guaranties;
 (e) receive distributions, information, and reports due to the Principal as a member;
 (f) consent to the admission of a member under Article [ ].4 of the Operating Agreement to prevent dissolution;
@@ -42,12 +42,13 @@ ____ (3) **Make gifts of the Principal's interest in the Company** to [named des
 ____ (4) **Disclaim** any interest in the Company or any right under the Operating Agreement or buy-sell agreement. (§ 709.2202(1)(g))
 
 ### Part D — Agent who is not a family member
-[Include only if the Business Agent is not an ancestor, spouse, or descendant of the Principal.] Notwithstanding § 709.2202(3), the Business Agent may, in exercising Parts B and C, (i) serve as Interim Manager and receive the compensation the Operating Agreement provides, and (ii) [participate as buyer under the Company's buy-sell agreement dated [ ] on its stated terms,] but may not otherwise create an interest in the Principal's property in the Business Agent's own favor.
+[Include only if the Business Agent is not an ancestor, spouse, or descendant of the Principal.] Notwithstanding § 709.2202(3) and, to the extent stated here, § 709.2114(2)(a)–(b), the Business Agent may, in exercising Parts B and C, (i) serve as Interim Manager and receive the compensation the Operating Agreement provides[, and (ii) participate as buyer under the Company's buy-sell agreement dated [ ] on its stated terms,] but may not otherwise create an interest in the Principal's property in the Business Agent's own favor. In any transaction in which the Business Agent is a buyer or a counterparty, the Business Agent does not act for the Principal; **[Alternate]** acts for the Principal in that transaction as special agent with the authority of Parts B and C. The Business Agent receives no compensation from the Principal as agent; compensation as Interim Manager is paid by the Company under the Operating Agreement. [Drafter: the duties in § 709.2114(1), including acting in good faith and not contrary to the Principal's best interest, apply notwithstanding this Rider. Compensation as agent is barred unless the agent is a "qualified agent" (§ 709.2112(3)–(4)).]
 
 ### Part E — Coordination
 (1) If this Rider and Article [ ] (Continuity) of the Operating Agreement conflict as to management of the Company, [the Operating Agreement] controls; as to the Principal's ownership of the interest, [the Principal's estate-planning documents] control.
 (2) The Business Agent shall deliver a copy of this Rider and the agent's affidavit under § 709.2119 to each of the Company's banks and lenders at signing and on any change of Business Agent.
 (3) The Principal directs that this Rider be reviewed with the Operating Agreement at least annually.
+(4) The Business Agent shall keep the records § 709.2114(1)(c) requires and give the [Family Liaison named in the Operating Agreement] a [quarterly] account of transactions under this Rider (§ 709.2114(6)).
 
 ### Part F — Reliance
 A person who in good faith accepts this Rider without actual knowledge of its revocation, or of the Business Agent's lack of authority, may rely on it and on the Business Agent's affidavit as § 709.2119 provides.
@@ -69,5 +70,12 @@ ______________________ Notary Public
 ## Drafting notes for the Firm
 - Where the client's DPOA is drafted by other counsel, this Rider is executed as a standalone supplement with its own witnesses and notary and references the existing Power by date; Part A(2) then becomes necessary.
 - Part C(1): whether a transfer to an *existing* revocable trust needs § 709.2202 initials turns on whether the agent is creating or amending the trust; a transfer alone is Part B authority. Put the initial line in anyway — it costs nothing and removes the argument.
-- Online notarization: a POA that is *remotely witnessed* cannot grant Part C powers (§ 709.2202(6)). Sign Part C in physical presence of both witnesses.
-- Statutes cited but not re-read this session: §§ 709.2104, 709.2105, 709.2108, 709.2119, 709.2120, 709.2208. Walk to each before the first execution.
+- **Suspension risk (§ 709.2109(3)).** If anyone files a petition to determine the Principal's incapacity or appoint a guardian advocate, this Rider is suspended unless the Business Agent is the Principal's parent, spouse, child, or grandchild (or a verified motion under § 744.3203 is also filed). The Operating Agreement's Interim Manager authority is not suspended by such a petition, which is why management rests there. During suspension the agent may petition for emergency authority (§ 709.2109(3)(a)).
+- **Spouse as agent.** Filing for dissolution, annulment, or legal separation ends a spouse-agent's authority unless the Power says otherwise (§ 709.2109(2)(b)). Name a non-spouse alternate.
+- **Trust-held interest.** If the Principal holds the Company interest as trustee, this Rider cannot reach it (§ 709.2201(3)(e)); use the trust's incapacity and successor-trustee provisions.
+- **Part C(1) amendment of an existing trust** works only if the trust instrument explicitly allows the settlor's agent to amend it (§ 709.2202(1)(b)).
+- **Principal physically unable to sign or initial:** the notary may sign or initial at the Principal's direction, in the Principal's presence, with two disinterested witnesses, writing the statutory statement under each (§ 709.2202(2)).
+- **Remote execution record.** A bank may refuse a remotely notarized or witnessed power if the agent cannot produce the notary's electronic journal or record (§ 709.2120(4)(d)). Get the record's retrieval details at signing.
+- Online notarization: a POA that is *remotely witnessed* cannot grant Part C powers (§ 709.2202(6); § 117.285(7) cross-refers). Sign Part C in physical presence of both witnesses.
+- Remote witnessing of the rider at all: Part B(c) grants § 709.2208(1) banking authority, so with fewer than two witnesses physically present § 117.285(5) applies — provider screening questions, written vulnerable-adult notice, the notary's five spoken questions, and a perceptible indication of remote witnesses in the record. A "yes" to any screening question requires physically present witnesses (§ 117.285(5)(b)). Read 2026-11-08.
+- §§ 709.2104, 709.2105, 709.2109, 709.2111–709.2114, 709.2119, 709.2120, 709.2201, 709.2202, 709.2208 read 2026-11-08. Not yet re-read: § 709.2108, § 744.3203. Walk to each before the first execution.

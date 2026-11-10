@@ -11,7 +11,7 @@ Decided 2026-11-02 (proposal; Josh to confirm hosting). Preserves the data model
 
 ## Decisions 2026-11-02
 - **Custom board**, not monday.com. Built (item 5, ahead of 2–4).
-- **The agent never drafts or fills in a document.** Drafting is the attorney's, in WealthCounsel. In the owner tier the agent records a document's existence, date and drafter only. The fields for POA agent / PR / trustee and long-term care / asset protection are recorded by the attorney from the call (enforced: `ws.profile_field_def.agent_may`).
+- **The agent never drafts or fills in a document.** Drafting is the attorney's (WealthCounsel superseded 2026-11-08 by the Firm's own attorney-only drafting tool: docs/design/drafting-tool.md). In the owner tier the agent records a document's existence, date and drafter only. The fields for POA agent / PR / trustee and long-term care / asset protection are recorded by the attorney from the call (enforced: `ws.profile_field_def.agent_may`).
 - **Zero data retention (ZDR)** on the Anthropic API organization. Source: platform.claude.com/docs/en/manage-claude/api-and-data-retention (read 2026-11-02).
   - Arranged through Anthropic sales, per organization; not a Console switch. Each new organization needs its own enablement.
   - ZDR-eligible and planned for use: Messages API, token counting, PDF input in the request, citations, prompt caching, adaptive thinking, structured outputs (qualified), web search/fetch.

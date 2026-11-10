@@ -1,6 +1,6 @@
 # Integrations — LEAP and WealthCounsel (v0, design only)
 
-Decided 2026-11-02: integrate with LEAP (practice management) and WealthCounsel (drafting). No code until the vendor terms below are read at the source.
+Decided 2026-11-02: integrate with LEAP (practice management) and WealthCounsel (drafting). **2026-11-08: WealthCounsel dropped; drafting moves to the Firm's own tool (docs/design/drafting-tool.md). The WealthCounsel lines below are kept as history only.** No code until the vendor terms below are read at the source.
 
 ## What is known, and how well
 Search-result summaries only. The vendor sites were not reachable from the build environment, so none of this has been read at the primary source. Confirm each line before relying on it.

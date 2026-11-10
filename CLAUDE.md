@@ -29,6 +29,10 @@ import → profile → intake gate → path assigned → scan (findings, attorne
 
 ## Where things are
 - `web/workspace.html` (client), `web/attorney.html` (attorney console), `web/board.html` — served by `server/` at /workspace, /attorney, /board (`npm run dev-db`, optional `node --experimental-strip-types src/dev-demo.ts <ids file>`, then `npm start`). Screenshots: `docs/design/screens/`.
+- `core/src/drafting.ts`, `core/src/templates.ts` — drafting tool step 1: deterministic assembly of the OA amendment and DPOA rider from `docs/templates/`, every value with a source id; execution-mode gate (docs/design/drafting-tool.md).
+- `server/src/docs-api.ts`, `server/src/docx.ts`, Documents tab in `web/attorney.html` — drafting tool step 2: editor with highlighted client choices, versions, send, Word export clean and redline (tracked changes), draft choices on the Thursday agenda.
+- `server/src/engine/drafting.ts`, `core/src/statutes.ts` — drafting tool step 3: AI review (findings must quote the draft; unconfirmed citations checked by code) and AI-suggested edits (accept/reject; never decides an open client choice). Owner tier off unless OWNER_TIER_AI=on.
+- `core/db/011_documents.sql`, `core/src/documents.ts` — document management wired to the assembler: drafts, immutable versions, send gate, executed originals, client uploads, counterparty papers, export package (drafting-tool.md § 8).
 - `core/` — build item 1: catalog (`src/catalog.ts`, generates `db/002_catalog.sql`), pure rules, Postgres schema with RLS (`db/001_init.sql`), tests (`npm test`, needs Postgres on PGURL). Design: `docs/design/architecture.md`.
 - `prototype/front-door.html` — single-file working prototype (vanilla JS, SVG diagrams, `claude.use("sample")` for the engine, `claude.use("mcp")` for Google Drive import, pdf.js from cdnjs, in-browser .docx unzip). Published as a claude.ai artifact; the prompts in it are the current engine prompts and should move server-side.
 - `docs/design/front-door-spec.md` — intake flow, permitted outputs, hard constraints
@@ -36,9 +40,10 @@ import → profile → intake gate → path assigned → scan (findings, attorne
 - `docs/design/collection-map.md` — every profile field → sources, access route, consent, pull order
 - `docs/design/contingency-sequence-nodes.md` — nodes, rungs, critical path, review cadence, calculator hooks
 - `docs/design/intake-assessment.md` — the 29 questions and what each feeds
+- `docs/design/drafting-tool.md` — attorney drafting tool: modes, templates, redlines, e-signature and online-notarization gates (ch. 117 pt. II, § 668.50)
 - `docs/design/pro-forma.md` — locked prices, capacity, year 1–2 model, positioning
 - `docs/engagement/` — entity subscription letter (v3) and owner personal letter (v1), both with Schedules
-- `docs/templates/` — OA continuity amendment (ch. 605, § 605.0602 confirmed 2026-11-01) and DPOA business-powers rider (ch. 709, § 709.2202 confirmed 2026-11-01). Other cited sections are listed in each file as "walk to before first execution."
+- `docs/templates/` — OA continuity amendment (ch. 605, § 605.0602 confirmed 2026-11-01) and DPOA business-powers rider (ch. 709, § 709.2202 confirmed 2026-11-01). Both v2 after a statute-by-statute review 2026-11-08. Other cited sections are listed in each file as "walk to before first execution."
 
 ## Build order (from the decisions)
 1. Shared state file + per-client workspace with two tiers and attorney/client roles
@@ -51,6 +56,8 @@ import → profile → intake gate → path assigned → scan (findings, attorne
 
 ## Open decisions
 - Agent never drafts or fills in documents; owner-tier documents: existence, date, drafter only (decided 2026-11-02).
+- AI review and suggested edits on owner-tier drafts (DPOA rider): off by default (OWNER_TIER_AI). Decide whether owner-tier draft text may go to the model under ZDR.
+- Own drafting tool replaces WealthCounsel entirely (decided 2026-11-08): attorney-only, manual / AI-assisted drafting / AI review per document, redline .docx export, e-signature, RON-ready package. First release: OA amendment and DPOA rider. Design and open questions: docs/design/drafting-tool.md.
 - Anthropic API on zero data retention (decided 2026-11-02): no Files API, Batches, Managed Agents, Skills, MCP connector or code execution; engine on claude-opus-5-5. See docs/design/architecture.md.
 - Phase 3 (family office management): engagement letter outline in docs/engagement/family-office-engagement-outline.md; SEC family office rule read 2026-11-03 (the office is always the client's, never the Firm's); Rule 4-5.4 read and applied 2026-11-03 (no fee sharing or joint practice with advisors; payer may not direct judgment); Rule 4-5.7 read 2026-11-03 (all Firm work is legal services; non-client workspace users and meeting attendees get a written notice first). Rule 4-1.8 read 2026-11-03 (third-party payment consent; no fiduciary role by default). Rule 4-4.3 read 2026-11-03 (notice to non-clients names the client, warns of differing interests, suggests own counsel; applied to the interim manager consent). Rule 4-7.13 read 2026-11-03: copy rules in docs/design/marketing-copy.md. Rule 4-7.14 read 2026-11-03 (family-office clarifier with the term; no specialist claims; full fee disclosure and 90-day honor in ads). Rule 4-7.11 read 2026-11-03 (front door, referral-source materials and change-order offers count as advertising). Rule 4-7.20 read 2026-11-03 (exempts from filing only, not from content rules). Rule 4-7.19 read 2026-11-03 (file non-exempt ads 20 days ahead; seek advisory opinions on four exempt items before launch; keep copies 3 years). Rule 4-7.16 read 2026-11-03 (safe-harbor ad format; the theme and family-office copy fall outside it). Chapter 4-7 reading complete for current needs (floridabar.org blocks automated access; paste the text). F1–F3 coverage set to personal before the exit; confirm.
 - LEAP + WealthCounsel integration: confirm API terms with the vendors (docs/design/integrations.md).
@@ -59,6 +66,6 @@ import → profile → intake gate → path assigned → scan (findings, attorne
 - C-node checks are subscription; C-node drafting is change order; C6 is personal-engagement only. Confirm.
 
 ## Conventions
-- Florida statutes cited by section; confirm against the current Online Sunshine text before relying. Statutes already confirmed: § 605.0602, § 709.2202 (2026-11-01), § 605.0405, § 605.0102(17), § 605.0406, § 605.04091, § 605.04092 (2026-11-03).
+- Florida statutes cited by section; confirm against the current Online Sunshine text before relying. Statutes already confirmed: § 605.0602, § 709.2202 (2026-11-01), § 605.0405, § 605.0102(17), § 605.0406, § 605.04091, § 605.04092 (2026-11-03); § 709.2105, § 709.2208, § 117.209, § 117.265, § 117.285, § 668.50(3), (7), (11) (2026-11-08); template v2 review 2026-11-08: §§ 605.0105–605.0107, 605.0302, 605.0401, 605.0407, 605.04071–605.04074, 605.0408, 605.0504, 605.0602, 605.0603, 605.0701, 605.0702, 709.2102, 709.2104, 709.2109, 709.2111–709.2114, 709.2119, 709.2120, 709.2201, 709.2202; § 95.11(5)(b), § 95.031 (2026-11-10).
 - Vocabulary on client surfaces: scope, budget, change order, inspection, as-built, maintenance. Avoid: retainer, hours, matter, billing.
 - Never put hours anywhere a client can see them.
