@@ -78,6 +78,10 @@ test("assemble saves a version; a hand edit keeps the base version's facts and b
   assert.equal(e.n, 3);
   const v3 = await call("atty", id.ent, "GET", `/api/docs/${draft}/versions/${e.versionId}`);
   assert.deepEqual(v3.facts, v2.facts); assert.deepEqual(v3.blockers, v2.blockers);
+  const cur = (await call("atty", id.ent, "GET", `/api/docs/${draft}`)).current;
+  assert.equal(cur.edited, true);
+  assert.ok(cur.highlighted.includes("Capitalized terms that are not defined here"), "the preview shows the hand edit, not a fresh assembly");
+  assert.ok(cur.highlighted.includes("⟦choice:interim_manager⟧Luis Herrera⟦/choice⟧") && cur.highlighted.includes("⟦choice:alternate_im⟧[Alternate name]⟦/choice⟧"));
   await assert.rejects(call("atty", id.ent, "POST", `/api/docs/${draft}/send`, { version: e.versionId }), /not ready to send/);
   for (const who of ["dana", "atty"]) {
     const qs = await inSession(pool, { personId: id[who], workspaceId: id.ent }, async c => (await c.query("select key, title, node from ws.draft_questions()")).rows);
