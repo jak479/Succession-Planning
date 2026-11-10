@@ -212,7 +212,8 @@ function clientSafe(msg: string, role: string) {
 
 http.createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", "http://x");
-  const html = (code: number, body: string) => { res.writeHead(code, { "content-type": "text/html; charset=utf-8" }); res.end(body); };
+  // no-store: every page reflects the latest deploy on reload (a cached console once hid a fix, 2026-11-10).
+  const html = (code: number, body: string) => { res.writeHead(code, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); res.end(body); };
   if (DEMO_MODE) {
     if (req.method === "POST" && url.pathname === "/demo/login") {
       let raw = ""; for await (const ch of req) raw += ch;
