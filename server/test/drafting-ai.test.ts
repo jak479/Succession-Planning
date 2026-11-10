@@ -12,7 +12,7 @@ const base = process.env.PGURL ?? "postgresql://postgres@%2Fvar%2Ftmp:5433";
 const db = "oew_ai_" + process.pid; let pool: pg.Pool; const id: Record<string, string> = {};
 const MIGRATIONS = ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql", "005_intake.sql", "006_profile.sql", "007_threads.sql",
   "008_estimate_terms.sql", "009_estimate_costs.sql", "010_agenda.sql", "011_documents.sql", "012_auto_green_retention.sql", "013_retention_directions.sql",
-  "014_keep_unless_destroy.sql", "015_legal_hold.sql", "016_draft_questions.sql", "017_ai_drafting.sql"];
+  "014_keep_unless_destroy.sql", "015_legal_hold.sql", "016_draft_questions.sql", "017_ai_drafting.sql", "018_ai_requests.sql"];
 const script: { out: any; system: string; user: string; calls: number } = { out: null, system: "", user: "", calls: 0 };
 const fake: Model = { async json({ system, user }) { script.system = system; script.user = user; script.calls++; return { ok: true, value: script.out, model: "scripted" } as any; } };
 const deps = () => ({ pool, model: fake });
@@ -111,6 +111,11 @@ test("a declined instruction returns no suggestions; owner-tier AI is off unless
   script.out = { declined: "That asks for advice on who should serve, which is the client's choice.", suggestions: [] };
   const r = await ai("atty", id.ent, `/api/docs/${draft}/suggest`, { instruction: "Who should be the alternate?" });
   assert.equal(r.suggestions.length, 0); assert.match(r.declined, /client's choice/);
+  const log = (await call("atty", id.ent, "GET", `/api/docs/${draft}/ai`)).requests;
+  assert.equal(log[0].outcome, "declined"); assert.equal(log[0].instruction, "Who should be the alternate?"); assert.match(log[0].declined, /client's choice/);
+  const refusedOne = log.find((q: any) => q.instruction.startsWith("Make the conflicts clause"));
+  assert.equal(refusedOne.outcome, "suggested"); assert.equal(refusedOne.kept, 1);
+  assert.ok(refusedOne.refused.some((x: any) => /would decide a client choice/.test(x.why)), "server refusals are logged with the reason");
   const rider = (await call("atty", id.own, "POST", "/api/docs", { template: "dpoa-rider" })).id;
   const calls = script.calls;
   await assert.rejects(ai("atty", id.own, `/api/docs/${rider}/review`), /off for owner-tier documents/);

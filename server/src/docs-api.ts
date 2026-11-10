@@ -134,8 +134,10 @@ export const docRoutes: JsonRoute[] = [
       join ws.doc_version v on v.id = r.version_id where v.document_id = $1 order by r.at desc limit 5`, [m[1]])).rows;
     const suggestions = (await c.query(`select s.id, s.version_id, v.n, s.instruction, s.find, s.replace_with, s.reason, s.uses, s.status, s.model, s.at
       from ws.doc_suggestion s join ws.doc_version v on v.id = s.version_id where v.document_id = $1 order by s.at desc limit 40`, [m[1]])).rows;
+    const requests = (await c.query(`select r.id, v.n, r.instruction, r.outcome, r.declined, r.refused, r.kept, r.model, r.at from ws.doc_ai_request r
+      join ws.doc_version v on v.id = r.version_id where v.document_id = $1 order by r.at desc limit 40`, [m[1]])).rows;
     const tier = (await one(c, "select ws.cur_tier() t")).t;
-    return { reviews, suggestions, aiAllowed: tier === "entity" || ownerTierAllowed() };
+    return { reviews, suggestions, requests, aiAllowed: tier === "entity" || ownerTierAllowed() };
   }],
   ["POST", /^\/api\/docs\/([0-9a-f-]{36})\/suggestions\/([0-9a-f-]{36})$/, async ({ c, body, role }, m) => {
     attorneyOnly(role); await draftRow(c, m[1]); return decideSuggestion(c, m[1], m[2], body.accept === true);

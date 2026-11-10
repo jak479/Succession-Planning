@@ -107,7 +107,10 @@ export async function suggestEdits(deps: Deps, s: Session, t: Template, template
   const text: string = v.content_md;
   const { a, user } = inputFor(t, templateFile, text, v.facts ?? {});
   const r = await deps.model.json({ system: SUGGEST_SYSTEM, user: `${user}\n\n<instruction>\n${instruction}\n</instruction>`, schema: SuggestSchema, effort: "high", maxTokens: 16000 });
-  if (!r.ok) return { ok: false, model: "unavailable: " + r.reason, suggestions: [], dropped: [], declined: "" };
+  const log = (outcome: string, model: string, declined: string, refused: any[], kept: number) => inSession(deps.pool, s, c => c.query(
+    `insert into ws.doc_ai_request (workspace_id, version_id, instruction, model, prompt_version, outcome, declined, refused, kept)
+     values (ws.cur_ws(), $1, $2, $3, $4, $5, $6, $7, $8)`, [versionId, instruction, model, DRAFTING_PROMPT_VERSION, outcome, declined, JSON.stringify(refused), kept]));
+  if (!r.ok) { await log("unavailable", "unavailable: " + r.reason, "", [], 0); return { ok: false, model: "unavailable: " + r.reason, suggestions: [], dropped: [], declined: "" }; }
   // Server checks: the passage is in the draft exactly once, and the edit does not touch a client choice the client
   // has not decided (the bracket text of an open or unconfirmed choice may not be removed).
   const undecided = a.choices.filter(c => c.status !== "decided" && /^\[.*\]$/s.test(c.template) && text.includes(c.template));
@@ -126,6 +129,7 @@ export async function suggestEdits(deps: Deps, s: Session, t: Template, template
       values (ws.cur_ws(), $1, $2, $3, $4, $5, $6, $7, $8) returning id`, [versionId, instruction, r.model, DRAFTING_PROMPT_VERSION, g.find, g.replace_with, g.reason, g.uses])).rows[0].id);
     return out;
   });
+  await log(kept.length ? "suggested" : dropped.length ? "refused" : "declined", r.model, r.value.declined, dropped, kept.length);
   return { ok: true, model: r.model, suggestions: kept.map((g, i) => ({ id: ids[i], ...g })), dropped, declined: r.value.declined };
 }
 

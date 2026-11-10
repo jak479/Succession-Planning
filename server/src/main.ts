@@ -31,8 +31,8 @@ const pool = process.env.CLOUD_SQL_INSTANCE
   : new pg.Pool({ connectionString: process.env.DATABASE_URL });
 if (DEMO_MODE) {
   // Demo data only: (re)seed when the schema is missing or older than the newest migration. NEWEST_TABLE is a table
-  // the newest migration creates (017 adds ws.doc_suggestion); update it with every new migration.
-  const NEWEST_TABLE = "ws.doc_suggestion";
+  // the newest migration creates (018 adds ws.doc_ai_request); update it with every new migration.
+  const NEWEST_TABLE = "ws.doc_ai_request";
   const current = (await pool.query("select to_regclass($1) is not null ok", [NEWEST_TABLE])).rows[0].ok;
   if (!current) { const c = await pool.connect(); try { await seedDemo(c); } finally { c.release(); } console.log("demo data seeded"); }
 }
