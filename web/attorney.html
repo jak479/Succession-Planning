@@ -143,7 +143,7 @@ mark.ch.decided{background:var(--pine-soft)}
         <div>
           <div class="small legend" style="margin-bottom:6px"><mark class="ch open">put to the client</mark><mark class="ch unconfirmed">confirm with the client</mark><mark class="ch decided">decided</mark></div>
           <div class="doc" id="dDoc"></div>
-          <div class="card edit" id="dEdit" hidden><h2>Edit text</h2><p class="small">Saves a new version with the same facts and the same open choices. Editing text does not decide a client choice.</p><textarea id="dText"></textarea><button id="dSaveEdit" type="button">Save edit as new version</button></div>
+          <div class="card edit" id="dEdit" hidden><h2>Edit text</h2><p class="small">Saves a new version with the same facts and the same open choices. Editing text does not decide a client choice.</p><textarea id="dText"></textarea><button id="dSaveEdit" type="button">Save edit as new version</button><button id="dCloseEdit" type="button" class="ghost">Close editor</button></div>
           <div class="card" style="margin-top:12px"><h2>Versions</h2><table><thead><tr><th>#</th><th>How</th><th>Note</th><th>Saved</th><th>Open</th><th>Word</th></tr></thead><tbody id="dVersions"></tbody></table></div>
           <div class="card" id="dAi"><h2>Claude: review and suggested edits</h2>
             <p class="small">Attorney-only. Review lists problems and writes nothing into the draft. Suggested edits change one exact passage each and enter the draft only when you accept them; an edit that would fill in a client choice not yet decided is refused by the server.</p>
@@ -355,6 +355,7 @@ function setEditing(on) {
   if (on) { $("dEdit").scrollIntoView({ block: "start", behavior: "smooth" }); $("dText").focus({ preventScroll: true }); }
 }
 $("dEditToggle").onclick = () => setEditing($("dEdit").hidden);
+$("dCloseEdit").onclick = () => { if ($("dText").value !== D.current.text && !confirm("Close without saving your edit?")) return; $("dText").value = D.current.text; setEditing(false); $("dTitle").scrollIntoView({ block: "start" }); };
 $("dSaveEdit").onclick = run(async () => { await api(`/api/docs/${D.id}/edit`, { base: D.current.versionId, text: $("dText").value, note: $("dNote").value || undefined }); $("dNote").value = ""; await openDoc(D.id); await loadDocs(); });
 $("dSend").onclick = run(async () => { if (!confirm("Send this version to the client? They will see it in their workspace.")) return; await api(`/api/docs/${D.id}/send`, { version: D.current.versionId }); await openDoc(D.id); await loadDocs(); });
 $("dSupersede").onclick = run(async () => { if (!confirm("Supersede this document? It stays in the index but takes no new versions.")) return; await api(`/api/docs/${D.id}/supersede`, {}); $("docEditor").hidden = true; await loadDocs(); });
