@@ -8,6 +8,8 @@ RUN cd server && npm ci --omit=dev
 COPY core core
 COPY server/src server/src
 COPY web web
+# The drafting tool reads its templates at run time (core/src/templates.ts); the wording lives only there.
+COPY docs/templates docs/templates
 ENV NODE_ENV=production
 USER node
 CMD ["node", "--experimental-strip-types", "server/src/main.ts"]

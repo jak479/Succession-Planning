@@ -2,6 +2,7 @@
 .git
 .github
 docs
+!docs/templates
 prototype
 server/eval
 server/test
