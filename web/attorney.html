@@ -143,7 +143,7 @@ mark.ch.decided{background:var(--pine-soft)}
         <div>
           <div class="small legend" style="margin-bottom:6px"><mark class="ch open">put to the client</mark><mark class="ch unconfirmed">confirm with the client</mark><mark class="ch decided">decided</mark></div>
           <div class="doc" id="dDoc"></div>
-          <div class="card edit" id="dEdit" hidden style="margin-top:12px"><h2>Edit text</h2><p class="small">Saves a new version with the same facts and the same open choices. Editing text does not decide a client choice.</p><textarea id="dText"></textarea><button id="dSaveEdit" type="button">Save edit as new version</button></div>
+          <div class="card edit" id="dEdit" hidden><h2>Edit text</h2><p class="small">Saves a new version with the same facts and the same open choices. Editing text does not decide a client choice.</p><textarea id="dText"></textarea><button id="dSaveEdit" type="button">Save edit as new version</button></div>
           <div class="card" style="margin-top:12px"><h2>Versions</h2><table><thead><tr><th>#</th><th>How</th><th>Note</th><th>Saved</th><th>Open</th><th>Word</th></tr></thead><tbody id="dVersions"></tbody></table></div>
           <div class="card" id="dAi"><h2>Claude: review and suggested edits</h2>
             <p class="small">Attorney-only. Review lists problems and writes nothing into the draft. Suggested edits change one exact passage each and enter the draft only when you accept them; an edit that would fill in a client choice not yet decided is refused by the server.</p>
@@ -306,7 +306,7 @@ function renderDoc(v) {
 async function openDoc(id) {
   const d = await api(`/api/docs/${id}`);
   D = { id, ...d, view: d.current };
-  $("docEditor").hidden = false; $("dEdit").hidden = true;
+  $("docEditor").hidden = false; setEditing(false);
   $("dTitle").textContent = d.document.title;
   $("dMeta").textContent = `${d.template.tier} tier · status ${d.document.status} · version ${d.current.n} · meant to satisfy ${d.document.nodes.join(", ") || "—"}`;
   renderFields(factsToForm(d.current.facts)); renderDoc(d.current);
@@ -349,7 +349,12 @@ $("dPreview").onclick = run(async () => { const v = await api(`/api/docs/${D.id}
 $("dAssemble").onclick = run(async () => {
   if (D.current.edited && !confirm("Saving from the fields re-assembles the text from the template. Hand edits in the latest version are not carried over (the redline will show them). Continue?")) return;
   await api(`/api/docs/${D.id}/assemble`, { facts: currentFacts(), note: $("dNote").value || undefined }); $("dNote").value = ""; await openDoc(D.id); await loadDocs(); });
-$("dEditToggle").onclick = () => { $("dEdit").hidden = !$("dEdit").hidden; };
+// The editor takes the preview's place, so it opens where the attorney is looking.
+function setEditing(on) {
+  $("dEdit").hidden = !on; $("dDoc").hidden = on; $("dEditToggle").textContent = on ? "Close editor" : "Edit text";
+  if (on) { $("dEdit").scrollIntoView({ block: "start", behavior: "smooth" }); $("dText").focus({ preventScroll: true }); }
+}
+$("dEditToggle").onclick = () => setEditing($("dEdit").hidden);
 $("dSaveEdit").onclick = run(async () => { await api(`/api/docs/${D.id}/edit`, { base: D.current.versionId, text: $("dText").value, note: $("dNote").value || undefined }); $("dNote").value = ""; await openDoc(D.id); await loadDocs(); });
 $("dSend").onclick = run(async () => { if (!confirm("Send this version to the client? They will see it in their workspace.")) return; await api(`/api/docs/${D.id}/send`, { version: D.current.versionId }); await openDoc(D.id); await loadDocs(); });
 $("dSupersede").onclick = run(async () => { if (!confirm("Supersede this document? It stays in the index but takes no new versions.")) return; await api(`/api/docs/${D.id}/supersede`, {}); $("docEditor").hidden = true; await loadDocs(); });
