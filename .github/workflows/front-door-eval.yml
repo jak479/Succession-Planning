@@ -1,5 +1,6 @@
 # Live evaluation of the front door (build item 2) against Claude.
-# Runs only when started by hand (Actions tab → front-door-eval → Run workflow).
+# Runs only when started by hand (Actions tab → front-door-eval → Run workflow), from any branch, and only after
+# the attorney approves the run (GitHub environment "eval" with a required reviewer; set up 2026-11-10).
 # Authenticates with Workload Identity Federation: GitHub issues a short-lived identity token, Anthropic
 # exchanges it for a short-lived access token. No API key is stored anywhere. Uses only the fictional sample client.
 name: front-door-eval
@@ -10,6 +11,9 @@ permissions:
 jobs:
   eval:
     runs-on: ubuntu-latest
+    # Runs only after the attorney approves it in GitHub (environment "eval", required reviewer). The identity token
+    # then names the environment instead of the branch, so one federation rule covers runs from any branch.
+    environment: eval
     services:
       postgres:
         image: postgres:16
@@ -52,6 +56,10 @@ jobs:
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" | jq -r .value > "$ANTHROPIC_IDENTITY_TOKEN_FILE.tmp" \
             && mv "$ANTHROPIC_IDENTITY_TOKEN_FILE.tmp" "$ANTHROPIC_IDENTITY_TOKEN_FILE"; }
           fetch
+          # Print only the token's subject claim (not the token): this exact string is what the federation rule
+          # in the Claude Console must match.
+          p=$(cut -d. -f2 "$ANTHROPIC_IDENTITY_TOKEN_FILE" | tr '_-' '/+'); while [ $(( ${#p} % 4 )) -ne 0 ]; do p="$p="; done
+          echo "Identity token subject: $(echo "$p" | base64 -d | jq -r .sub)"
           ( while sleep 120; do fetch; done ) &
           set +e
           npm run eval; e=$?
