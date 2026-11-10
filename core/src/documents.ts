@@ -114,3 +114,42 @@ export async function markOriginal(c: pg.PoolClient, documentId: string, keep = 
 export async function purgeFile(c: pg.PoolClient): Promise<number> {
   return (await one(c, "select ws.purge_documents() as n", [])).n;
 }
+
+/** Integrity and readability check over every stored version in the session's workspace (db/014; Op. 06-1):
+ *  the stored hash still matches, and the bytes still look like the format they claim. Results are attorney-only. */
+export async function verifyIntegrity(c: pg.PoolClient) {
+  const rows = (await c.query(`select v.id, v.sha256, v.mime, v.filename, v.content_md, coalesce(v.bytes, b.bytes) as bytes
+    from ws.doc_version v left join ws.file_blob b on b.source_id = v.blob_source where v.purged_at is null`)).rows;
+  const out: { versionId: string; hashOk: boolean; opensOk: boolean; detail: string }[] = [];
+  for (const r of rows) {
+    const data: Uint8Array | null = r.content_md != null ? new TextEncoder().encode(r.content_md) : r.bytes ? new Uint8Array(r.bytes) : null;
+    let hashOk = false, opensOk = false, detail = "";
+    if (!data) detail = "contents missing";
+    else {
+      hashOk = sha(data) === r.sha256;
+      const kind = r.content_md != null ? "text" : formatOf(r.mime, r.filename);
+      opensOk = opens(kind, data);
+      detail = `${kind}${hashOk ? "" : "; hash mismatch"}${opensOk ? "" : "; does not open as " + kind}`;
+    }
+    await c.query("insert into ws.integrity_check (workspace_id, version_id, hash_ok, opens_ok, detail) values (ws.cur_ws(), $1, $2, $3, $4)", [r.id, hashOk, opensOk, detail]);
+    out.push({ versionId: r.id, hashOk, opensOk, detail });
+  }
+  return { checked: out.length, failed: out.filter(x => !x.hashOk || !x.opensOk) };
+}
+const formatOf = (mime = "", name = "") =>
+  /pdf/.test(mime) || /\.pdf$/i.test(name) ? "pdf"
+  : /wordprocessingml|zip/.test(mime) || /\.(docx|zip)$/i.test(name) ? "zip"
+  : /png/.test(mime) || /\.png$/i.test(name) ? "png"
+  : /jpe?g/.test(mime) || /\.jpe?g$/i.test(name) ? "jpeg"
+  : /^text\//.test(mime) || /\.(txt|md|csv)$/i.test(name) ? "text" : "other";
+function opens(kind: string, b: Uint8Array): boolean {
+  const starts = (...sig: number[]) => sig.every((x, i) => b[i] === x);
+  switch (kind) {
+    case "pdf": return starts(0x25, 0x50, 0x44, 0x46, 0x2d);              // %PDF-
+    case "zip": return starts(0x50, 0x4b, 0x03, 0x04);                    // PK..
+    case "png": return starts(0x89, 0x50, 0x4e, 0x47);
+    case "jpeg": return starts(0xff, 0xd8, 0xff);
+    case "text": try { new TextDecoder("utf-8", { fatal: true }).decode(b); return true; } catch { return false; }
+    default: return b.length > 0;                                          // unknown format: present, not parsed
+  }
+}

@@ -20,7 +20,7 @@ const profile = (ws: string) => as("atty", ws, c => c.query("select field, value
 before(async () => {
   const a = new pg.Client({ connectionString: base + "/postgres" }); await a.connect(); await a.query(`create database ${db}`); await a.end();
   pool = new pg.Pool({ connectionString: `${base}/${db}` });
-  for (const f of ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql", "005_intake.sql", "006_profile.sql", "007_threads.sql", "008_estimate_terms.sql", "009_estimate_costs.sql", "010_agenda.sql", "011_documents.sql", "012_auto_green_retention.sql", "013_retention_directions.sql"]) await pool.query(readFileSync(new URL("../../core/db/" + f, import.meta.url), "utf8"));
+  for (const f of ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql", "005_intake.sql", "006_profile.sql", "007_threads.sql", "008_estimate_terms.sql", "009_estimate_costs.sql", "010_agenda.sql", "011_documents.sql", "012_auto_green_retention.sql", "013_retention_directions.sql", "014_keep_unless_destroy.sql"]) await pool.query(readFileSync(new URL("../../core/db/" + f, import.meta.url), "utf8"));
   const one = async (q: string, p: unknown[] = []) => (await pool.query(q + " returning id", p)).rows[0].id;
   for (const [k, n, r] of [["atty", "Josh", "attorney"], ["dana", "Dana", "client"], ["engine", "engine", "agent"]]) id[k] = await one("insert into ws.person(name, role) values ($1,$2)", [n, r]);
   const cl = await one("insert into ws.client(name) values ('Gulfside Mechanical, LLC')");

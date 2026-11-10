@@ -4,13 +4,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import pg from "pg";
 import { inSession } from "../src/store.ts";
-import { addFile, closeFile, createDraft, exportPackage, fileExecuted, listDocuments, markClosure, markOriginal, purgeFile, recordDirection, recordUnreachable, saveAssembled, saveVersion, sendVersion, supersede } from "../src/documents.ts";
+import { addFile, closeFile, createDraft, exportPackage, fileExecuted, listDocuments, markClosure, markOriginal, purgeFile, recordDirection, recordUnreachable, saveAssembled, verifyIntegrity, saveVersion, sendVersion, supersede } from "../src/documents.ts";
 import { OA_CONTINUITY as OA, DPOA_RIDER as RIDER, TEMPLATES } from "../src/templates.ts";
 
 const base = process.env.PGURL ?? "postgresql://postgres@%2Fvar%2Ftmp:5433";
 const db = "oew_docs_" + process.pid;
 const MIGRATIONS = ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql", "005_intake.sql", "006_profile.sql", "007_threads.sql",
-  "008_estimate_terms.sql", "009_estimate_costs.sql", "010_agenda.sql", "011_documents.sql", "012_auto_green_retention.sql", "013_retention_directions.sql"];
+  "008_estimate_terms.sql", "009_estimate_costs.sql", "010_agenda.sql", "011_documents.sql", "012_auto_green_retention.sql", "013_retention_directions.sql", "014_keep_unless_destroy.sql"];
 let pool: pg.Pool; const id: Record<string, string> = {};
 const tpl = (t: typeof OA) => readFileSync(new URL("../../" + t.file, import.meta.url), "utf8");
 const PDF = { filename: "signed.pdf", mime: "application/pdf", bytes: new TextEncoder().encode("%PDF-1.4 signed") };
@@ -158,56 +158,40 @@ test("auto-green: executing the OA turns green the nodes its signatures satisfy,
   }), /check/);
 });
 
-test("retention, client directed: no purge without the period, the client's direction, and (for return) the export", async () => {
-  await assert.rejects(as("atty", "ent", c => purgeFile(c)), /no retention period set/);
-  await pool.query("update ws.retention_policy set period_months = 1, originals_months = 2, rule_cite = 'test only', read_on = current_date");
-  await assert.rejects(as("atty", "ent", c => purgeFile(c)), /not closed/);
-  await as("atty", "ent", c => closeFile(c, "2020-01-01"));
-  await assert.rejects(as("atty", "ent", c => purgeFile(c)), /obtain the client's directions first/);
+test("integrity: every stored version is checked for its hash and that it still opens", async () => {
+  const r = await as("atty", "ent", c => verifyIntegrity(c));
+  assert.ok(r.checked > 0);
+  assert.deepEqual(r.failed.map(f => f.detail), ["pdf; hash mismatch; does not open as pdf"], "the test upload (fake hash, not a PDF) is caught");
+  await as("owner", "ent", async c => assert.equal((await c.query("select * from ws.integrity_check")).rowCount, 0, "results are attorney-only"));
+});
+
+test("retention: files are kept unless the client directs destruction; then everything goes at once", async () => {
+  await as("atty", "ent", c => closeFile(c, "2026-11-01"));
+  await assert.rejects(as("atty", "ent", c => purgeFile(c)), /kept unless the client directs destruction \(current: no direction\)/);
   await assert.rejects(as("atty", "ent", c => recordUnreachable(c, "called twice")), /request the client's directions before/);
-  await as("atty", "ent", async c => { await markClosure(c, "directions_requested"); await recordDirection(c, "firm_keep"); });
-  await assert.rejects(as("atty", "ent", c => purgeFile(c)), /directed the Firm to keep/);
-  await as("atty", "ent", c => recordDirection(c, "return"));
-  await assert.rejects(as("atty", "ent", c => purgeFile(c)), /export package first/);
-  await as("atty", "ent", c => markClosure(c, "export_delivered"));
+  await as("atty", "ent", async c => { await markClosure(c, "directions_requested"); await recordDirection(c, "return"); await markClosure(c, "export_delivered"); });
+  await assert.rejects(as("atty", "ent", c => purgeFile(c)), /current: return/, "return: the Firm keeps its copy");
+  await as("atty", "ent", c => recordDirection(c, "firm_keep"));
+  await assert.rejects(as("atty", "ent", c => purgeFile(c)), /current: firm_keep/);
+  await as("atty", "ent", c => recordDirection(c, "destroy"));
   await assert.rejects(as("owner", "ent", c => purgeFile(c)), /attorney only/);
   await assert.rejects(as("atty", "ent", c => c.query("update ws.file_closure set purged_at = now()")), /purge_documents\(\) only/);
   const n = await as("atty", "ent", c => purgeFile(c));
-  assert.ok(n > 0);
+  assert.ok(n > 0, "no waiting period");
   await as("atty", "ent", async c => {
-    assert.equal((await c.query("select count(*)::int n from ws.doc_version where purged_at is null")).rows[0].n, 0, "return: everything goes");
+    assert.equal((await c.query("select count(*)::int n from ws.doc_version where purged_at is null")).rows[0].n, 0, "originals too: the client directed it");
     assert.ok((await c.query("select count(*)::int n from ws.doc_execution")).rows[0].n > 0, "execution records stay");
-    assert.equal((await c.query("select row_data->>'stage' s from ws.event_log where tbl = 'purge'")).rows[0].s, "all");
+    assert.equal((await c.query("select row_data->>'stage' s from ws.event_log where tbl = 'purge'")).rows[0].s, "client directed destruction");
   });
   await assert.rejects(as("atty", "ent", async c => saveVersion(c, (await listDocuments(c)).find(d => d.kind === "draft" && d.status !== "superseded")!.id, "x", {}, [], "manual")), /purged file is closed/);
   await assert.rejects(as("atty", "ent", c => purgeFile(c)), /already purged/);
 });
 
-test("retention, client unreachable: marked originals are kept for the longer period, then go", async () => {
+test("retention: an unreachable client's file is kept", async () => {
   await as("atty", "own", async c => {
-    assert.ok((await c.query("select count(*)::int n from ws.doc_version where purged_at is null")).rows[0].n > 0, "the other tier was untouched");
-    const marked = (await c.query("select count(*)::int n from ws.document where kind = 'executed' and retain_original")).rows[0].n;
-    assert.ok(marked > 0, "executed originals are marked automatically");
-    const other = (await c.query("select id from ws.document where kind = 'draft' limit 1")).rows[0].id;
-    await markOriginal(c, other);
-    await closeFile(c, String(new Date().getFullYear() - 1) + "-" + String(new Date().getMonth() + 1).padStart(2, "0") + "-01");
-    await markClosure(c, "directions_requested");
+    await closeFile(c, "2000-01-01"); await markClosure(c, "directions_requested");
     await recordUnreachable(c, "letter 2026-10-01 to last address; email 2026-10-15; phone 2026-10-20");
   });
-  await pool.query("update ws.retention_policy set originals_months = 600");
-  await as("atty", "own", c => purgeFile(c));
-  await as("atty", "own", async c => {
-    const left = (await c.query("select d.kind, d.retain_original from ws.doc_version v join ws.document d on d.id = v.document_id where v.purged_at is null")).rows;
-    assert.ok(left.length > 0 && left.every(r => r.retain_original), "only marked originals remain");
-    assert.ok(left.some(r => r.kind === "executed") && left.some(r => r.kind === "draft"));
-  });
-  await assert.rejects(as("atty", "own", c => purgeFile(c)), /originals are kept until/);
-  await pool.query("update ws.retention_policy set originals_months = 2");
-  await as("atty", "own", c => purgeFile(c));
-  await as("atty", "own", async c => {
-    assert.equal((await c.query("select count(*)::int n from ws.doc_version where purged_at is null")).rows[0].n, 0);
-    assert.deepEqual((await c.query("select row_data->>'stage' s from ws.event_log where tbl = 'purge' order by id")).rows.map(r => r.s), ["all but originals", "originals"]);
-  });
-  await assert.rejects(as("atty", "own", c => purgeFile(c)), /already purged/);
-  await pool.query("update ws.retention_policy set period_months = null, originals_months = null, rule_cite = null, read_on = null");
+  await assert.rejects(as("atty", "own", c => purgeFile(c)), /current: unreachable/);
+  await as("atty", "own", async c => assert.ok((await c.query("select count(*)::int n from ws.doc_version where purged_at is null")).rows[0].n > 0));
 });
