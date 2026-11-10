@@ -8,6 +8,9 @@ import { assemble, blockers, executionModes, type Facts, type SourceKind, type T
 import { TEMPLATES } from "../../core/src/templates.ts";
 import { createDraft, exportPackage, listDocuments, saveAssembled, saveVersion, sendVersion, supersede } from "../../core/src/documents.ts";
 import { docxClean, docxRedline } from "./docx.ts";
+import { decideSuggestion, reviewVersion, suggestEdits, ownerTierAllowed } from "./engine/drafting.ts";
+import type { Model } from "./engine/model.ts";
+import { inSession, type Session } from "../../core/src/store.ts";
 
 const tplFile = (t: Template) => readFileSync(new URL("../../" + t.file, import.meta.url), "utf8");
 const tpl = (id: string) => { const t = TEMPLATES.find(x => x.id === id); if (!t) throw new Error("unknown template"); return t; };
@@ -107,6 +110,19 @@ export const docRoutes: JsonRoute[] = [
   }],
   ["POST", /^\/api\/docs\/([0-9a-f-]{36})\/send$/, async ({ c, body, role }, m) => { attorneyOnly(role); await sendVersion(c, m[1], String(body.version)); return { ok: true }; }],
   ["POST", /^\/api\/docs\/([0-9a-f-]{36})\/supersede$/, async ({ c, role }, m) => { attorneyOnly(role); await supersede(c, m[1]); return { ok: true }; }],
+  // AI review and suggestions on file for this draft (attorney-only by RLS).
+  ["GET", /^\/api\/docs\/([0-9a-f-]{36})\/ai$/, async ({ c, role }, m) => {
+    attorneyOnly(role);
+    const reviews = (await c.query(`select r.id, r.version_id, v.n, r.model, r.prompt_version, r.findings, r.dropped, r.citations, r.at from ws.doc_review r
+      join ws.doc_version v on v.id = r.version_id where v.document_id = $1 order by r.at desc limit 5`, [m[1]])).rows;
+    const suggestions = (await c.query(`select s.id, s.version_id, v.n, s.instruction, s.find, s.replace_with, s.reason, s.uses, s.status, s.model, s.at
+      from ws.doc_suggestion s join ws.doc_version v on v.id = s.version_id where v.document_id = $1 order by s.at desc limit 40`, [m[1]])).rows;
+    const tier = (await one(c, "select ws.cur_tier() t")).t;
+    return { reviews, suggestions, aiAllowed: tier === "entity" || ownerTierAllowed() };
+  }],
+  ["POST", /^\/api\/docs\/([0-9a-f-]{36})\/suggestions\/([0-9a-f-]{36})$/, async ({ c, body, role }, m) => {
+    attorneyOnly(role); await draftRow(c, m[1]); return decideSuggestion(c, m[1], m[2], body.accept === true);
+  }],
   // Sources a fact may cite, newest first. The attorney records a client choice against a call source.
   ["GET", /^\/api\/sources$/, async ({ c, role }) => {
     attorneyOnly(role);
@@ -145,3 +161,15 @@ export async function docDownload(c: pg.PoolClient, role: string, path: string, 
   return null;
 }
 const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+/** AI routes: they call the model outside a database transaction, so they take the pool and the session. */
+export async function docAi(deps: { pool: pg.Pool; model: Model }, s: Session, path: string, body: any) {
+  const m = /^\/api\/docs\/([0-9a-f-]{36})\/(review|suggest)$/.exec(path); if (!m) return null;
+  const { templateId, versionId } = await inSession(deps.pool, s, async c => {
+    const d = await draftRow(c, m[1]); const v = await latest(c, m[1]);
+    return { templateId: d.template_id as string, versionId: (body.version ? String(body.version) : v.id) as string };
+  });
+  const t = tpl(templateId);
+  return m[2] === "review" ? reviewVersion(deps, s, t, tplFile(t), m[1], versionId)
+    : suggestEdits(deps, s, t, tplFile(t), m[1], versionId, String(body.instruction ?? ""));
+}

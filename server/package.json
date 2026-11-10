@@ -8,7 +8,8 @@
     "test": "node --experimental-strip-types --test test/*.test.ts",
     "eval": "node --experimental-strip-types eval/run.ts",
     "eval:scan": "node --experimental-strip-types eval/scan.ts",
-    "eval:profile": "node --experimental-strip-types eval/profile.ts"
+    "eval:profile": "node --experimental-strip-types eval/profile.ts",
+    "eval:drafting": "node --experimental-strip-types eval/drafting.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.3.0",

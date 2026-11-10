@@ -10,7 +10,7 @@ import { OA_CONTINUITY as OA, DPOA_RIDER as RIDER, TEMPLATES } from "../src/temp
 const base = process.env.PGURL ?? "postgresql://postgres@%2Fvar%2Ftmp:5433";
 const db = "oew_docs_" + process.pid;
 const MIGRATIONS = ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql", "005_intake.sql", "006_profile.sql", "007_threads.sql",
-  "008_estimate_terms.sql", "009_estimate_costs.sql", "010_agenda.sql", "011_documents.sql", "012_auto_green_retention.sql", "013_retention_directions.sql", "014_keep_unless_destroy.sql", "015_legal_hold.sql", "016_draft_questions.sql"];
+  "008_estimate_terms.sql", "009_estimate_costs.sql", "010_agenda.sql", "011_documents.sql", "012_auto_green_retention.sql", "013_retention_directions.sql", "014_keep_unless_destroy.sql", "015_legal_hold.sql", "016_draft_questions.sql", "017_ai_drafting.sql"];
 let pool: pg.Pool; const id: Record<string, string> = {};
 const tpl = (t: typeof OA) => readFileSync(new URL("../../" + t.file, import.meta.url), "utf8");
 const PDF = { filename: "signed.pdf", mime: "application/pdf", bytes: new TextEncoder().encode("%PDF-1.4 signed") };

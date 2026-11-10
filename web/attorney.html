@@ -74,6 +74,10 @@ mark.ch.decided{background:var(--pine-soft)}
 .legend mark{margin-right:8px}
 .edit textarea{min-height:60vh;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
 .vrow button{margin:0 4px 0 0;padding:4px 10px;font-size:13px}
+.sug{border-top:1px solid var(--rule);padding:10px 0}
+.sug del{background:var(--gap-soft);text-decoration:line-through;color:var(--gap)} .sug ins{background:var(--pine-soft);text-decoration:none;color:var(--pine)}
+.sug blockquote,.fnd blockquote{margin:4px 0;padding:4px 10px;border-left:3px solid var(--rule);font-family:var(--display);font-size:14px}
+.fnd{border-top:1px solid var(--rule);padding:8px 0}
 </style>
 </head>
 <body>
@@ -141,6 +145,14 @@ mark.ch.decided{background:var(--pine-soft)}
           <div class="doc" id="dDoc"></div>
           <div class="card edit" id="dEdit" hidden style="margin-top:12px"><h2>Edit text</h2><p class="small">Saves a new version with the same facts and the same open choices. Editing text does not decide a client choice.</p><textarea id="dText"></textarea><button id="dSaveEdit" type="button">Save edit as new version</button></div>
           <div class="card" style="margin-top:12px"><h2>Versions</h2><table><thead><tr><th>#</th><th>How</th><th>Note</th><th>Saved</th><th>Open</th><th>Word</th></tr></thead><tbody id="dVersions"></tbody></table></div>
+          <div class="card" id="dAi"><h2>Claude: review and suggested edits</h2>
+            <p class="small">Attorney-only. Review lists problems and writes nothing into the draft. Suggested edits change one exact passage each and enter the draft only when you accept them; an edit that would fill in a client choice not yet decided is refused by the server.</p>
+            <div id="aiOff" class="note" hidden>Claude is off for owner-tier documents. Turning it on is the Firm's decision (OWNER_TIER_AI).</div>
+            <div id="aiOn"><button id="aiReview" type="button" class="ghost">Review the latest version</button><span class="small" id="aiBusy"></span>
+              <label for="aiInstr">Ask for edits</label><textarea id="aiInstr" rows="3" placeholder="e.g. Make the conflicts clause survive later amendments that do not refer to this Article."></textarea>
+              <button id="aiSuggest" type="button" class="ghost">Suggest edits</button></div>
+            <h3>Suggested edits</h3><div id="aiSug" class="small">None yet.</div>
+            <h3>Latest review</h3><div id="aiRev" class="small">None yet.</div></div>
           <div class="card"><h2>How it may be signed</h2><div id="dExec" class="small"></div></div>
         </div>
       </div>
@@ -304,8 +316,35 @@ async function openDoc(id) {
     return `<tr class="vrow"><td>${v.n}</td><td>${esc(v.mode || "")}</td><td>${esc(v.note || "")}</td><td class="small">${new Date(v.created_at).toLocaleString()}${v.sent_at ? ' <span class="pill warn">sent</span>' : ""}</td><td>${v.blocker_count}</td>
       <td><button class="ghost" data-dl="${v.id}" data-n="${v.n}">Clean</button>${prev ? `<button class="ghost" data-rl="${v.id}" data-against="${prev.id}" data-n="${v.n}">Redline v${prev.n}→v${v.n}</button>` : ""}</td></tr>`; }).join("");
   $("dVersions").querySelectorAll("[data-dl]").forEach(b => b.onclick = run(() => download(`/api/docs/${id}/docx?v=${b.dataset.dl}`, `v${b.dataset.n}.docx`)));
+  await loadAi();
   $("dVersions").querySelectorAll("[data-rl]").forEach(b => b.onclick = run(() => download(`/api/docs/${id}/docx?v=${b.dataset.rl}&against=${b.dataset.against}`, `redline v${b.dataset.n}.docx`)));
 }
+const CAT = { value_mismatch: "value mismatch", unfilled: "open blank", cross_reference: "cross-reference", missing_schedule: "missing schedule or form", internal_inconsistency: "inconsistency", execution: "signing blocks", statutory: "statute use", drafting: "drafting" };
+async function loadAi() {
+  const a = await api(`/api/docs/${D.id}/ai`);
+  $("aiOff").hidden = a.aiAllowed; $("aiOn").hidden = !a.aiAllowed;
+  $("aiSug").innerHTML = a.suggestions.map(s => `<div class="sug"><div><span class="pill ${s.status === "accepted" ? "good" : s.status === "proposed" ? "warn" : ""}">${esc(s.status)}</span> on v${s.n} · ${esc(s.instruction)}</div>
+    <blockquote><del>${esc(s.find)}</del><br><ins>${esc(s.replace_with)}</ins></blockquote><div>${esc(s.reason)}${s.uses.length ? ` · relies on ${s.uses.map(esc).join(", ")}` : ""}</div>
+    ${s.status === "proposed" ? `<button data-acc="${s.id}">Accept</button><button class="ghost" data-rej="${s.id}">Reject</button>` : ""}</div>`).join("") || "None yet.";
+  $("aiSug").querySelectorAll("[data-acc],[data-rej]").forEach(b => b.onclick = run(async () => {
+    const r = await api(`/api/docs/${D.id}/suggestions/${b.dataset.acc || b.dataset.rej}`, { accept: !!b.dataset.acc });
+    if (r.status === "stale") $("err").textContent = "That passage has changed since the suggestion was made; it was not applied.";
+    await openDoc(D.id); await loadDocs(); }));
+  const r = a.reviews[0];
+  $("aiRev").innerHTML = !r ? "None yet." : `<div>v${r.n} · ${new Date(r.at).toLocaleString()} · ${esc(r.model)} · ${esc(r.prompt_version)}</div>
+    ${r.citations.length ? `<div class="note">Cited but not confirmed at the source: ${r.citations.map(c => "§ " + esc(c.section)).join(", ")}</div>` : '<div><span class="pill good">every cited section is confirmed</span></div>'}
+    ${/^unavailable/.test(r.model) ? '<div class="note"><strong>Claude did not run, so this is not a clean review.</strong> Only the citation check above ran.</div>' : ""}
+    ${r.findings.map(f => `<div class="fnd"><span class="pill">${esc(CAT[f.category] || f.category)}</span> ${esc(f.problem)}<blockquote>${esc(f.quote)}</blockquote>${f.fix_hint ? `<div>${esc(f.fix_hint)}</div>` : ""}</div>`).join("") || (/^unavailable/.test(r.model) ? "" : "<div>No findings.</div>")}
+    ${r.dropped.length ? `<div>${r.dropped.length} finding(s) discarded: the quote was not in the draft.</div>` : ""}`;
+}
+const busy = (on, msg) => { $("aiBusy").textContent = on ? " " + msg : ""; $("aiReview").disabled = $("aiSuggest").disabled = on; };
+$("aiReview").onclick = run(async () => { busy(true, "Reviewing…"); try { await api(`/api/docs/${D.id}/review`, {}); } finally { busy(false); } await loadAi(); });
+$("aiSuggest").onclick = run(async () => { const instruction = $("aiInstr").value.trim(); if (instruction.length < 4) throw new Error("Write an instruction.");
+  busy(true, "Drafting suggestions…"); let r; try { r = await api(`/api/docs/${D.id}/suggest`, { instruction }); } finally { busy(false); }
+  if (!r.ok) throw new Error("Claude did not run: " + r.model.replace(/^unavailable: /, ""));
+  if (r.declined) $("err").textContent = "Claude: " + r.declined; if (r.dropped?.length) $("err").textContent += ` ${r.dropped.length} suggestion(s) refused by the server: ${r.dropped.map(d => d.why).join("; ")}.`;
+  $("aiInstr").value = ""; await loadAi(); });
+
 $("dPreview").onclick = run(async () => { const v = await api(`/api/docs/${D.id}/preview`, { facts: currentFacts() }); D.view = v; renderDoc(v); renderFields(factsToForm(Object.fromEntries(Object.entries(currentFacts()).map(([k, f]) => [k, { value: f.value, source: f.source_id }])))); });
 $("dAssemble").onclick = run(async () => {
   if (D.current.edited && !confirm("Saving from the fields re-assembles the text from the template. Hand edits in the latest version are not carried over (the redline will show them). Continue?")) return;

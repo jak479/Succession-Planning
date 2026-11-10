@@ -15,7 +15,7 @@ import { PUBLIC_RECORDS } from "../../core/src/intake.ts";
 import { buildProfile } from "./engine/profile.ts";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { DEMO, seedDemo } from "./demo-seed.ts";
-import { docRoutes, docDownload } from "./docs-api.ts";
+import { docRoutes, docDownload, docAi } from "./docs-api.ts";
 import { TEMPLATES } from "../../core/src/templates.ts";
 
 // Demo mode (hosted proof of concept): a site password, a persona page, fictional client only, resettable.
@@ -272,6 +272,15 @@ http.createServer(async (req, res) => {
       const msg = String(e?.message ?? e);
       return send(400, { error: /conflict check not cleared/.test(msg) ? "Josh needs to finish a routine check before intake begins. You'll hear when it's done." : /not a document item/.test(msg) ? "That item isn't a document." : "That couldn't be received. Please try again." });
     }
+  }
+  // Drafting tool AI (attorney-only; the model call runs outside the database transaction).
+  if (req.method === "POST" && /^\/api\/docs\/[0-9a-f-]{36}\/(review|suggest)$/.test(url.pathname)) {
+    const personId = who(req), workspaceId = url.searchParams.get("ws");
+    const send = (code: number, obj: unknown) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(obj)); };
+    if (!personId || !workspaceId) return send(401, { error: "sign in" });
+    let raw = ""; for await (const ch of req) raw += ch;
+    try { return send(200, await docAi({ pool, model }, { personId, workspaceId }, url.pathname, raw ? JSON.parse(raw) : {})); }
+    catch (e: any) { return send(400, { error: String(e?.message ?? e) }); }
   }
   // Downloads (Word, export package): binary, same session rules as every other route.
   if (req.method === "GET" && (/^\/api\/docs\/[0-9a-f-]{36}\/docx$/.test(url.pathname) || url.pathname === "/api/export.zip")) {

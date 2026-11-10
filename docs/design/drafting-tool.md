@@ -73,7 +73,13 @@ Every save is an immutable version (author, time, mode, digest). Redline = any t
    - **Word writer.** `server/src/docx.ts`: native tracked changes (`w:ins`/`w:del`), word-level within a changed paragraph, with punctuation as separate tokens. Redlines open with Track Changes on. Checked in LibreOffice: both files open and the redline shows the changes.
    - **Agenda.** Open choices reach the Thursday agenda through `ws.draft_questions()` (`core/db/016`) as one item per draft ("Your choices for the …: N to decide", 15 minutes at most). The client and attorney see the same item; the draft text stays the attorney's.
    - **Tests:** `server/test/docs.test.ts`.
-3. AI review mode, then AI-assisted drafting mode (server-side prompts; eval set like the classifier's).
+3. AI review mode, then AI-assisted drafting mode (server-side prompts; eval set like the classifier's). **Built 2026-11-10:**
+   - **Files.** `server/src/engine/drafting.ts` (prompts `drafting-2026-11-10.1`), `core/src/statutes.ts`, `core/db/017_ai_drafting.sql`; console panel "Claude: review and suggested edits"; tests `server/test/drafting-ai.test.ts`, `core/test/statutes.test.ts`; live eval `server/eval/drafting.ts` (`npm run eval:drafting`, added to the front-door-eval workflow).
+   - **What the model sees.** The version's text, the template's drafter notes, the recorded facts with each source's kind, and each client choice's status. Nothing else: no other documents, no other tier.
+   - **Review.** Findings in eight categories. Each must quote the draft verbatim or the server drops it. Uncited-but-unconfirmed statutes are found by code against `core/src/statutes.ts`, never by the model. A review writes nothing into the draft.
+   - **Suggested edits.** Each replaces one exact passage. The server drops any edit whose passage is not in the draft exactly once, or which would remove the bracket of a client choice not yet decided. Accepting saves a new version (mode `ai_draft`) that keeps the base version's facts, blockers and call questions. A passage that has changed since the suggestion was made is marked stale and not applied. Decisions are final and audited.
+   - **Owner tier.** Off unless `OWNER_TIER_AI=on` (open decision).
+   - **Model and settings.** `claude-opus-5-5` through the existing ZDR wrapper, effort high. Server-side refusal fallbacks are not enabled: that is a beta whose ZDR eligibility is unconfirmed.
 4. E-signature with UETA audit trail, or a vendor (open question 1).
 5. RON package export and execution-mode gate (§ 4 table).
 
