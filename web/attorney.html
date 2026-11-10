@@ -56,6 +56,24 @@ section[hidden],[hidden]{display:none !important}
 .agi .mv{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
 .agi .mv input{flex:1 1 260px;width:auto} .agi .mv input[type=date]{flex:0 0 160px}
 .agi .mv button{margin:0}
+/* Documents (drafting tool step 2) */
+.dgrid{display:grid;grid-template-columns:minmax(300px,420px) 1fr;gap:16px;align-items:start}
+@media (max-width:900px){.dgrid{grid-template-columns:1fr}}
+.field{border-top:1px solid var(--rule);padding:10px 0}
+.field:first-child{border-top:0}
+.field .ask{font-size:14px;margin-bottom:4px}
+.field .row{display:flex;gap:6px;flex-wrap:wrap}
+.field .row>*{flex:1 1 140px;width:auto}
+.field .tpl{font-size:12px;color:var(--muted)}
+.doc{background:var(--page);border:1px solid var(--rule);border-radius:12px;padding:24px 28px;font-family:var(--display);font-size:15px;line-height:1.6;max-height:78vh;overflow:auto}
+.doc h1,.doc h2,.doc h3{font-family:var(--display)} .doc p{margin:0 0 10px}
+mark.ch{border-radius:3px;padding:0;color:inherit}
+mark.ch.open{background:var(--gap-soft);outline:1px solid var(--gap)}
+mark.ch.unconfirmed{background:var(--wait-soft);outline:1px dashed var(--wait)}
+mark.ch.decided{background:var(--pine-soft)}
+.legend mark{margin-right:8px}
+.edit textarea{min-height:60vh;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.vrow button{margin:0 4px 0 0;padding:4px 10px;font-size:13px}
 </style>
 </head>
 <body>
@@ -68,6 +86,7 @@ section[hidden],[hidden]{display:none !important}
   <button role="tab" data-tab="queue">Unread documents<span class="count" id="nQueue" hidden></span></button>
   <button role="tab" data-tab="profile">Profile</button>
   <button role="tab" data-tab="intake">Intake transcript</button>
+  <button role="tab" data-tab="docs">Documents</button>
   <button role="tab" data-tab="board">Board</button>
 </div></nav>
 <main class="wrap">
@@ -98,6 +117,35 @@ section[hidden],[hidden]{display:none !important}
     <div class="card"><h2>Last build</h2><div id="lastRun" class="small"></div></div>
   </section>
   <section id="tab-intake" hidden><div class="card"><h2>Intake transcript (all clients in this workspace)</h2><div id="transcript"></div></div></section>
+  <section id="tab-docs" hidden>
+    <div class="card"><h2>Documents</h2>
+      <p class="small">Drafts, executed originals, client uploads and counterparty papers in this workspace (one tier). Highlighted spots in a draft are client choices: red is not yet put to the client, amber is a value not yet confirmed on the call, green is decided.</p>
+      <div class="row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end"><div style="flex:1 1 260px"><label for="newTpl">New draft from template</label><select id="newTpl"></select></div><button id="newDraft" type="button">Open draft</button>
+        <button id="exportZip" type="button" class="ghost">Download the client's export package</button></div>
+      <table style="margin-top:12px"><thead><tr><th>Document</th><th>Kind</th><th>Status</th><th>Versions</th></tr></thead><tbody id="docList"></tbody></table>
+    </div>
+    <div id="docEditor" hidden>
+      <div class="card"><h2 id="dTitle"></h2><div id="dMeta" class="small"></div>
+        <div id="dBlockers" style="margin-top:8px"></div>
+        <div><button id="dPreview" type="button" class="ghost">Preview</button><button id="dAssemble" type="button">Save as new version</button>
+          <button id="dEditToggle" type="button" class="ghost">Edit text</button><button id="dSend" type="button">Send latest version to the client</button>
+          <button id="dSupersede" type="button" class="warn">Supersede</button></div>
+        <input id="dNote" placeholder="Note for this version (optional)" style="margin-top:8px">
+      </div>
+      <div class="dgrid">
+        <div class="card"><h2>Fields</h2>
+          <div class="row" style="display:flex;gap:6px;align-items:end"><div style="flex:1"><label for="callDate">Record choices from the call on</label><input id="callDate" type="date"></div><button id="useCall" type="button" class="ghost">Use this call as source</button></div>
+          <div id="dFields"></div></div>
+        <div>
+          <div class="small legend" style="margin-bottom:6px"><mark class="ch open">put to the client</mark><mark class="ch unconfirmed">confirm with the client</mark><mark class="ch decided">decided</mark></div>
+          <div class="doc" id="dDoc"></div>
+          <div class="card edit" id="dEdit" hidden style="margin-top:12px"><h2>Edit text</h2><p class="small">Saves a new version with the same facts and the same open choices. Editing text does not decide a client choice.</p><textarea id="dText"></textarea><button id="dSaveEdit" type="button">Save edit as new version</button></div>
+          <div class="card" style="margin-top:12px"><h2>Versions</h2><table><thead><tr><th>#</th><th>How</th><th>Note</th><th>Saved</th><th>Open</th><th>Word</th></tr></thead><tbody id="dVersions"></tbody></table></div>
+          <div class="card"><h2>How it may be signed</h2><div id="dExec" class="small"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
   <section id="tab-board" hidden><div class="card"><h2>Board</h2><p>Add cards, propose change orders, scope Schedule A work, mark work done.</p><a id="boardLink" href="#">Open the board</a></div></section>
 </main>
 <script>
@@ -116,7 +164,7 @@ const checkPills = g => (g?.checks || []).map(c => `<span class="pill ${c.pass ?
 document.querySelectorAll("nav [data-tab]").forEach(b => b.onclick = run(async () => {
   document.querySelectorAll("nav [data-tab]").forEach(x => x.setAttribute("aria-selected", x === b));
   document.querySelectorAll("main > section").forEach(s => s.hidden = s.id !== "tab-" + b.dataset.tab);
-  await ({ conflicts: loadConflicts, thursday: loadAgendaPlan, briefs: loadBriefs, agenda: loadAgenda, queue: loadQueue, profile: loadProfile, intake: loadTranscript })[b.dataset.tab]?.();
+  await ({ docs: loadDocs, conflicts: loadConflicts, thursday: loadAgendaPlan, briefs: loadBriefs, agenda: loadAgenda, queue: loadQueue, profile: loadProfile, intake: loadTranscript })[b.dataset.tab]?.();
 }));
 
 // ---- Conflicts ----
@@ -185,6 +233,87 @@ async function loadTranscript() {
   const { turns } = await api("/api/intake/turns");
   $("transcript").innerHTML = turns.map(t => `<div class="${t.speaker === "agent" ? "note" : "client"}"><div class="small">${t.speaker === "agent" ? "Assistant" : esc(t.for_name || "Client")} · ${new Date(t.at).toLocaleString()}</div>${t.withheld ? "<em>Withheld: health or capacity.</em>" : esc(t.body).replace(/\n/g, "<br>")}</div>`).join("") || '<p class="small">No intake yet.</p>';
 }
+
+// ---- Documents (drafting tool step 2) ----
+let D = null, SOURCES = [], CALLSRC = null;
+const KIND = { draft: "Draft", executed: "Executed original", client_upload: "Client upload", counterparty: "Counterparty paper" };
+async function download(path, fallback) {
+  const r = await fetch(path + (path.includes("?") ? "&" : "?") + "ws=" + encodeURIComponent(WS), { headers: { authorization: "Dev " + AS } });
+  if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || "Download failed."); }
+  const name = /filename="([^"]+)"/.exec(r.headers.get("content-disposition") || "")?.[1] || fallback;
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(await r.blob()), download: name }); a.click(); URL.revokeObjectURL(a.href);
+}
+async function loadDocs() {
+  const d = await api("/api/docs");
+  $("newTpl").innerHTML = d.templates.map(t => `<option value="${t.id}">${esc(t.title)}</option>`).join("") || "<option disabled>No templates for this tier</option>";
+  $("newDraft").disabled = !d.templates.length;
+  $("docList").innerHTML = d.documents.map(x => `<tr><td>${x.kind === "draft" ? `<a href="#" data-open="${x.id}">${esc(x.title)}</a>` : esc(x.title)}</td><td>${KIND[x.kind] || x.kind}</td><td><span class="pill ${x.status === "executed" ? "good" : x.status === "sent" ? "warn" : ""}">${esc(x.status)}</span></td><td>${x.versions ?? 0}</td></tr>`).join("") || '<tr><td colspan="4" class="small">No documents yet.</td></tr>';
+  $("docList").querySelectorAll("[data-open]").forEach(a => a.onclick = run(async e => { e.preventDefault(); await openDoc(a.dataset.open); }));
+  SOURCES = (await api("/api/sources")).sources;
+}
+$("newDraft").onclick = run(async () => { const r = await api("/api/docs", { template: $("newTpl").value }); await loadDocs(); await openDoc(r.id); });
+$("exportZip").onclick = run(() => download("/api/export.zip", "executed-documents.zip"));
+$("callDate").value = new Date().toLocaleDateString("en-CA");
+$("useCall").onclick = run(async () => { const r = await api("/api/sources/call", { date: $("callDate").value }); CALLSRC = r.id; SOURCES = (await api("/api/sources")).sources; renderFields(currentFacts()); });
+
+function srcOptions(sel) {
+  return `<option value="">source…</option>` + SOURCES.map(s => `<option value="${s.id}" ${s.id === sel ? "selected" : ""}>${esc(s.label)} · ${esc(s.kind)}${s.kind === "CALL" ? " (decides a choice)" : ""}</option>`).join("");
+}
+function renderFields(facts) {
+  const ins = D.template.inputs, ch = Object.fromEntries(D.view.choices.map(c => [c.id, c]));
+  const groups = [["client", "Client choices: put to the client on the call"], ["fact", "Facts"], ["drafting", "Drafting"], ["advisor", "Advisor inputs"]];
+  $("dFields").innerHTML = groups.map(([g, title]) => { const list = ins.filter(i => i.group === g); if (!list.length) return "";
+    return `<h3>${title}</h3>` + list.map(i => { const f = facts[i.id] || {}, c = ch[i.id];
+      const val = i.input === "bool" ? `<select data-f="${i.id}"><option value="">not decided</option><option value="true" ${f.value === true ? "selected" : ""}>Yes</option><option value="false" ${f.value === false ? "selected" : ""}>No</option></select>`
+        : i.input === "choice" ? `<select data-f="${i.id}"><option value="">not decided</option>${i.options.map(o => `<option ${f.value === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`
+        : `<input data-f="${i.id}" value="${esc(f.value ?? "")}" placeholder="${esc(i.label)}">`;
+      const src = f.source || (i.client && CALLSRC) || "";
+      return `<div class="field"><div class="ask">${i.client ? esc(i.client.ask) : esc(i.label)} ${c ? `<span class="pill ${c.status === "decided" ? "good" : c.status === "unconfirmed" ? "warn" : "crit"}">${c.status}</span>` : ""}${i.advisor ? ` <span class="pill">from the ${esc(i.advisor)}</span>` : ""}</div>
+        ${i.client ? `<div class="tpl">${esc(i.label)}${c ? ` · template text: ${esc(c.template)}` : " · not in this draft"}</div>` : ""}
+        <div class="row">${val}<select data-s="${i.id}">${srcOptions(src)}</select></div></div>`; }).join(""); }).join("");
+}
+function currentFacts() {
+  const out = {};
+  document.querySelectorAll("#dFields [data-f]").forEach(el => { const id = el.dataset.f, s = document.querySelector(`#dFields [data-s="${id}"]`).value, raw = el.value.trim();
+    if (raw === "") return; const inp = D.template.inputs.find(i => i.id === id);
+    out[id] = { value: inp.input === "bool" ? raw === "true" : raw, source_id: s }; });
+  return out;
+}
+function factsToForm(facts) { return Object.fromEntries(Object.entries(facts || {}).map(([k, f]) => [k, { value: f.value, source: f.source }])); }
+function renderDoc(v) {
+  const html = esc(v.highlighted).split("\n").map(l => {
+    l = l.replace(/⟦choice:([a-z_0-9]+)⟧/g, (_, id) => { const c = v.choices.find(x => x.id === id); return `<mark class="ch ${c ? c.status : "open"}" title="${esc(c ? c.ask : id)}">`; }).replace(/⟦\/choice⟧/g, "</mark>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>");
+    const h = /^(#{1,3})\s+(.*)$/.exec(l); if (h) return `<h${h[1].length}>${h[2]}</h${h[1].length}>`;
+    return /^-{3,}$/.test(l) ? "<hr>" : l.trim() ? `<p>${l}</p>` : ""; }).join("");
+  $("dDoc").innerHTML = html;
+  const b = v.blockers || [];
+  $("dBlockers").innerHTML = b.length ? `<div class="note"><strong>${b.length} before it can be sent:</strong> ${b.slice(0, 8).map(esc).join("; ")}${b.length > 8 ? "; …" : ""}</div>` : '<span class="pill good">Nothing open: ready to send</span>';
+  $("dExec").innerHTML = (v.execution || []).map(r => `<div><span class="pill ${r.allowed ? "good" : "crit"}">${esc(r.mode.replace(/_/g, " "))}: ${r.allowed ? "allowed" : "not allowed"}</span> ${esc(r.why)}${(r.requires || []).length ? `<div class="small">Requires: ${r.requires.map(esc).join("; ")}</div>` : ""}</div>`).join("");
+}
+async function openDoc(id) {
+  const d = await api(`/api/docs/${id}`);
+  D = { id, ...d, view: d.current };
+  $("docEditor").hidden = false; $("dEdit").hidden = true;
+  $("dTitle").textContent = d.document.title;
+  $("dMeta").textContent = `${d.template.tier} tier · status ${d.document.status} · version ${d.current.n} · meant to satisfy ${d.document.nodes.join(", ") || "—"}`;
+  renderFields(factsToForm(d.current.facts)); renderDoc(d.current);
+  $("dText").value = d.current.text;
+  $("dSend").disabled = d.document.status !== "active" || (d.current.blockers || []).length > 0;
+  $("dVersions").innerHTML = d.versions.map((v, k) => { const prev = d.versions[k + 1];
+    return `<tr class="vrow"><td>${v.n}</td><td>${esc(v.mode || "")}</td><td>${esc(v.note || "")}</td><td class="small">${new Date(v.created_at).toLocaleString()}${v.sent_at ? ' <span class="pill warn">sent</span>' : ""}</td><td>${v.blocker_count}</td>
+      <td><button class="ghost" data-dl="${v.id}" data-n="${v.n}">Clean</button>${prev ? `<button class="ghost" data-rl="${v.id}" data-against="${prev.id}" data-n="${v.n}">Redline v${prev.n}→v${v.n}</button>` : ""}</td></tr>`; }).join("");
+  $("dVersions").querySelectorAll("[data-dl]").forEach(b => b.onclick = run(() => download(`/api/docs/${id}/docx?v=${b.dataset.dl}`, `v${b.dataset.n}.docx`)));
+  $("dVersions").querySelectorAll("[data-rl]").forEach(b => b.onclick = run(() => download(`/api/docs/${id}/docx?v=${b.dataset.rl}&against=${b.dataset.against}`, `redline v${b.dataset.n}.docx`)));
+}
+$("dPreview").onclick = run(async () => { const v = await api(`/api/docs/${D.id}/preview`, { facts: currentFacts() }); D.view = v; renderDoc(v); renderFields(factsToForm(Object.fromEntries(Object.entries(currentFacts()).map(([k, f]) => [k, { value: f.value, source: f.source_id }])))); });
+$("dAssemble").onclick = run(async () => {
+  if (D.current.edited && !confirm("Saving from the fields re-assembles the text from the template. Hand edits in the latest version are not carried over (the redline will show them). Continue?")) return;
+  await api(`/api/docs/${D.id}/assemble`, { facts: currentFacts(), note: $("dNote").value || undefined }); $("dNote").value = ""; await openDoc(D.id); await loadDocs(); });
+$("dEditToggle").onclick = () => { $("dEdit").hidden = !$("dEdit").hidden; };
+$("dSaveEdit").onclick = run(async () => { await api(`/api/docs/${D.id}/edit`, { base: D.current.versionId, text: $("dText").value, note: $("dNote").value || undefined }); $("dNote").value = ""; await openDoc(D.id); await loadDocs(); });
+$("dSend").onclick = run(async () => { if (!confirm("Send this version to the client? They will see it in their workspace.")) return; await api(`/api/docs/${D.id}/send`, { version: D.current.versionId }); await openDoc(D.id); await loadDocs(); });
+$("dSupersede").onclick = run(async () => { if (!confirm("Supersede this document? It stays in the index but takes no new versions.")) return; await api(`/api/docs/${D.id}/supersede`, {}); $("docEditor").hidden = true; await loadDocs(); });
 
 // ---- Profile ----
 async function loadProfile() {

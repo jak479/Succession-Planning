@@ -15,6 +15,8 @@ import { PUBLIC_RECORDS } from "../../core/src/intake.ts";
 import { buildProfile } from "./engine/profile.ts";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { DEMO, seedDemo } from "./demo-seed.ts";
+import { docRoutes, docDownload } from "./docs-api.ts";
+import { TEMPLATES } from "../../core/src/templates.ts";
 
 // Demo mode (hosted proof of concept): a site password, a persona page, fictional client only, resettable.
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? "";
@@ -109,6 +111,18 @@ const routes: [string, RegExp, (x: Ctx, m: RegExpExecArray) => Promise<unknown>]
       ...cards.map(b => ({ key: "co:" + b.id, kind: "change_order" as const, node: (b.clears ?? [])[0] ?? null, at: new Date(b.at).toISOString(),
         title: b.proposed_at ? `Change order waiting for your signature: ${b.title}` : `To discuss: ${b.title}` })),
     ];
+    // Open client choices in active drafts (core/db/016): question text only, the same for client and attorney.
+    // Grouped: one agenda item per draft, so 30 choices do not crowd out the rest of the call. The questions themselves
+    // are the call sheet in the attorney's Documents tab.
+    const drafts = (await c.query("select key, title, node, at from ws.draft_questions()")).rows;
+    const byTpl = new Map<string, typeof drafts>();
+    for (const d of drafts) { const k = d.key.split(":")[1]; byTpl.set(k, [...(byTpl.get(k) ?? []), d]); }
+    for (const [tplId, qs] of byTpl) {
+      const name = TEMPLATES.find(x => x.id === tplId)?.title ?? tplId;
+      const nodes = qs.map(q => q.node).filter(Boolean).sort();
+      sources.push({ key: `draft:${tplId}`, kind: "question", title: `Your choices for the ${name}: ${qs.length} to decide`, node: nodes[0] ?? null,
+        at: new Date(Math.min(...qs.map(q => +new Date(q.at)))).toISOString(), minutes: Math.min(15, 2 * qs.length) });   // fits the 20-minute plan block
+    }
     const deadlines = (await c.query("select node_id node, label, to_char(due,'YYYY-MM-DD') due from ws.deadline")).rows;
     const overrides = (await c.query("select item_key key, action, reason, to_char(until_date,'YYYY-MM-DD') until from ws.agenda_override")).rows;
     return planAgenda({ nodes, sources, deadlines, overrides, ...callDates(today) });
@@ -181,6 +195,8 @@ const routes: [string, RegExp, (x: Ctx, m: RegExpExecArray) => Promise<unknown>]
   ["POST", /^\/api\/board\/([0-9a-f-]{36})\/allowance$/, ({ c, body }, m) => c.query("update ws.board_item set allowance=$2 where id=$1 and col='Identified'", [m[1], Number(body.allowance) || 0])
     .then(r => { if (!r.rowCount) throw new Error("not permitted"); })],
 ];
+
+routes.push(...docRoutes);
 
 // Database messages are written for the attorney; clients get a plain line.
 function clientSafe(msg: string, role: string) {
@@ -256,6 +272,18 @@ http.createServer(async (req, res) => {
       const msg = String(e?.message ?? e);
       return send(400, { error: /conflict check not cleared/.test(msg) ? "Josh needs to finish a routine check before intake begins. You'll hear when it's done." : /not a document item/.test(msg) ? "That item isn't a document." : "That couldn't be received. Please try again." });
     }
+  }
+  // Downloads (Word, export package): binary, same session rules as every other route.
+  if (req.method === "GET" && (/^\/api\/docs\/[0-9a-f-]{36}\/docx$/.test(url.pathname) || url.pathname === "/api/export.zip")) {
+    const personId = who(req), workspaceId = url.searchParams.get("ws");
+    if (!personId || !workspaceId) { res.writeHead(401); res.end(); return; }
+    let role = "client";
+    try {
+      const f = await inSession(pool, { personId, workspaceId }, async c => { role = (await c.query("select ws.my_role() r")).rows[0].r ?? "client"; return docDownload(c, role, url.pathname, url.searchParams); });
+      if (!f) { res.writeHead(404); res.end(); return; }
+      res.writeHead(200, { "content-type": f.mime, "content-disposition": `attachment; filename="${f.filename.replace(/"/g, "")}"`, "cache-control": "no-store" });
+      res.end(Buffer.from(f.bytes)); return;
+    } catch (e: any) { res.writeHead(400, { "content-type": "application/json" }); res.end(JSON.stringify({ error: clientSafe(String(e.message ?? e), role) })); return; }
   }
   const route = routes.find(([m, re]) => m === req.method && re.test(url.pathname));
   const send = (code: number, obj: unknown) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(obj ?? {})); };

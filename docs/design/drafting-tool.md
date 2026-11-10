@@ -61,7 +61,18 @@ Every save is an immutable version (author, time, mode, digest). Redline = any t
 
 ## 6. Build sequence
 1. Template schema + assembler for the two templates (deterministic; tests against the demo profile). **Built 2026-11-08:** `core/src/drafting.ts` (assembler, tier check, execution-mode gate), `core/src/templates.ts` (one binding per bracket, in order), `core/test/drafting.test.ts`. The wording stays in `docs/templates/`; if a template is edited, the tests fail until its bindings match. Confirmed by the attorney 2026-11-08: OA `[If the Principal dies: …]` is a drafter note (never exported). Template edits approved the same day: OA 1(b)(2) attending-physician clause now carries its own commas inside the bracket; OA .4(c) single-member clause is closed as `[If single-member: …]`, so it is included only when the company has one member and the multi-member sentence takes its place otherwise. In the rider, ", and (ii)" was moved inside the buy-sell bracket so that dropping the clause leaves no orphan "(ii)"; the text is unchanged when the clause is kept.
-2. Console editor with versions; .docx export, clean and redline.
+2. Console editor with versions; .docx export, clean and redline. **Built 2026-11-10:**
+   - **Console.** Attorney console, Documents tab (`web/attorney.html`; screenshot `docs/design/screens/attorney-7-documents.png`):
+     - Open a draft from a template of the workspace's tier.
+     - Fill fields grouped as client choices, facts, drafting and advisor inputs. Each value cites a source. "Use this call as source" creates or reuses a `CALL-<date>` source, which is what decides a client choice.
+     - Live preview with highlights: red for put to the client, amber for confirm, green for decided. The blockers list and the allowed signing modes show beside it.
+     - Save as a new version, or edit the text by hand. A hand edit keeps the base version's facts, blockers and questions.
+     - Send, when nothing is open; supersede.
+     - Word download, clean or as a redline between versions; the client's export package.
+   - **Routes.** `server/src/docs-api.ts`. A fact's source kind is read from the database, never from the request.
+   - **Word writer.** `server/src/docx.ts`: native tracked changes (`w:ins`/`w:del`), word-level within a changed paragraph, with punctuation as separate tokens. Redlines open with Track Changes on. Checked in LibreOffice: both files open and the redline shows the changes.
+   - **Agenda.** Open choices reach the Thursday agenda through `ws.draft_questions()` (`core/db/016`) as one item per draft ("Your choices for the …: N to decide", 15 minutes at most). The client and attorney see the same item; the draft text stays the attorney's.
+   - **Tests:** `server/test/docs.test.ts`.
 3. AI review mode, then AI-assisted drafting mode (server-side prompts; eval set like the classifier's).
 4. E-signature with UETA audit trail, or a vendor (open question 1).
 5. RON package export and execution-mode gate (§ 4 table).

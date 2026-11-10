@@ -2,7 +2,7 @@
 // Every call runs inside an inSession() transaction, so RLS and the triggers decide who may do what.
 import { createHash } from "node:crypto";
 import type pg from "pg";
-import { assemble, blockers, executionModes, type AssembleOptions, type ExecMode, type Facts, type Template } from "./drafting.ts";
+import { assemble, blockers, callQuestions, executionModes, type AssembleOptions, type ExecMode, type Facts, type Template } from "./drafting.ts";
 
 export type DraftMode = "manual" | "ai_draft" | "ai_review" | "import";
 /** Who signed the executed copy. The template's auto-green rule (db/012) reads this to turn nodes green. */
@@ -18,14 +18,16 @@ export async function createDraft(c: pg.PoolClient, t: Template, nodes: string[]
 /** Assemble from facts and save the result as the draft's next version, with the facts, their sources and the blockers. */
 export async function saveAssembled(c: pg.PoolClient, documentId: string, t: Template, templateFile: string, facts: Facts, mode: DraftMode = "manual", note?: string) {
   const a = assemble(t, templateFile, facts);
-  return { ...(await saveVersion(c, documentId, a.text, facts, blockers(a), mode, note)), assembly: a };
+  const questions = callQuestions(t, a, new Date().toISOString()).map(({ key, title, node }) => ({ key, title, node }));
+  return { ...(await saveVersion(c, documentId, a.text, facts, blockers(a), mode, note, questions)), assembly: a };
 }
 
 /** Save edited text as the next version. `blockers` comes from the assembler run the text started from. */
-export async function saveVersion(c: pg.PoolClient, documentId: string, text: string, facts: Facts, open: string[], mode: DraftMode, note?: string) {
+export async function saveVersion(c: pg.PoolClient, documentId: string, text: string, facts: Facts, open: string[], mode: DraftMode, note?: string,
+  questions: { key: string; title: string; node: string | null }[] = []) {
   const n = (await one(c, "select coalesce(max(n), 0) + 1 as n from ws.doc_version where document_id = $1", [documentId])).n;
-  const r = await one(c, `insert into ws.doc_version (workspace_id, document_id, n, content_md, sha256, mode, facts, blockers, note)
-    values (ws.cur_ws(), $1, $2, $3, $4, $5, $6, $7, $8) returning id, n`, [documentId, n, text, sha(text), mode, JSON.stringify(facts), JSON.stringify(open), note ?? null]);
+  const r = await one(c, `insert into ws.doc_version (workspace_id, document_id, n, content_md, sha256, mode, facts, blockers, note, questions)
+    values (ws.cur_ws(), $1, $2, $3, $4, $5, $6, $7, $8, $9) returning id, n`, [documentId, n, text, sha(text), mode, JSON.stringify(facts), JSON.stringify(open), note ?? null, JSON.stringify(questions)]);
   return { versionId: r.id as string, n: r.n as number };
 }
 

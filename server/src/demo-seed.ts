@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import type pg from "pg";
 import { SAMPLE_DOCS } from "./sample-docs.ts";
 
-export const MIGRATIONS = ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql", "005_intake.sql", "006_profile.sql", "007_threads.sql", "008_estimate_terms.sql", "009_estimate_costs.sql", "010_agenda.sql", "011_documents.sql", "012_auto_green_retention.sql", "013_retention_directions.sql", "014_keep_unless_destroy.sql", "015_legal_hold.sql"];
+export const MIGRATIONS = ["001_init.sql", "002_catalog.sql", "003_board_profile.sql", "004_frontdoor.sql", "005_intake.sql", "006_profile.sql", "007_threads.sql", "008_estimate_terms.sql", "009_estimate_costs.sql", "010_agenda.sql", "011_documents.sql", "012_auto_green_retention.sql", "013_retention_directions.sql", "014_keep_unless_destroy.sql", "015_legal_hold.sql", "016_draft_questions.sql"];
 export const DEMO = {
   attorney: "00000000-0000-4000-8000-000000000001", dana: "00000000-0000-4000-8000-000000000002",
   luis: "00000000-0000-4000-8000-000000000003", engine: "00000000-0000-4000-8000-000000000004",
