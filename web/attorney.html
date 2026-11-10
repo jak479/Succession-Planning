@@ -152,6 +152,7 @@ mark.ch.decided{background:var(--pine-soft)}
               <label for="aiInstr">Ask for edits</label><textarea id="aiInstr" rows="3" placeholder="e.g. Make the conflicts clause survive later amendments that do not refer to this Article."></textarea>
               <button id="aiSuggest" type="button" class="ghost">Suggest edits</button></div>
             <h3>Suggested edits</h3><div id="aiSug" class="small">None yet.</div>
+            <h3>Requests</h3><div id="aiReq" class="small">None yet.</div>
             <h3>Latest review</h3><div id="aiRev" class="small">None yet.</div></div>
           <div class="card"><h2>How it may be signed</h2><div id="dExec" class="small"></div></div>
         </div>
@@ -330,6 +331,10 @@ async function loadAi() {
     const r = await api(`/api/docs/${D.id}/suggestions/${b.dataset.acc || b.dataset.rej}`, { accept: !!b.dataset.acc });
     if (r.status === "stale") $("err").textContent = "That passage has changed since the suggestion was made; it was not applied.";
     await openDoc(D.id); await loadDocs(); }));
+  const OUT = { suggested: ["good", "suggested"], declined: ["warn", "declined by Claude"], refused: ["crit", "refused by the server"], unavailable: ["crit", "Claude did not run"] };
+  $("aiReq").innerHTML = a.requests.map(q => `<div class="sug"><div><span class="pill ${OUT[q.outcome][0]}">${OUT[q.outcome][1]}</span> on v${q.n} · ${new Date(q.at).toLocaleString()}${q.kept ? ` · ${q.kept} suggestion(s)` : ""}</div>
+    <blockquote>${esc(q.instruction)}</blockquote>${q.declined ? `<div>Claude: ${esc(q.declined)}</div>` : ""}
+    ${q.refused.map(x => `<div>Refused: ${esc(x.why)} <span class="small">(${esc(x.find).slice(0, 80)} → ${esc(x.replace_with).slice(0, 80)})</span></div>`).join("")}</div>`).join("") || "None yet.";
   const r = a.reviews[0];
   $("aiRev").innerHTML = !r ? "None yet." : `<div>v${r.n} · ${new Date(r.at).toLocaleString()} · ${esc(r.model)} · ${esc(r.prompt_version)}</div>
     ${r.citations.length ? `<div class="note">Cited but not confirmed at the source: ${r.citations.map(c => "§ " + esc(c.section)).join(", ")}</div>` : '<div><span class="pill good">every cited section is confirmed</span></div>'}
@@ -338,9 +343,9 @@ async function loadAi() {
     ${r.dropped.length ? `<div>${r.dropped.length} finding(s) discarded: the quote was not in the draft.</div>` : ""}`;
 }
 const busy = (on, msg) => { $("aiBusy").textContent = on ? " " + msg : ""; $("aiReview").disabled = $("aiSuggest").disabled = on; };
-$("aiReview").onclick = run(async () => { busy(true, "Reviewing…"); try { await api(`/api/docs/${D.id}/review`, {}); } finally { busy(false); } await loadAi(); });
+$("aiReview").onclick = run(async () => { busy(true, "Reviewing…"); try { await api(`/api/docs/${D.id}/review`, {}); } finally { busy(false); await loadAi(); } });
 $("aiSuggest").onclick = run(async () => { const instruction = $("aiInstr").value.trim(); if (instruction.length < 4) throw new Error("Write an instruction.");
-  busy(true, "Drafting suggestions…"); let r; try { r = await api(`/api/docs/${D.id}/suggest`, { instruction }); } finally { busy(false); }
+  busy(true, "Drafting suggestions…"); let r; try { r = await api(`/api/docs/${D.id}/suggest`, { instruction }); } finally { busy(false); await loadAi(); }
   if (!r.ok) throw new Error("Claude did not run: " + r.model.replace(/^unavailable: /, ""));
   if (r.declined) $("err").textContent = "Claude: " + r.declined; if (r.dropped?.length) $("err").textContent += ` ${r.dropped.length} suggestion(s) refused by the server: ${r.dropped.map(d => d.why).join("; ")}.`;
   $("aiInstr").value = ""; await loadAi(); });
